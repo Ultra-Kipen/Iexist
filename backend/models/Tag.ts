@@ -2,57 +2,47 @@
 
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
-interface TagAttributes {
-  id: number;
-  name: string;
-  created_at?: Date;
-  updated_at?: Date;
-}
+class Tag extends Model {
+  public id!: number;
+  public name!: string;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
-interface TagInstance extends Model<TagAttributes>, TagAttributes {}
-
-export class Tag extends Model<TagAttributes> {
-  declare id: number;
-  declare name: string;
-  declare readonly created_at: Date;
-  declare readonly updated_at: Date;
-
-  public static initialize(sequelize: Sequelize) {
-    Tag.init(
+  static init(sequelize: Sequelize): void {
+    super.init(
       {
         id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
-          primaryKey: true
+          primaryKey: true,
         },
         name: {
           type: DataTypes.STRING(50),
           allowNull: false,
-          unique: true
-        },
-        created_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
-        },
-        updated_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
+          unique: true,
+          validate: {
+            len: [1, 50]
+          }
         }
       },
       {
         sequelize,
-        tableName: 'tags',
         modelName: 'Tag',
+        tableName: 'tags',
         timestamps: true,
-        underscored: true
+        underscored: true,
+        indexes: [
+          {
+            fields: ['name']
+          }
+        ]
       }
     );
   }
 
-  public static associate(models: any) {
-    Tag.belongsToMany(models.SomeoneDayPost, {
+  static associate(models: any): void {
+    // SomeoneDayPost와의 다대다 관계
+    this.belongsToMany(models.SomeoneDayPost, {
       through: 'post_tags',
       foreignKey: 'tag_id',
       otherKey: 'post_id',
