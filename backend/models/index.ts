@@ -15,32 +15,25 @@ import Tag from './Tag';
 
 const db = {
   sequelize,
-  Sequelize
+  Sequelize,
+  User,
+  Challenge,
+  Emotion,
+  EmotionLog,
+  MyDayComment,
+  MyDayPost,
+  SomeoneDayPost,
+  Tag
 };
 
-// 모델 초기화
-User.init(User.getAttributes(), { sequelize });
-Challenge.init(Challenge.getAttributes(), { sequelize });
-Emotion.init(Emotion.getAttributes(), { sequelize });
-EmotionLog.init(EmotionLog.getAttributes(), { sequelize });
-MyDayComment.init(MyDayComment.getAttributes(), { sequelize });
-MyDayPost.init(MyDayPost.getAttributes(), { sequelize });
-SomeoneDayPost.init(SomeoneDayPost.getAttributes(), { sequelize });
-Tag.init(Tag.getAttributes(), { sequelize });
-
-// db 객체에 모델 추가
-db.User = User;
-db.Challenge = Challenge;
-db.Emotion = Emotion;
-db.EmotionLog = EmotionLog;
-db.MyDayComment = MyDayComment;
-db.MyDayPost = MyDayPost;
-db.SomeoneDayPost = SomeoneDayPost;
-db.Tag = Tag;
-
-// 모델 간 관계 설정
 Object.values(db).forEach((model: any) => {
-  if (model.associate) {
+  if (typeof model.initialize === 'function') {
+    model.initialize(sequelize);
+  }
+});
+
+Object.values(db).forEach((model: any) => {
+  if (typeof model.associate === 'function') {
     model.associate(db);
   }
 });
