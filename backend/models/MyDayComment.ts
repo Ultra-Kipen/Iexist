@@ -11,55 +11,69 @@ class MyDayComment extends Model {
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
-  static initModel(sequelize: Sequelize) {
-    MyDayComment.init({
-      id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-      },
-      post_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'my_day_posts',
-          key: 'id'
+  static init(sequelize: Sequelize): void {
+    super.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+        },
+        post_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'my_day_posts',
+            key: 'id'
+          }
+        },
+        user_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'users',
+            key: 'id'
+          }
+        },
+        content: {
+          type: DataTypes.STRING(500),
+          allowNull: false,
+          validate: {
+            len: [1, 500]
+          }
+        },
+        is_anonymous: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false
         }
       },
-      user_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id'
-        }
-      },
-      content: {
-        type: DataTypes.STRING(500),
-        allowNull: false,
-      },
-      is_anonymous: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false
+      {
+        sequelize,
+        modelName: 'MyDayComment',
+        tableName: 'my_day_comments',
+        timestamps: true,
+        underscored: true,
+        indexes: [
+          {
+            fields: ['post_id']
+          },
+          {
+            fields: ['user_id']
+          }
+        ]
       }
-    }, {
-      sequelize,
-      tableName: 'my_day_comments',
-      modelName: 'MyDayComment',
-      timestamps: true,
-      underscored: true,
-    });
-
-    return MyDayComment;
+    );
   }
 
-  static associate(models: any) {
+  static associate(models: any): void {
+    // User와의 관계
     this.belongsTo(models.User, {
       foreignKey: 'user_id',
       as: 'user'
     });
 
+    // MyDayPost와의 관계
     this.belongsTo(models.MyDayPost, {
       foreignKey: 'post_id',
       as: 'post'
