@@ -1,64 +1,43 @@
-// backend/models/index.ts
+// backend/models/User.ts
 
-import { Sequelize } from 'sequelize';
-import sequelize from '../config/database';
+import { Model, DataTypes, Sequelize } from 'sequelize';
+import bcrypt from 'bcrypt';
 
-import User from './User';
-import Challenge from './Challenge';
-import Emotion from './Emotion';
-import EmotionLog from './EmotionLog';
-import MyDayComment from './MyDayComment';
-import MyDayPost from './MyDayPost';
-import SomeoneDayPost from './SomeoneDayPost';
-import Tag from './Tag';
-import MyDayLike from './MyDayLike';
-import SomeoneDayComment from './SomeoneDayComment';
-import SomeoneDayLike from './SomeoneDayLike';
-import ChallengeParticipant from './ChallengeParticipant';
-import ChallengeEmotion from './ChallengeEmotion';
-import UserStats from './UserStats';
-import Notification from './Notification';
-import PostReport from './PostReport';
-import EncouragementMessage from './EncouragementMessage';
+class User extends Model {
+  public id!: number;
+  public username!: string;
+  public email!: string;
+  public password!: string;
+  public nickname?: string;
+  public profile_image_url?: string;
+  public theme_preference!: 'light' | 'dark' | 'system';
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
-const db = {
-  sequelize,
-  Sequelize,
-  User: User.init({
-    // User model attributes here
-  }, { sequelize }),
-  Challenge: Challenge.init({
-    // Challenge model attributes here
-  }, { sequelize }),
-  // ... other models initialization
-};
-
-Object.values(db).forEach((model: any) => {
-  if (model.associate) {
-    model.associate(db);
+  // 비밀번호 해싱 메서드
+  async hashPassword() {
+    if (this.password) {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
   }
-});
 
-export type DbInterface = {
-  sequelize: Sequelize;
-  Sequelize: typeof Sequelize;
-  User: typeof User;
-  Challenge: typeof Challenge;
-  Emotion: typeof Emotion;
-  EmotionLog: typeof EmotionLog;
-  MyDayComment: typeof MyDayComment;
-  MyDayPost: typeof MyDayPost;
-  SomeoneDayPost: typeof SomeoneDayPost;
-  Tag: typeof Tag;
-  MyDayLike: typeof MyDayLike;
-  SomeoneDayComment: typeof SomeoneDayComment;
-  SomeoneDayLike: typeof SomeoneDayLike;
-  ChallengeParticipant: typeof ChallengeParticipant;
-  ChallengeEmotion: typeof ChallengeEmotion;
-  UserStats: typeof UserStats;
-  Notification: typeof Notification;
-  PostReport: typeof PostReport;
-  EncouragementMessage: typeof EncouragementMessage;
-};
+  // 비밀번호 검증 메서드
+  async validatePassword(password: string): Promise<boolean> {
+    return bcrypt.compare(password, this.password);
+  }
 
-export default db as DbInterface;
+  static associate(models: any) {
+    this.hasMany(models.MyDayPost, {
+      foreignKey: 'user_id',
+      as: 'myDayPosts'
+    });
+
+    this.hasMany(models.SomeoneDayPost, {
+      foreignKey: 'user_id',
+      as: 'someoneDayPosts'
+    });
+  }
+}
+
+export default User;
