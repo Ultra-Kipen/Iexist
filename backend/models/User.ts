@@ -1,48 +1,99 @@
-// backend/models/index.ts
+// backend/models/User.ts
 
-import { Sequelize } from 'sequelize';
-import sequelize from '../config/database';
+import { Model, DataTypes, Sequelize } from 'sequelize';
 
-// 모델 import
-import User from './User';
-import Challenge from './Challenge';
-import Emotion from './Emotion';
-import EmotionLog from './EmotionLog';
-import MyDayComment from './MyDayComment';
-import MyDayPost from './MyDayPost';
-import SomeoneDayPost from './SomeoneDayPost';
-import Tag from './Tag';
+interface UserAttributes {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+  nickname?: string;
+  profile_image_url?: string;
+  theme_preference: 'light' | 'dark' | 'system';
+  created_at?: Date;
+  updated_at?: Date;
+}
 
-const db = {
-  sequelize,
-  Sequelize
-};
+class User extends Model<UserAttributes> {
+  public id!: number;
+  public username!: string;
+  public email!: string;
+  public password!: string;
+  public nickname?: string;
+  public profile_image_url?: string;
+  public theme_preference!: 'light' | 'dark' | 'system';
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
-// 모델 초기화
-User.init(User.getAttributes(), { sequelize });
-Challenge.init(Challenge.getAttributes(), { sequelize });
-Emotion.init(Emotion.getAttributes(), { sequelize });
-EmotionLog.init(EmotionLog.getAttributes(), { sequelize });
-MyDayComment.init(MyDayComment.getAttributes(), { sequelize });
-MyDayPost.init(MyDayPost.getAttributes(), { sequelize });
-SomeoneDayPost.init(SomeoneDayPost.getAttributes(), { sequelize });
-Tag.init(Tag.getAttributes(), { sequelize });
-
-// db 객체에 모델 추가
-db.User = User;
-db.Challenge = Challenge;
-db.Emotion = Emotion;
-db.EmotionLog = EmotionLog;
-db.MyDayComment = MyDayComment;
-db.MyDayPost = MyDayPost;
-db.SomeoneDayPost = SomeoneDayPost;
-db.Tag = Tag;
-
-// 모델 간 관계 설정
-Object.values(db).forEach((model: any) => {
-  if (model.associate) {
-    model.associate(db);
+  // 모델 초기화
+  public static initialize(sequelize: Sequelize): void {
+    User.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+        },
+        username: {
+          type: DataTypes.STRING(50),
+          allowNull: false,
+          unique: true,
+        },
+        email: {
+          type: DataTypes.STRING(100),
+          allowNull: false,
+          unique: true,
+        },
+        password: {
+          type: DataTypes.STRING(255),
+          allowNull: false,
+        },
+        nickname: {
+          type: DataTypes.STRING(50),
+          allowNull: true,
+        },
+        profile_image_url: {
+          type: DataTypes.STRING(255),
+          allowNull: true,
+        },
+        theme_preference: {
+          type: DataTypes.ENUM('light', 'dark', 'system'),
+          allowNull: false,
+          defaultValue: 'system',
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
+        updated_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
+      },
+      {
+        sequelize,
+        modelName: 'User',
+        tableName: 'users',
+        timestamps: true,
+        underscored: true,
+      }
+    );
   }
-});
 
-export default db;
+  // 관계 설정
+  public static associate(models: any): void {
+    this.hasMany(models.MyDayPost, {
+      foreignKey: 'user_id',
+      as: 'myDayPosts',
+    });
+
+    this.hasMany(models.SomeoneDayPost, {
+      foreignKey: 'user_id',
+      as: 'someoneDayPosts',
+    });
+  }
+}
+
+export default User;
