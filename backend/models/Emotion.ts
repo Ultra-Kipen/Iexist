@@ -1,54 +1,73 @@
+// backend/models/Emotion.ts
+
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
-interface EmotionAttributes {
-  emotion_id: number;
-  name: string;
-  icon: string;
-}
-
-class Emotion extends Model<EmotionAttributes> implements EmotionAttributes {
-  public emotion_id!: number;
+class Emotion extends Model {
+  public id!: number;
   public name!: string;
   public icon!: string;
+  public color?: string;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
-  static initModel(sequelize: Sequelize): typeof Emotion {
-    Emotion.init({
-      emotion_id: {
-        type: DataTypes.TINYINT.UNSIGNED,
-        primaryKey: true,
-        autoIncrement: true
+  static init(sequelize: Sequelize): void {
+    super.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+        },
+        name: {
+          type: DataTypes.STRING(50),
+          allowNull: false,
+          unique: true
+        },
+        icon: {
+          type: DataTypes.STRING(50),
+          allowNull: false,
+        },
+        color: {
+          type: DataTypes.STRING(7),
+          allowNull: true,
+          validate: {
+            is: /^#[0-9A-Fa-f]{6}$/
+          }
+        }
       },
-      name: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-        unique: true
-      },
-      icon: {
-        type: DataTypes.STRING(10),
-        allowNull: false
+      {
+        sequelize,
+        modelName: 'Emotion',
+        tableName: 'emotions',
+        timestamps: true,
+        underscored: true
       }
-    }, {
-      sequelize,
-      modelName: 'Emotion',
-      tableName: 'emotions',
-      timestamps: false,
-      underscored: true
-    });
-
-    return Emotion;
+    );
   }
 
   static associate(models: any): void {
-    Emotion.belongsToMany(models.MyDayPost, {
+    // MyDayPost와의 다대다 관계
+    this.belongsToMany(models.MyDayPost, {
       through: 'my_day_emotions',
-      foreignKey: 'emotion_id'
+      foreignKey: 'emotion_id',
+      otherKey: 'post_id',
+      as: 'myDayPosts'
     });
-    Emotion.hasMany(models.EmotionLog, {
-      foreignKey: 'emotion_id'
+
+    // EmotionLog와의 관계
+    this.hasMany(models.EmotionLog, {
+      foreignKey: 'emotion_id',
+      as: 'emotionLogs'
+    });
+
+    // Challenge와의 다대다 관계
+    this.belongsToMany(models.Challenge, {
+      through: 'challenge_emotions',
+      foreignKey: 'emotion_id',
+      otherKey: 'challenge_id',
+      as: 'challenges'
     });
   }
 }
 
-export default (sequelize: Sequelize): typeof Emotion => {
-  return Emotion.initModel(sequelize);
-};
+export default Emotion;
