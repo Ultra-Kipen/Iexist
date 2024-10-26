@@ -22,9 +22,7 @@ import Notification from './Notification';
 import PostReport from './PostReport';
 import EncouragementMessage from './EncouragementMessage';
 
-const db = {
-  sequelize,
-  Sequelize,
+const modelDefiners = [
   User,
   Challenge,
   Emotion,
@@ -41,21 +39,47 @@ const db = {
   UserStats,
   Notification,
   PostReport,
-  EncouragementMessage
-};
+  EncouragementMessage,
+];
 
-// 모든 모델 초기화
-Object.values(db).forEach((model: any) => {
-  if (typeof model?.init === 'function') {
-    model.init(sequelize);
-  }
+const db: any = {};
+
+db.sequelize = sequelize;
+db.Sequelize = Sequelize;
+
+// 모델 초기화
+modelDefiners.forEach(model => {
+  const modelInstance = model.initialize(sequelize);
+  db[model.name] = modelInstance;
 });
 
 // 모델 간 관계 설정
-Object.values(db).forEach((model: any) => {
-  if (typeof model?.associate === 'function') {
-    model.associate(db);
+Object.keys(db).forEach(modelName => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
   }
 });
 
-export default db;
+export type DbInterface = {
+  sequelize: Sequelize;
+  Sequelize: typeof Sequelize;
+  User: typeof User;
+  Challenge: typeof Challenge;
+  Emotion: typeof Emotion;
+  EmotionLog: typeof EmotionLog;
+  MyDayComment: typeof MyDayComment;
+  MyDayPost: typeof MyDayPost;
+  SomeoneDayPost: typeof SomeoneDayPost;
+  Tag: typeof Tag;
+  MyDayLike: typeof MyDayLike;
+  SomeoneDayComment: typeof SomeoneDayComment;
+  SomeoneDayLike: typeof SomeoneDayLike;
+  ChallengeParticipant: typeof ChallengeParticipant;
+  ChallengeEmotion: typeof ChallengeEmotion;
+  UserStats: typeof UserStats;
+  Notification: typeof Notification;
+  PostReport: typeof PostReport;
+  EncouragementMessage: typeof EncouragementMessage;
+};
+
+export default db as DbInterface;
