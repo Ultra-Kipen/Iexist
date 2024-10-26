@@ -14,8 +14,8 @@ class User extends Model {
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
-  static initialize(sequelize: Sequelize) {
-    const User = super.init({
+  static init(sequelize: Sequelize): typeof User {
+    super.init({
       id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -64,10 +64,10 @@ class User extends Model {
       }
     });
 
-    return User;
+    return this;
   }
 
-  static associate(models: any) {
+  static associate(models: any): void {
     this.hasMany(models.MyDayPost, {
       foreignKey: 'user_id',
       as: 'myDayPosts'
