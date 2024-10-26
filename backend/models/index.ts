@@ -3,7 +3,6 @@
 import { Sequelize } from 'sequelize';
 import sequelize from '../config/database';
 
-// 모델 import
 import User from './User';
 import Challenge from './Challenge';
 import Emotion from './Emotion';
@@ -22,49 +21,25 @@ import Notification from './Notification';
 import PostReport from './PostReport';
 import EncouragementMessage from './EncouragementMessage';
 
-// 초기화 순서 정의
-const models = [
-  User,
-  Emotion,
-  Tag,
-  MyDayPost,
-  MyDayComment,
-  MyDayLike,
-  SomeoneDayPost,
-  SomeoneDayComment,
-  SomeoneDayLike,
-  Challenge,
-  ChallengeParticipant,
-  ChallengeEmotion,
-  EmotionLog,
-  UserStats,
-  Notification,
-  PostReport,
-  EncouragementMessage
-];
-
-// DB 객체 생성
-const db: any = {
+const db = {
   sequelize,
-  Sequelize
+  Sequelize,
+  User: User.init({
+    // User model attributes here
+  }, { sequelize }),
+  Challenge: Challenge.init({
+    // Challenge model attributes here
+  }, { sequelize }),
+  // ... other models initialization
 };
 
-// 모델 초기화
-models.forEach(model => {
-  if (typeof model.init === 'function') {
-    model.init(sequelize);
-    db[model.name] = model;
-  }
-});
-
-// 모델 간 관계 설정
-models.forEach(model => {
-  if (typeof model.associate === 'function') {
+Object.values(db).forEach((model: any) => {
+  if (model.associate) {
     model.associate(db);
   }
 });
 
-export interface DbInterface {
+export type DbInterface = {
   sequelize: Sequelize;
   Sequelize: typeof Sequelize;
   User: typeof User;
@@ -84,6 +59,6 @@ export interface DbInterface {
   Notification: typeof Notification;
   PostReport: typeof PostReport;
   EncouragementMessage: typeof EncouragementMessage;
-}
+};
 
 export default db as DbInterface;
