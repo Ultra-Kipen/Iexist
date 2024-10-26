@@ -1,7 +1,6 @@
 // backend/models/index.ts
 
-import { Sequelize } from 'sequelize';
-import sequelize from '../config/database';
+import { sequelize, Sequelize } from '../config/database';
 
 // 모델 import
 import User from './User';
@@ -22,7 +21,13 @@ import Notification from './Notification';
 import PostReport from './PostReport';
 import EncouragementMessage from './EncouragementMessage';
 
-const modelDefiners = [
+const db: any = {
+  sequelize,
+  Sequelize
+};
+
+// 모델 초기화
+[
   User,
   Challenge,
   Emotion,
@@ -39,17 +44,9 @@ const modelDefiners = [
   UserStats,
   Notification,
   PostReport,
-  EncouragementMessage,
-];
-
-const db: any = {};
-
-db.sequelize = sequelize;
-db.Sequelize = Sequelize;
-
-// 모델 초기화
-modelDefiners.forEach(model => {
-  const modelInstance = model.initialize(sequelize);
+  EncouragementMessage
+].forEach(model => {
+  const modelInstance = model.init(sequelize);
   db[model.name] = modelInstance;
 });
 
@@ -60,8 +57,8 @@ Object.keys(db).forEach(modelName => {
   }
 });
 
-export type DbInterface = {
-  sequelize: Sequelize;
+export interface DbInterface {
+  sequelize: typeof sequelize;
   Sequelize: typeof Sequelize;
   User: typeof User;
   Challenge: typeof Challenge;
@@ -80,6 +77,6 @@ export type DbInterface = {
   Notification: typeof Notification;
   PostReport: typeof PostReport;
   EncouragementMessage: typeof EncouragementMessage;
-};
+}
 
 export default db as DbInterface;
