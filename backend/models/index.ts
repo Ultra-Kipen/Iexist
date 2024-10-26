@@ -12,32 +12,78 @@ import MyDayComment from './MyDayComment';
 import MyDayPost from './MyDayPost';
 import SomeoneDayPost from './SomeoneDayPost';
 import Tag from './Tag';
+import MyDayLike from './MyDayLike';
+import SomeoneDayComment from './SomeoneDayComment';
+import SomeoneDayLike from './SomeoneDayLike';
+import ChallengeParticipant from './ChallengeParticipant';
+import ChallengeEmotion from './ChallengeEmotion';
+import UserStats from './UserStats';
+import Notification from './Notification';
+import PostReport from './PostReport';
+import EncouragementMessage from './EncouragementMessage';
 
-const db = {
-  sequelize,
-  Sequelize,
+// 초기화 순서 정의
+const models = [
   User,
-  Challenge,
   Emotion,
-  EmotionLog,
-  MyDayComment,
+  Tag,
   MyDayPost,
+  MyDayComment,
+  MyDayLike,
   SomeoneDayPost,
-  Tag
+  SomeoneDayComment,
+  SomeoneDayLike,
+  Challenge,
+  ChallengeParticipant,
+  ChallengeEmotion,
+  EmotionLog,
+  UserStats,
+  Notification,
+  PostReport,
+  EncouragementMessage
+];
+
+// DB 객체 생성
+const db: any = {
+  sequelize,
+  Sequelize
 };
 
-// 모든 모델 초기화
-Object.values(db).forEach((model: any) => {
-  if (model && 'init' in model) {
+// 모델 초기화
+models.forEach(model => {
+  if (typeof model.init === 'function') {
     model.init(sequelize);
+    db[model.name] = model;
   }
 });
 
 // 모델 간 관계 설정
-Object.values(db).forEach((model: any) => {
-  if (model && 'associate' in model && typeof model.associate === 'function') {
+models.forEach(model => {
+  if (typeof model.associate === 'function') {
     model.associate(db);
   }
 });
 
-export default db;
+export interface DbInterface {
+  sequelize: Sequelize;
+  Sequelize: typeof Sequelize;
+  User: typeof User;
+  Challenge: typeof Challenge;
+  Emotion: typeof Emotion;
+  EmotionLog: typeof EmotionLog;
+  MyDayComment: typeof MyDayComment;
+  MyDayPost: typeof MyDayPost;
+  SomeoneDayPost: typeof SomeoneDayPost;
+  Tag: typeof Tag;
+  MyDayLike: typeof MyDayLike;
+  SomeoneDayComment: typeof SomeoneDayComment;
+  SomeoneDayLike: typeof SomeoneDayLike;
+  ChallengeParticipant: typeof ChallengeParticipant;
+  ChallengeEmotion: typeof ChallengeEmotion;
+  UserStats: typeof UserStats;
+  Notification: typeof Notification;
+  PostReport: typeof PostReport;
+  EncouragementMessage: typeof EncouragementMessage;
+}
+
+export default db as DbInterface;
