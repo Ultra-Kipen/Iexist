@@ -26,12 +26,14 @@ const db = {
   Tag
 };
 
+// 모델 초기화
 Object.values(db).forEach((model: any) => {
   if (typeof model.initialize === 'function') {
     model.initialize(sequelize);
   }
 });
 
+// 모델 간 관계 설정
 Object.values(db).forEach((model: any) => {
   if (typeof model.associate === 'function') {
     model.associate(db);
