@@ -11,81 +11,88 @@ class EncouragementMessage extends Model {
   public is_anonymous!: boolean;
   public readonly created_at!: Date;
 
-  static initModel(sequelize: Sequelize) {
-    return EncouragementMessage.init({
-      id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true
-      },
-      sender_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id'
-        }
-      },
-      receiver_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id'
-        }
-      },
-      post_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'someone_day_posts',
-          key: 'id'
-        }
-      },
-      message: {
-        type: DataTypes.TEXT,
-        allowNull: false
-      },
-      is_anonymous: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: true
-      },
-      created_at: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-      }
-    }, {
-      sequelize,
-      tableName: 'encouragement_messages',
-      modelName: 'EncouragementMessage',
-      timestamps: true,
-      updatedAt: false,
-      underscored: true,
-      indexes: [
-        {
-          fields: ['receiver_id']
+  static init(sequelize: Sequelize): void {
+    super.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
         },
-        {
-          fields: ['post_id']
+        sender_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'users',
+            key: 'id'
+          }
+        },
+        receiver_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'users',
+            key: 'id'
+          }
+        },
+        post_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'someone_day_posts',
+            key: 'id'
+          }
+        },
+        message: {
+          type: DataTypes.TEXT,
+          allowNull: false,
+          validate: {
+            len: [1, 1000]
+          }
+        },
+        is_anonymous: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: true
         }
-      ]
-    });
+      },
+      {
+        sequelize,
+        modelName: 'EncouragementMessage',
+        tableName: 'encouragement_messages',
+        timestamps: true,
+        updatedAt: false,
+        underscored: true,
+        indexes: [
+          {
+            fields: ['sender_id']
+          },
+          {
+            fields: ['receiver_id']
+          },
+          {
+            fields: ['post_id']
+          }
+        ]
+      }
+    );
   }
 
-  static associate(models: any) {
-    EncouragementMessage.belongsTo(models.User, {
+  static associate(models: any): void {
+    // Sender와의 관계
+    this.belongsTo(models.User, {
       foreignKey: 'sender_id',
       as: 'sender'
     });
 
-    EncouragementMessage.belongsTo(models.User, {
+    // Receiver와의 관계
+    this.belongsTo(models.User, {
       foreignKey: 'receiver_id',
       as: 'receiver'
     });
 
-    EncouragementMessage.belongsTo(models.SomeoneDayPost, {
+    // SomeoneDayPost와의 관계
+    this.belongsTo(models.SomeoneDayPost, {
       foreignKey: 'post_id',
       as: 'post'
     });
