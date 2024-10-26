@@ -1,87 +1,48 @@
-// backend/models/User.ts
+// backend/models/index.ts
 
-import { Model, DataTypes, Sequelize } from 'sequelize';
-import bcrypt from 'bcrypt';
+import { Sequelize } from 'sequelize';
+import sequelize from '../config/database';
 
-class User extends Model {
-  public id!: number;
-  public username!: string;
-  public email!: string;
-  public password!: string;
-  public nickname?: string;
-  public profile_image_url?: string;
-  public theme_preference!: 'light' | 'dark' | 'system';
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
+// 모델 import
+import User from './User';
+import Challenge from './Challenge';
+import Emotion from './Emotion';
+import EmotionLog from './EmotionLog';
+import MyDayComment from './MyDayComment';
+import MyDayPost from './MyDayPost';
+import SomeoneDayPost from './SomeoneDayPost';
+import Tag from './Tag';
 
-  static init(sequelize: Sequelize): typeof User {
-    super.init({
-      id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true
-      },
-      username: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-        unique: true
-      },
-      email: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-        unique: true
-      },
-      password: {
-        type: DataTypes.STRING(255),
-        allowNull: false
-      },
-      nickname: {
-        type: DataTypes.STRING(50),
-        allowNull: true
-      },
-      profile_image_url: {
-        type: DataTypes.STRING(255),
-        allowNull: true
-      },
-      theme_preference: {
-        type: DataTypes.ENUM('light', 'dark', 'system'),
-        allowNull: false,
-        defaultValue: 'system'
-      }
-    }, {
-      sequelize,
-      modelName: 'User',
-      tableName: 'users',
-      timestamps: true,
-      underscored: true,
-      hooks: {
-        beforeSave: async (user: User) => {
-          if (user.password) {
-            const salt = await bcrypt.genSalt(10);
-            user.password = await bcrypt.hash(user.password, salt);
-          }
-        }
-      }
-    });
+const db = {
+  sequelize,
+  Sequelize
+};
 
-    return this;
+// 모델 초기화
+User.init(User.getAttributes(), { sequelize });
+Challenge.init(Challenge.getAttributes(), { sequelize });
+Emotion.init(Emotion.getAttributes(), { sequelize });
+EmotionLog.init(EmotionLog.getAttributes(), { sequelize });
+MyDayComment.init(MyDayComment.getAttributes(), { sequelize });
+MyDayPost.init(MyDayPost.getAttributes(), { sequelize });
+SomeoneDayPost.init(SomeoneDayPost.getAttributes(), { sequelize });
+Tag.init(Tag.getAttributes(), { sequelize });
+
+// db 객체에 모델 추가
+db.User = User;
+db.Challenge = Challenge;
+db.Emotion = Emotion;
+db.EmotionLog = EmotionLog;
+db.MyDayComment = MyDayComment;
+db.MyDayPost = MyDayPost;
+db.SomeoneDayPost = SomeoneDayPost;
+db.Tag = Tag;
+
+// 모델 간 관계 설정
+Object.values(db).forEach((model: any) => {
+  if (model.associate) {
+    model.associate(db);
   }
+});
 
-  static associate(models: any): void {
-    this.hasMany(models.MyDayPost, {
-      foreignKey: 'user_id',
-      as: 'myDayPosts'
-    });
-
-    this.hasMany(models.SomeoneDayPost, {
-      foreignKey: 'user_id',
-      as: 'someoneDayPosts'
-    });
-  }
-
-  async validatePassword(password: string): Promise<boolean> {
-    return bcrypt.compare(password, this.password);
-  }
-}
-
-export default User;
+export default db;
