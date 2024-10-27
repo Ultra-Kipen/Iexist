@@ -1,33 +1,21 @@
-// backend/models/User.ts
-
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
-interface UserAttributes {
-  id: number;
-  username: string;
-  email: string;
-  password: string;
-  nickname?: string;
-  profile_image_url?: string;
-  theme_preference: 'light' | 'dark' | 'system';
-  created_at?: Date;
-  updated_at?: Date;
-}
-
-class User extends Model<UserAttributes> {
+export class User extends Model {
   public id!: number;
   public username!: string;
   public email!: string;
-  public password!: string;
+  public password_hash!: string;
   public nickname?: string;
   public profile_image_url?: string;
-  public theme_preference!: 'light' | 'dark' | 'system';
+  public background_image_url?: string;
+  public favorite_quote?: string;
+  public theme_preference!: string;
+  public privacy_settings?: object;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
-  // 모델 초기화
-  public static initialize(sequelize: Sequelize): void {
-    User.init(
+  public static initialize(sequelize: Sequelize) {
+    const UserModel = User.init(
       {
         id: {
           type: DataTypes.INTEGER,
@@ -36,15 +24,15 @@ class User extends Model<UserAttributes> {
         },
         username: {
           type: DataTypes.STRING(50),
-          allowNull: false,
           unique: true,
+          allowNull: false,
         },
         email: {
           type: DataTypes.STRING(100),
-          allowNull: false,
           unique: true,
+          allowNull: false,
         },
-        password: {
+        password_hash: {
           type: DataTypes.STRING(255),
           allowNull: false,
         },
@@ -56,20 +44,21 @@ class User extends Model<UserAttributes> {
           type: DataTypes.STRING(255),
           allowNull: true,
         },
+        background_image_url: {
+          type: DataTypes.STRING(255),
+          allowNull: true,
+        },
+        favorite_quote: {
+          type: DataTypes.STRING(255),
+          allowNull: true,
+        },
         theme_preference: {
           type: DataTypes.ENUM('light', 'dark', 'system'),
-          allowNull: false,
           defaultValue: 'system',
         },
-        created_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW,
-        },
-        updated_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW,
+        privacy_settings: {
+          type: DataTypes.JSON,
+          allowNull: true,
         },
       },
       {
@@ -80,20 +69,32 @@ class User extends Model<UserAttributes> {
         underscored: true,
       }
     );
+
+    return UserModel;
   }
 
-  // 관계 설정
-  public static associate(models: any): void {
-    this.hasMany(models.MyDayPost, {
+  public static associate(models: any) {
+    const { Challenge, MyDayPost, SomeoneDayPost } = models;
+
+    User.hasMany(Challenge, {
+      foreignKey: 'creator_id',
+      as: 'createdChallenges',
+    });
+
+    User.belongsToMany(Challenge, {
+      through: 'challenge_participants',
+      foreignKey: 'user_id',
+      as: 'participatingChallenges',
+    });
+
+    User.hasMany(MyDayPost, {
       foreignKey: 'user_id',
       as: 'myDayPosts',
     });
 
-    this.hasMany(models.SomeoneDayPost, {
+    User.hasMany(SomeoneDayPost, {
       foreignKey: 'user_id',
       as: 'someoneDayPosts',
     });
   }
 }
-
-export default User;

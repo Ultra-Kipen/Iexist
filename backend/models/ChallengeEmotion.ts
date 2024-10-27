@@ -1,8 +1,6 @@
-// backend/models/ChallengeEmotion.ts
-
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
-class ChallengeEmotion extends Model {
+export class ChallengeEmotion extends Model {
   public id!: number;
   public challenge_id!: number;
   public user_id!: number;
@@ -12,8 +10,8 @@ class ChallengeEmotion extends Model {
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  public static initialize(sequelize: Sequelize) {
+    ChallengeEmotion.init(
       {
         id: {
           type: DataTypes.INTEGER,
@@ -71,23 +69,22 @@ class ChallengeEmotion extends Model {
         ]
       }
     );
+
+    return ChallengeEmotion;
   }
 
-  static associate(models: any): void {
-    // Challenge와의 관계
-    this.belongsTo(models.Challenge, {
+  public static associate(models: any) {
+    ChallengeEmotion.belongsTo(models.Challenge, {
       foreignKey: 'challenge_id',
       as: 'challenge'
     });
 
-    // User와의 관계
-    this.belongsTo(models.User, {
+    ChallengeEmotion.belongsTo(models.User, {
       foreignKey: 'user_id',
       as: 'user'
     });
 
-    // Emotion과의 관계
-    this.belongsTo(models.Emotion, {
+    ChallengeEmotion.belongsTo(models.Emotion, {
       foreignKey: 'emotion_id',
       as: 'emotion'
     });

@@ -1,21 +1,54 @@
-// backend/models/index.ts
-
 import { Sequelize } from 'sequelize';
-import sequelize from '../config/database';
+import config from '../config/database';
+import { User } from './User';
+import { Challenge } from './Challenge';
+import { Emotion } from './Emotion';
+import { EmotionLog } from './EmotionLog';
+import { MyDayComment } from './MyDayComment';
+import { MyDayPost } from './MyDayPost';
+import { SomeoneDayPost } from './SomeoneDayPost';
+import { Tag } from './Tag';
 
-// 모델 import
-import User from './User';
-import Challenge from './Challenge';
-import Emotion from './Emotion';
-import EmotionLog from './EmotionLog';
-import MyDayComment from './MyDayComment';
-import MyDayPost from './MyDayPost';
-import SomeoneDayPost from './SomeoneDayPost';
-import Tag from './Tag';
+const sequelize = config;
 
-const db = {
+interface DB {
+  sequelize: Sequelize;
+  Sequelize: typeof Sequelize;
+  User: typeof User;
+  Challenge: typeof Challenge;
+  Emotion: typeof Emotion;
+  EmotionLog: typeof EmotionLog;
+  MyDayComment: typeof MyDayComment;
+  MyDayPost: typeof MyDayPost;
+  SomeoneDayPost: typeof SomeoneDayPost;
+  Tag: typeof Tag;
+  [key: string]: any;
+}
+
+// Initialize models
+const models: DB = {
   sequelize,
   Sequelize,
+  User: User.initialize(sequelize),
+  Challenge: Challenge.initialize(sequelize),
+  Emotion: Emotion.initialize(sequelize),
+  EmotionLog: EmotionLog.initialize(sequelize),
+  MyDayComment: MyDayComment.initialize(sequelize),
+  MyDayPost: MyDayPost.initialize(sequelize),
+  SomeoneDayPost: SomeoneDayPost.initialize(sequelize),
+  Tag: Tag.initialize(sequelize)
+} as DB;
+
+// Setup associations
+Object.keys(models).forEach(modelName => {
+  if (models[modelName].associate) {
+    models[modelName].associate(models);
+  }
+});
+
+export default models;
+export {
+  sequelize,
   User,
   Challenge,
   Emotion,
@@ -25,17 +58,3 @@ const db = {
   SomeoneDayPost,
   Tag
 };
-
-Object.values(db).forEach((model: any) => {
-  if (typeof model.initialize === 'function') {
-    model.initialize(sequelize);
-  }
-});
-
-Object.values(db).forEach((model: any) => {
-  if (typeof model.associate === 'function') {
-    model.associate(db);
-  }
-});
-
-export default db;
