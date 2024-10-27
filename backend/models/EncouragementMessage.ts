@@ -1,100 +1,99 @@
 // backend/models/EncouragementMessage.ts
 
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import sequelize from '../config/database'; // 데이터베이스 연결 인스턴스
+import User from './User'; // 외래 키 참조 User 모델
+import SomeoneDayPost from './SomeoneDayPost'; // 외래 키 참조하는 SomeoneDayPost 모델
 
 class EncouragementMessage extends Model {
   public id!: number;
-  public sender_id!: number;
-  public receiver_id!: number;
-  public post_id!: number;
+  public senderId!: number;
+  public receiverId!: number;
+  public postId!: number;
   public message!: string;
-  public is_anonymous!: boolean;
-  public readonly created_at!: Date;
+  public isAnonymous!: boolean;
+  public createdAt!: Date;
+  public updatedAt!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initialize(sequelize: Sequelize): void {
+    EncouragementMessage.init(
       {
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.INTEGER.UNSIGNED,
           autoIncrement: true,
           primaryKey: true,
         },
-        sender_id: {
-          type: DataTypes.INTEGER,
+        senderId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
           references: {
-            model: 'users',
-            key: 'id'
-          }
+            model: User,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
-        receiver_id: {
-          type: DataTypes.INTEGER,
+        receiverId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
           references: {
-            model: 'users',
-            key: 'id'
-          }
+            model: User,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
-        post_id: {
-          type: DataTypes.INTEGER,
+        postId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
           references: {
-            model: 'someone_day_posts',
-            key: 'id'
-          }
+            model: SomeoneDayPost,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
         message: {
           type: DataTypes.TEXT,
           allowNull: false,
-          validate: {
-            len: [1, 1000]
-          }
         },
-        is_anonymous: {
+        isAnonymous: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
-          defaultValue: true
-        }
+          defaultValue: true,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
       },
       {
         sequelize,
         modelName: 'EncouragementMessage',
         tableName: 'encouragement_messages',
         timestamps: true,
-        updatedAt: false,
-        underscored: true,
-        indexes: [
-          {
-            fields: ['sender_id']
-          },
-          {
-            fields: ['receiver_id']
-          },
-          {
-            fields: ['post_id']
-          }
-        ]
       }
     );
   }
 
   static associate(models: any): void {
-    // Sender와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'sender_id',
-      as: 'sender'
+    EncouragementMessage.belongsTo(models.User, {
+      foreignKey: 'senderId',
+      as: 'sender',
     });
-
-    // Receiver와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'receiver_id',
-      as: 'receiver'
+    EncouragementMessage.belongsTo(models.User, {
+      foreignKey: 'receiverId',
+      as: 'receiver',
     });
-
-    // SomeoneDayPost와의 관계
-    this.belongsTo(models.SomeoneDayPost, {
-      foreignKey: 'post_id',
-      as: 'post'
+    EncouragementMessage.belongsTo(models.SomeoneDayPost, {
+      foreignKey: 'postId',
+      as: 'post',
     });
   }
 }

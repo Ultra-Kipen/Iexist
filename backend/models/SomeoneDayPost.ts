@@ -1,121 +1,67 @@
 // backend/models/SomeoneDayPost.ts
 
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import sequelize from '../config/database'; // 데이터베이스 연결 인스턴스
+import User from './User'; // 외래 키 참조하는 User 모델
 
 class SomeoneDayPost extends Model {
   public id!: number;
-  public user_id!: number;
   public title!: string;
   public content!: string;
-  public image_url?: string;
-  public is_anonymous!: boolean;
-  public like_count!: number;
-  public comment_count!: number;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
+  public userId!: number;
+  public createdAt!: Date;
+  public updatedAt!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initialize(sequelize: Sequelize): void {
+    SomeoneDayPost.init(
       {
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.INTEGER.UNSIGNED,
           autoIncrement: true,
           primaryKey: true,
         },
-        user_id: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-          references: {
-            model: 'users',
-            key: 'id'
-          }
-        },
         title: {
-          type: DataTypes.STRING(100),
+          type: DataTypes.STRING,
           allowNull: false,
-          validate: {
-            len: [1, 100]
-          }
         },
         content: {
           type: DataTypes.TEXT,
           allowNull: false,
-          validate: {
-            len: [1, 2000]
-          }
         },
-        image_url: {
-          type: DataTypes.STRING(255),
-          allowNull: true
-        },
-        is_anonymous: {
-          type: DataTypes.BOOLEAN,
+        userId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
-          defaultValue: true
+          references: {
+            model: User,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
-        like_count: {
-          type: DataTypes.INTEGER,
+        createdAt: {
+          type: DataTypes.DATE,
           allowNull: false,
-          defaultValue: 0
+          defaultValue: DataTypes.NOW,
         },
-        comment_count: {
-          type: DataTypes.INTEGER,
+        updatedAt: {
+          type: DataTypes.DATE,
           allowNull: false,
-          defaultValue: 0
-        }
+          defaultValue: DataTypes.NOW,
+        },
       },
       {
-        sequelize,
+        sequelize, // 인스턴스를 직접 전달
         modelName: 'SomeoneDayPost',
         tableName: 'someone_day_posts',
         timestamps: true,
-        underscored: true,
-        indexes: [
-          {
-            fields: ['user_id']
-          },
-          {
-            fields: ['created_at']
-          },
-          {
-            fields: ['like_count']
-          }
-        ]
       }
     );
   }
 
   static associate(models: any): void {
-    // User와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
-    });
-
-    // Tag와의 다대다 관계
-    this.belongsToMany(models.Tag, {
-      through: 'post_tags',
-      foreignKey: 'post_id',
-      otherKey: 'tag_id',
-      as: 'tags'
-    });
-
-    // Comment와의 관계
-    this.hasMany(models.SomeoneDayComment, {
-      foreignKey: 'post_id',
-      as: 'comments'
-    });
-
-    // Like와의 관계
-    this.hasMany(models.SomeoneDayLike, {
-      foreignKey: 'post_id',
-      as: 'likes'
-    });
-
-    // EncouragementMessage와의 관계
-    this.hasMany(models.EncouragementMessage, {
-      foreignKey: 'post_id',
-      as: 'encouragementMessages'
+    SomeoneDayPost.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'user',
     });
   }
 }

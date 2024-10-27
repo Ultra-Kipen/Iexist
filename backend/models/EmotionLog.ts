@@ -11,59 +11,62 @@ class EmotionLog extends Model {
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
-      {
-        id: {
-          type: DataTypes.INTEGER,
-          autoIncrement: true,
-          primaryKey: true,
-        },
-        user_id: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-          references: {
-            model: 'users',
-            key: 'id'
-          }
-        },
-        emotion_id: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-          references: {
-            model: 'emotions',
-            key: 'id'
-          }
-        },
-        note: {
-          type: DataTypes.STRING(200),
-          allowNull: true
-        },
-        log_date: {
-          type: DataTypes.DATEONLY,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
+  static initialize(sequelize: Sequelize) {
+    return this.init({
+      id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true
+      },
+      user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'users',
+          key: 'id'
         }
       },
-      {
-        sequelize,
-        modelName: 'EmotionLog',
-        tableName: 'emotion_logs',
-        timestamps: true,
-        underscored: true,
-        indexes: [
-          {
-            fields: ['user_id', 'log_date']
-          },
-          {
-            fields: ['emotion_id']
-          }
-        ]
+      emotion_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'emotions',
+          key: 'id'
+        }
+      },
+      note: {
+        type: DataTypes.STRING(200),
+        allowNull: true
+      },
+      log_date: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
       }
-    );
+    },
+    {
+      sequelize,
+      modelName: 'EmotionLog',
+      tableName: 'emotion_logs',
+      timestamps: true,
+      underscored: true,
+      indexes: [
+        {
+          fields: ['user_id', 'log_date']
+        },
+        {
+          fields: ['emotion_id']
+        }
+      ]
+    });
   }
 
-  static associate(models: any): void {
+  static associate(models: any) {
+    if (!models.User || !models.Emotion) {
+      console.warn('Required models are not initialized');
+      return;
+    }
+
     // User와의 관계
     this.belongsTo(models.User, {
       foreignKey: 'user_id',

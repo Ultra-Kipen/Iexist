@@ -8,13 +8,13 @@ class Tag extends Model {
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initialize(sequelize: Sequelize) {
+    return this.init(
       {
         id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
-          primaryKey: true,
+          primaryKey: true
         },
         name: {
           type: DataTypes.STRING(50),
@@ -33,6 +33,7 @@ class Tag extends Model {
         underscored: true,
         indexes: [
           {
+            unique: true,
             fields: ['name']
           }
         ]
@@ -40,13 +41,24 @@ class Tag extends Model {
     );
   }
 
-  static associate(models: any): void {
+  static associate(models: any) {
+    if (!models.SomeoneDayPost) {
+      console.warn('SomeoneDayPost model is not initialized');
+      return;
+    }
+
     // SomeoneDayPost와의 다대다 관계
     this.belongsToMany(models.SomeoneDayPost, {
       through: 'post_tags',
-      foreignKey: 'tag_id',
-      otherKey: 'post_id',
-      as: 'posts'
+      as: 'posts',
+      foreignKey: {
+        name: 'tag_id',
+        allowNull: false
+      },
+      otherKey: {
+        name: 'post_id',
+        allowNull: false
+      }
     });
   }
 }

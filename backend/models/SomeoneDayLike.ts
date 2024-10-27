@@ -4,63 +4,74 @@ import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class SomeoneDayLike extends Model {
   public id!: number;
-  public post_id!: number;
   public user_id!: number;
+  public post_id!: number;
   public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
-  static initModel(sequelize: Sequelize) {
-    return SomeoneDayLike.init({
-      id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true
-      },
-      post_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'someone_day_posts',
-          key: 'id'
+  static initialize(sequelize: Sequelize) {
+    return this.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+          allowNull: false
+        },
+        user_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
+          references: {
+            model: 'users',
+            key: 'id'
+          }
+        },
+        post_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
+          references: {
+            model: 'someone_day_posts',
+            key: 'id'
+          }
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
+        },
+        updated_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
         }
       },
-      user_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id'
-        }
-      },
-      created_at: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      {
+        sequelize,
+        modelName: 'SomeoneDayLike',
+        tableName: 'someone_day_likes',
+        timestamps: true,
+        underscored: true
       }
-    }, {
-      sequelize,
-      tableName: 'someone_day_likes',
-      modelName: 'SomeoneDayLike',
-      timestamps: true,
-      updatedAt: false,
-      underscored: true,
-      indexes: [
-        {
-          unique: true,
-          fields: ['post_id', 'user_id']
-        }
-      ]
-    });
+    );
   }
 
   static associate(models: any) {
-    SomeoneDayLike.belongsTo(models.User, {
+    this.belongsTo(models.User, {
       foreignKey: 'user_id',
-      as: 'user'
+      as: 'user',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
     });
 
-    SomeoneDayLike.belongsTo(models.SomeoneDayPost, {
+    this.belongsTo(models.SomeoneDayPost, {
       foreignKey: 'post_id',
-      as: 'post'
+      as: 'post',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
     });
   }
 }

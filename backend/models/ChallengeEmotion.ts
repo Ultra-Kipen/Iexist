@@ -1,95 +1,100 @@
 // backend/models/ChallengeEmotion.ts
 
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import sequelize from '../config/database'; // 데이터베이스 인스턴스
+import Challenge from './Challenge'; // 외래 키 참조하는 Challenge 모델
+import User from './User'; // 외래 키 참조하는 User 모델
+import Emotion from './Emotion'; // 외래 키 참조하는 Emotion 모델
 
 class ChallengeEmotion extends Model {
   public id!: number;
-  public challenge_id!: number;
-  public user_id!: number;
-  public emotion_id!: number;
+  public challengeId!: number;
+  public userId!: number;
+  public emotionId!: number;
   public note?: string;
-  public log_date!: Date;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
+  public logDate!: Date;
+  public createdAt!: Date;
+  public updatedAt!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initialize(sequelize: Sequelize): void {
+    ChallengeEmotion.init(
       {
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.INTEGER.UNSIGNED,
           autoIncrement: true,
           primaryKey: true,
         },
-        challenge_id: {
-          type: DataTypes.INTEGER,
+        challengeId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
           references: {
-            model: 'challenges',
-            key: 'id'
-          }
+            model: Challenge,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
-        user_id: {
-          type: DataTypes.INTEGER,
+        userId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
           references: {
-            model: 'users',
-            key: 'id'
-          }
+            model: User,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
-        emotion_id: {
-          type: DataTypes.INTEGER,
+        emotionId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
           references: {
-            model: 'emotions',
-            key: 'id'
-          }
+            model: Emotion,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
         note: {
           type: DataTypes.STRING(500),
-          allowNull: true
+          allowNull: true,
         },
-        log_date: {
+        logDate: {
           type: DataTypes.DATEONLY,
           allowNull: false,
-          defaultValue: DataTypes.NOW
-        }
+          defaultValue: DataTypes.NOW,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
       },
       {
         sequelize,
         modelName: 'ChallengeEmotion',
         tableName: 'challenge_emotions',
         timestamps: true,
-        underscored: true,
-        indexes: [
-          {
-            fields: ['challenge_id', 'user_id', 'log_date'],
-            unique: true
-          },
-          {
-            fields: ['emotion_id']
-          }
-        ]
       }
     );
   }
 
   static associate(models: any): void {
-    // Challenge와의 관계
-    this.belongsTo(models.Challenge, {
-      foreignKey: 'challenge_id',
-      as: 'challenge'
+    ChallengeEmotion.belongsTo(models.Challenge, {
+      foreignKey: 'challengeId',
+      as: 'challenge',
     });
-
-    // User와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
+    ChallengeEmotion.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'user',
     });
-
-    // Emotion과의 관계
-    this.belongsTo(models.Emotion, {
-      foreignKey: 'emotion_id',
-      as: 'emotion'
+    ChallengeEmotion.belongsTo(models.Emotion, {
+      foreignKey: 'emotionId',
+      as: 'emotion',
     });
   }
 }

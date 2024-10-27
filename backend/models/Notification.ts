@@ -1,74 +1,67 @@
 // backend/models/Notification.ts
 
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import sequelize from '../config/database'; // 데이터베이스 연결 인스턴스
+import User from './User'; // 외래 키 참조하는 User 모델
 
 class Notification extends Model {
   public id!: number;
-  public user_id!: number;
-  public content!: string;
-  public notification_type!: 'like' | 'comment' | 'challenge' | 'system';
-  public related_id?: number;
-  public is_read!: boolean;
-  public readonly created_at!: Date;
+  public type!: string;
+  public userId!: number;
+  public message!: string;
+  public createdAt!: Date;
+  public updatedAt!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initialize(sequelize: Sequelize): void {
+    Notification.init(
       {
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.INTEGER.UNSIGNED,
           autoIncrement: true,
           primaryKey: true,
         },
-        user_id: {
-          type: DataTypes.INTEGER,
+        type: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        message: {
+          type: DataTypes.TEXT,
+          allowNull: false,
+        },
+        userId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
           references: {
-            model: 'users',
-            key: 'id'
-          }
+            model: User,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
-        content: {
-          type: DataTypes.STRING(255),
-          allowNull: false
-        },
-        notification_type: {
-          type: DataTypes.ENUM('like', 'comment', 'challenge', 'system'),
-          allowNull: false
-        },
-        related_id: {
-          type: DataTypes.INTEGER,
-          allowNull: true
-        },
-        is_read: {
-          type: DataTypes.BOOLEAN,
+        createdAt: {
+          type: DataTypes.DATE,
           allowNull: false,
-          defaultValue: false
-        }
+          defaultValue: DataTypes.NOW,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
       },
       {
         sequelize,
         modelName: 'Notification',
         tableName: 'notifications',
         timestamps: true,
-        updatedAt: false,
-        underscored: true,
-        indexes: [
-          {
-            fields: ['user_id', 'is_read']
-          },
-          {
-            fields: ['created_at']
-          }
-        ]
       }
     );
   }
 
   static associate(models: any): void {
-    // User와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
+    Notification.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'user',
     });
   }
 }

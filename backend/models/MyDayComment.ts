@@ -11,13 +11,13 @@ class MyDayComment extends Model {
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initialize(sequelize: Sequelize) {
+    return this.init(
       {
         id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
-          primaryKey: true,
+          primaryKey: true
         },
         post_id: {
           type: DataTypes.INTEGER,
@@ -37,10 +37,7 @@ class MyDayComment extends Model {
         },
         content: {
           type: DataTypes.STRING(500),
-          allowNull: false,
-          validate: {
-            len: [1, 500]
-          }
+          allowNull: false
         },
         is_anonymous: {
           type: DataTypes.BOOLEAN,
@@ -66,14 +63,12 @@ class MyDayComment extends Model {
     );
   }
 
-  static associate(models: any): void {
-    // User와의 관계
+  static associate(models: any) {
     this.belongsTo(models.User, {
       foreignKey: 'user_id',
       as: 'user'
     });
 
-    // MyDayPost와의 관계
     this.belongsTo(models.MyDayPost, {
       foreignKey: 'post_id',
       as: 'post'

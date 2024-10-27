@@ -1,82 +1,71 @@
-// backend/models/ChallengeParticipant.ts
-
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import sequelize from '../config/database'; // 데이터베이스 연결 인스턴스
+import User from './User'; // 외래 키로 참조하는 User 모델
+import Challenge from './Challenge'; // 외래 키로 참조하는 Challenge 모델
 
 class ChallengeParticipant extends Model {
   public id!: number;
-  public challenge_id!: number;
-  public user_id!: number;
-  public joined_at!: Date;
-  public last_progress_update?: Date;
-  public progress_note?: string;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
+  public userId!: number;
+  public challengeId!: number;
+  public createdAt!: Date;
+  public updatedAt!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initialize(sequelize: Sequelize): void {
+    ChallengeParticipant.init(
       {
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.INTEGER.UNSIGNED,
           autoIncrement: true,
           primaryKey: true,
         },
-        challenge_id: {
-          type: DataTypes.INTEGER,
+        userId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
           references: {
-            model: 'challenges',
-            key: 'id'
-          }
+            model: User,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
-        user_id: {
-          type: DataTypes.INTEGER,
+        challengeId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
           references: {
-            model: 'users',
-            key: 'id'
-          }
+            model: Challenge,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
-        joined_at: {
+        createdAt: {
           type: DataTypes.DATE,
           allowNull: false,
-          defaultValue: DataTypes.NOW
+          defaultValue: DataTypes.NOW,
         },
-        last_progress_update: {
+        updatedAt: {
           type: DataTypes.DATE,
-          allowNull: true
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
         },
-        progress_note: {
-          type: DataTypes.STRING(500),
-          allowNull: true
-        }
       },
       {
-        sequelize,
+        sequelize, // 인스턴스 전달
         modelName: 'ChallengeParticipant',
         tableName: 'challenge_participants',
         timestamps: true,
-        underscored: true,
-        indexes: [
-          {
-            unique: true,
-            fields: ['challenge_id', 'user_id']
-          }
-        ]
       }
     );
   }
 
   static associate(models: any): void {
-    // Challenge와의 관계
-    this.belongsTo(models.Challenge, {
-      foreignKey: 'challenge_id',
-      as: 'challenge'
+    ChallengeParticipant.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'user',
     });
-
-    // User와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
+    ChallengeParticipant.belongsTo(models.Challenge, {
+      foreignKey: 'challengeId',
+      as: 'challenge',
     });
   }
 }

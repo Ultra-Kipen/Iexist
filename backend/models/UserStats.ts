@@ -1,92 +1,75 @@
 // backend/models/UserStats.ts
 
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import sequelize from '../config/database'; // 데이터베이스 연결 인스턴스
+import User from './User'; // 외래 키 참조하는 User 모델
 
 class UserStats extends Model {
   public id!: number;
-  public user_id!: number;
-  public my_day_post_count!: number;
-  public someone_day_post_count!: number;
-  public my_day_like_received_count!: number;
-  public someone_day_like_received_count!: number;
-  public my_day_comment_received_count!: number;
-  public someone_day_comment_received_count!: number;
-  public challenge_count!: number;
-  public readonly last_updated!: Date;
+  public userId!: number;
+  public postsCount!: number;
+  public likesReceived!: number;
+  public commentsReceived!: number;
+  public createdAt!: Date;
+  public updatedAt!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initialize(sequelize: Sequelize): void {
+    UserStats.init(
       {
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.INTEGER.UNSIGNED,
           autoIncrement: true,
           primaryKey: true,
         },
-        user_id: {
-          type: DataTypes.INTEGER,
+        userId: {
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
-          unique: true,
           references: {
-            model: 'users',
-            key: 'id'
-          }
+            model: User,
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
-        my_day_post_count: {
+        postsCount: {
           type: DataTypes.INTEGER,
           allowNull: false,
-          defaultValue: 0
+          defaultValue: 0,
         },
-        someone_day_post_count: {
+        likesReceived: {
           type: DataTypes.INTEGER,
           allowNull: false,
-          defaultValue: 0
+          defaultValue: 0,
         },
-        my_day_like_received_count: {
+        commentsReceived: {
           type: DataTypes.INTEGER,
           allowNull: false,
-          defaultValue: 0
+          defaultValue: 0,
         },
-        someone_day_like_received_count: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-          defaultValue: 0
-        },
-        my_day_comment_received_count: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-          defaultValue: 0
-        },
-        someone_day_comment_received_count: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-          defaultValue: 0
-        },
-        challenge_count: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-          defaultValue: 0
-        },
-        last_updated: {
+        createdAt: {
           type: DataTypes.DATE,
           allowNull: false,
-          defaultValue: DataTypes.NOW
-        }
+          defaultValue: DataTypes.NOW,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
       },
       {
         sequelize,
         modelName: 'UserStats',
         tableName: 'user_stats',
-        timestamps: false,
-        underscored: true
+        timestamps: true,
       }
     );
   }
 
   static associate(models: any): void {
-    // User와의 1:1 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
+    UserStats.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'user',
     });
   }
 }

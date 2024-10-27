@@ -12,13 +12,14 @@ class MyDayPost extends Model {
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initialize(sequelize: Sequelize) {
+    return this.init(
       {
         id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
+          allowNull: false
         },
         user_id: {
           type: DataTypes.INTEGER,
@@ -32,6 +33,7 @@ class MyDayPost extends Model {
           type: DataTypes.TEXT,
           allowNull: false,
           validate: {
+            notEmpty: true,
             len: [1, 1000]
           }
         },
@@ -67,20 +69,20 @@ class MyDayPost extends Model {
     );
   }
 
-  static associate(models: any): void {
+  static associate(models: any) {
     // User와의 관계
     this.belongsTo(models.User, {
       foreignKey: 'user_id',
       as: 'user'
     });
 
-    // Comment와의 관계
+    // MyDayComment와의 관계
     this.hasMany(models.MyDayComment, {
       foreignKey: 'post_id',
       as: 'comments'
     });
 
-    // Like와의 관계
+    // MyDayLike와의 관계
     this.hasMany(models.MyDayLike, {
       foreignKey: 'post_id',
       as: 'likes'
@@ -88,10 +90,28 @@ class MyDayPost extends Model {
 
     // Emotion과의 다대다 관계
     this.belongsToMany(models.Emotion, {
-      through: 'my_day_emotions',
+      through: 'post_emotions',
       foreignKey: 'post_id',
       otherKey: 'emotion_id',
       as: 'emotions'
+    });
+  }
+
+  // 인스턴스 메서드 예시
+  toJSON() {
+    const values = super.toJSON();
+    if (this.is_anonymous) {
+      delete values.user_id;
+    }
+    return values;
+  }
+
+  // 커스텀 메서드 예시
+  async getLikesCount() {
+    return await (this.constructor as typeof MyDayPost).count({
+      where: {
+        post_id: this.id
+      }
     });
   }
 }
