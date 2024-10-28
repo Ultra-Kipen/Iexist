@@ -56,16 +56,44 @@ const startServer = async () => {
 
     if (process.env.NODE_ENV === 'development') {
       await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-      
-      // 데이터베이스 동기화
-      await sequelize.sync({ 
-        alter: true,
-        force: false,
-        logging: console.log
-      });
-      
+
+      // 동기화할 모델들을 그룹화하고 순서 지정
+      const modelGroups = [
+        // 1. 독립적인 기본 테이블
+        ['User', 'Tag', 'Emotion'],
+        
+        // 2. 한 개의 외래키를 가진 테이블
+        ['EmotionLog', 'MyDayPost', 'SomeoneDayPost', 'Challenge'],
+        
+        // 3. 두 개 이상의 외래키를 가진 테이블
+        ['MyDayComment', 'SomeoneDayComment', 'MyDayEmotion'],
+        
+        // 4. 다대다 관계 테이블
+        ['ChallengeParticipant', 'PostTag']
+      ];
+
+      // 그룹별로 순차적 동기화
+      for (const group of modelGroups) {
+        await Promise.all(
+          group.map(async (modelName) => {
+            if (db[modelName]) {
+              try {
+                await db[modelName].sync({
+                  alter: true,
+                  force: false
+                });
+                logger.info(`${modelName} 모델 동기화 완료`);
+              } catch (error) {
+                logger.error(`${modelName} 모델 동기화 실패:`, error);
+                throw error;
+              }
+            }
+          })
+        );
+      }
+
       await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
-      logger.info('데이터베이스 스키마 동기화 완료');
+      logger.info('모든 데이터베이스 스키마 동기화 완료');
     }
 
     app.listen(PORT, () => {

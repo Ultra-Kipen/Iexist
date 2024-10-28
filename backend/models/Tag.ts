@@ -1,17 +1,19 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class Tag extends Model {
-  public id!: number;
+  public tag_id!: number;  // id를 tag_id로 변경
   public name!: string;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
   public static initialize(sequelize: Sequelize) {
-    const model = Tag.init(
+    return Tag.init(
       {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
+        tag_id: {  // 기본키 필드명 변경
+          type: DataTypes.SMALLINT.UNSIGNED,
           autoIncrement: true,
           primaryKey: true,
-          allowNull: false
+          field: 'tag_id'  // 실제 DB 컬럼명 지정
         },
         name: {
           type: DataTypes.STRING(50),
@@ -25,12 +27,14 @@ class Tag extends Model {
         tableName: 'tags',
         timestamps: true,
         underscored: true,
-        charset: 'utf8mb4',
-        collate: 'utf8mb4_unicode_ci'
+        indexes: [
+          {
+            unique: true,
+            fields: ['name']
+          }
+        ]
       }
     );
-
-    return model;
   }
 
   public static associate(models: any) {
@@ -41,8 +45,7 @@ class Tag extends Model {
         through: 'post_tags',
         foreignKey: 'tag_id',
         otherKey: 'post_id',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
+        as: 'posts'
       });
     }
   }

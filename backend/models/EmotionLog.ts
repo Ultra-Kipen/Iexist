@@ -1,34 +1,35 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class EmotionLog extends Model {
-  public id!: number;
+  public log_id!: number;  // id 대신 log_id 사용
   public user_id!: number;
   public emotion_id!: number;
   public note?: string;
   public log_date!: Date;
 
   public static initialize(sequelize: Sequelize) {
-    const model = EmotionLog.init(
+    return EmotionLog.init(
       {
-        id: {
-          type: DataTypes.INTEGER,
+        log_id: {  // 기본키 필드명 변경
+          type: DataTypes.BIGINT,
           autoIncrement: true,
           primaryKey: true,
+          field: 'log_id'  // 실제 DB 컬럼명
         },
         user_id: {
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
             model: 'users',
-            key: 'id'
+            key: 'user_id'
           }
         },
         emotion_id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.TINYINT.UNSIGNED,
           allowNull: false,
           references: {
             model: 'emotions',
-            key: 'id'
+            key: 'emotion_id'
           }
         },
         note: {
@@ -57,24 +58,18 @@ class EmotionLog extends Model {
         ]
       }
     );
-
-    return model;
   }
 
   public static associate(models: any) {
-    const { User, Emotion } = models;
+    EmotionLog.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'user'
+    });
 
-    if (User && Emotion) {
-      EmotionLog.belongsTo(User, {
-        foreignKey: 'user_id',
-        as: 'user'
-      });
-
-      EmotionLog.belongsTo(Emotion, {
-        foreignKey: 'emotion_id',
-        as: 'emotion'
-      });
-    }
+    EmotionLog.belongsTo(models.Emotion, {
+      foreignKey: 'emotion_id',
+      as: 'emotion'
+    });
   }
 }
 
