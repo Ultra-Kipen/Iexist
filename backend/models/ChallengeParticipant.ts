@@ -3,6 +3,7 @@ import { Model, DataTypes, Sequelize } from 'sequelize';
 class ChallengeParticipant extends Model {
   public challenge_id!: number;
   public user_id!: number;
+  public joined_at!: Date;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
@@ -16,8 +17,7 @@ class ChallengeParticipant extends Model {
           references: {
             model: 'challenges',
             key: 'challenge_id'
-          },
-          onDelete: 'CASCADE'
+          }
         },
         user_id: {
           type: DataTypes.INTEGER,
@@ -26,18 +26,20 @@ class ChallengeParticipant extends Model {
           references: {
             model: 'users',
             key: 'user_id'
-          },
-          onDelete: 'CASCADE'
+          }
+        },
+        joined_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
         },
         created_at: {
           type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
+          allowNull: false
         },
         updated_at: {
           type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
+          allowNull: false
         }
       },
       {
@@ -48,9 +50,6 @@ class ChallengeParticipant extends Model {
         underscored: true,
         indexes: [
           {
-            fields: ['challenge_id']
-          },
-          {
             fields: ['user_id']
           }
         ]
@@ -59,7 +58,12 @@ class ChallengeParticipant extends Model {
   }
 
   public static associate(models: any) {
-    // 관계는 Challenge와 User 모델에서 정의됨
+    const { User, Challenge } = models;
+
+    if (User && Challenge) {
+      // 관계는 User와 Challenge 모델에서 정의됨
+      // 여기서는 추가적인 관계 설정이 필요 없음
+    }
   }
 }
 

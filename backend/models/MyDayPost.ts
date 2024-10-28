@@ -1,48 +1,68 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class MyDayPost extends Model {
-  public id!: number;
+  public post_id!: number;  // id 대신 post_id 사용
   public user_id!: number;
   public content!: string;
-  public image_url?: string;
   public emotion_summary?: string;
+  public image_url?: string;
   public is_anonymous!: boolean;
+  public character_count?: number;
+  public like_count!: number;
+  public comment_count!: number;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 
   public static initialize(sequelize: Sequelize) {
-    const model = MyDayPost.init(
+    return MyDayPost.init(
       {
-        id: {
+        post_id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
+          field: 'post_id'  // 실제 DB 컬럼명 명시
         },
         user_id: {
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
             model: 'users',
-            key: 'id'
+            key: 'user_id'
           }
         },
         content: {
           type: DataTypes.TEXT,
           allowNull: false,
           validate: {
-            len: [1, 1000]
+            notEmpty: true
           }
-        },
-        image_url: {
-          type: DataTypes.STRING(255),
-          allowNull: true
         },
         emotion_summary: {
           type: DataTypes.STRING(100),
+          allowNull: true
+        },
+        image_url: {
+          type: DataTypes.STRING(255),
           allowNull: true
         },
         is_anonymous: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
           defaultValue: false
+        },
+        character_count: {
+          type: DataTypes.SMALLINT.UNSIGNED,
+          allowNull: true
+        },
+        like_count: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          defaultValue: 0
+        },
+        comment_count: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          defaultValue: 0
         }
       },
       {
@@ -61,38 +81,35 @@ class MyDayPost extends Model {
         ]
       }
     );
-
-    return model;
   }
 
   public static associate(models: any) {
     const { User, MyDayComment, MyDayLike, Emotion } = models;
 
-    if (User && MyDayComment && MyDayLike && Emotion) {
-      MyDayPost.belongsTo(User, {
-        foreignKey: 'user_id',
-        as: 'user'
-      });
+    MyDayPost.belongsTo(User, {
+      foreignKey: 'user_id',
+      as: 'user',
+      onDelete: 'CASCADE'
+    });
 
-      MyDayPost.hasMany(MyDayComment, {
-        foreignKey: 'post_id',
-        as: 'comments',
-        onDelete: 'CASCADE'
-      });
+    MyDayPost.hasMany(MyDayComment, {
+      foreignKey: 'post_id',
+      as: 'comments',
+      onDelete: 'CASCADE'
+    });
 
-      MyDayPost.hasMany(MyDayLike, {
-        foreignKey: 'post_id',
-        as: 'likes',
-        onDelete: 'CASCADE'
-      });
+    MyDayPost.hasMany(MyDayLike, {
+      foreignKey: 'post_id',
+      as: 'likes',
+      onDelete: 'CASCADE'
+    });
 
-      MyDayPost.belongsToMany(Emotion, {
-        through: 'my_day_emotions',
-        foreignKey: 'post_id',
-        otherKey: 'emotion_id',
-        as: 'emotions'
-      });
-    }
+    MyDayPost.belongsToMany(Emotion, {
+      through: 'my_day_emotions',
+      foreignKey: 'post_id',
+      otherKey: 'emotion_id',
+      as: 'emotions'
+    });
   }
 }
 

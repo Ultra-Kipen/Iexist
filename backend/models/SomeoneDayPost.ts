@@ -1,30 +1,32 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class SomeoneDayPost extends Model {
-  public id!: number;
+  public post_id!: number;
   public user_id!: number;
   public title!: string;
   public content!: string;
+  public summary?: string;
   public image_url?: string;
   public is_anonymous!: boolean;
+  public character_count?: number;
   public like_count!: number;
   public comment_count!: number;
 
   public static initialize(sequelize: Sequelize) {
-    const model = SomeoneDayPost.init(
+    return SomeoneDayPost.init(
       {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
+        post_id: {
+          type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
-          allowNull: false
+          field: 'post_id'
         },
         user_id: {
-          type: DataTypes.INTEGER.UNSIGNED,
+          type: DataTypes.INTEGER,
           allowNull: false,
           references: {
             model: 'users',
-            key: 'id'
+            key: 'user_id'
           }
         },
         title: {
@@ -35,6 +37,10 @@ class SomeoneDayPost extends Model {
           type: DataTypes.TEXT,
           allowNull: false
         },
+        summary: {
+          type: DataTypes.STRING(200),
+          allowNull: true
+        },
         image_url: {
           type: DataTypes.STRING(255),
           allowNull: true
@@ -42,7 +48,11 @@ class SomeoneDayPost extends Model {
         is_anonymous: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
-          defaultValue: true
+          defaultValue: false
+        },
+        character_count: {
+          type: DataTypes.SMALLINT.UNSIGNED,
+          allowNull: true
         },
         like_count: {
           type: DataTypes.INTEGER,
@@ -61,32 +71,35 @@ class SomeoneDayPost extends Model {
         tableName: 'someone_day_posts',
         timestamps: true,
         underscored: true,
-        charset: 'utf8mb4',
-        collate: 'utf8mb4_unicode_ci'
+        indexes: [
+          {
+            fields: ['user_id']
+          },
+          {
+            fields: ['created_at']
+          },
+          {
+            fields: ['like_count']
+          }
+        ]
       }
     );
-
-    return model;
   }
 
   public static associate(models: any) {
     const { User, Tag } = models;
 
-    if (User) {
-      SomeoneDayPost.belongsTo(User, {
-        foreignKey: 'user_id',
-        as: 'user',
-        onDelete: 'CASCADE'
-      });
-    }
+    SomeoneDayPost.belongsTo(User, {
+      foreignKey: 'user_id',
+      as: 'user'
+    });
 
     if (Tag) {
       SomeoneDayPost.belongsToMany(Tag, {
-        through: 'post_tags',
+        through: 'someone_day_tags',
         foreignKey: 'post_id',
         otherKey: 'tag_id',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
+        as: 'tags'
       });
     }
   }

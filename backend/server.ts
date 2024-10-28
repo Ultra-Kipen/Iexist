@@ -57,43 +57,52 @@ const startServer = async () => {
     if (process.env.NODE_ENV === 'development') {
       await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
 
-      // 동기화할 모델들을 그룹화하고 순서 지정
-      const modelGroups = [
-        // 1. 독립적인 기본 테이블
-        ['User', 'Tag', 'Emotion'],
-        
-        // 2. 한 개의 외래키를 가진 테이블
-        ['EmotionLog', 'MyDayPost', 'SomeoneDayPost', 'Challenge'],
-        
-        // 3. 두 개 이상의 외래키를 가진 테이블
-        ['MyDayComment', 'SomeoneDayComment', 'MyDayEmotion'],
-        
-        // 4. 다대다 관계 테이블
-        ['ChallengeParticipant', 'PostTag']
-      ];
+      // 테이블 구조 확인
+      const [tables] = await sequelize.query(
+        `SELECT TABLE_NAME, COLUMN_NAME 
+         FROM information_schema.COLUMNS 
+         WHERE TABLE_SCHEMA = '${process.env.DB_NAME}' 
+         AND EXTRA = 'auto_increment'`
+      );
+      
+      logger.info('현재 auto_increment 컬럼:', tables);
 
-      // 그룹별로 순차적 동기화
-      for (const group of modelGroups) {
-        await Promise.all(
-          group.map(async (modelName) => {
-            if (db[modelName]) {
-              try {
-                await db[modelName].sync({
-                  alter: true,
-                  force: false
-                });
-                logger.info(`${modelName} 모델 동기화 완료`);
-              } catch (error) {
-                logger.error(`${modelName} 모델 동기화 실패:`, error);
-                throw error;
-              }
-            }
-          })
-        );
+      // 동기화 옵션 설정
+      const syncOptions = {
+        alter: {
+          drop: false,  // 컬럼 삭제 방지
+        },
+        force: false,   // 테이블 강제 재생성 방지
+        hooks: true,
+        logging: console.log
+      };
+
+      // 순차적 동기화
+      for (const modelName of [
+        'User',
+        'Tag',
+        'Emotion',
+        'MyDayPost',
+        'MyDayComment',
+        'MyDayLike',
+        'SomeoneDayPost',
+        'SomeoneDayComment',
+        'Challenge',
+        'ChallengeParticipant'
+      ]) {
+        if (db[modelName]) {
+          try {
+            await db[modelName].sync(syncOptions);
+            logger.info(`${modelName} 모델 동기화 완료`);
+          } catch (error) {
+            logger.error(`${modelName} 모델 동기화 실패:`, error);
+            throw error;
+          }
+        }
       }
 
       await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
-      logger.info('모든 데이터베이스 스키마 동기화 완료');
+      logger.info('데이터베이스 스키마 동기화 완료');
     }
 
     app.listen(PORT, () => {

@@ -6,8 +6,6 @@ class SomeoneDayComment extends Model {
   public user_id!: number;
   public content!: string;
   public is_anonymous!: boolean;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
 
   public static initialize(sequelize: Sequelize) {
     return SomeoneDayComment.init(
@@ -24,8 +22,7 @@ class SomeoneDayComment extends Model {
           references: {
             model: 'someone_day_posts',
             key: 'post_id'
-          },
-          onDelete: 'CASCADE'
+          }
         },
         user_id: {
           type: DataTypes.INTEGER,
@@ -66,8 +63,7 @@ class SomeoneDayComment extends Model {
   public static associate(models: any) {
     SomeoneDayComment.belongsTo(models.SomeoneDayPost, {
       foreignKey: 'post_id',
-      as: 'post',
-      onDelete: 'CASCADE'
+      as: 'post'
     });
 
     SomeoneDayComment.belongsTo(models.User, {
