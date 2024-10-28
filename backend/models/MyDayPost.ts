@@ -1,5 +1,3 @@
-// backend/models/MyDayPost.ts
-
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class MyDayPost extends Model {
@@ -9,11 +7,9 @@ class MyDayPost extends Model {
   public image_url?: string;
   public emotion_summary?: string;
   public is_anonymous!: boolean;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  public static initialize(sequelize: Sequelize) {
+    const model = MyDayPost.init(
       {
         id: {
           type: DataTypes.INTEGER,
@@ -65,34 +61,38 @@ class MyDayPost extends Model {
         ]
       }
     );
+
+    return model;
   }
 
-  static associate(models: any): void {
-    // User와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
-    });
+  public static associate(models: any) {
+    const { User, MyDayComment, MyDayLike, Emotion } = models;
 
-    // Comment와의 관계
-    this.hasMany(models.MyDayComment, {
-      foreignKey: 'post_id',
-      as: 'comments'
-    });
+    if (User && MyDayComment && MyDayLike && Emotion) {
+      MyDayPost.belongsTo(User, {
+        foreignKey: 'user_id',
+        as: 'user'
+      });
 
-    // Like와의 관계
-    this.hasMany(models.MyDayLike, {
-      foreignKey: 'post_id',
-      as: 'likes'
-    });
+      MyDayPost.hasMany(MyDayComment, {
+        foreignKey: 'post_id',
+        as: 'comments',
+        onDelete: 'CASCADE'
+      });
 
-    // Emotion과의 다대다 관계
-    this.belongsToMany(models.Emotion, {
-      through: 'my_day_emotions',
-      foreignKey: 'post_id',
-      otherKey: 'emotion_id',
-      as: 'emotions'
-    });
+      MyDayPost.hasMany(MyDayLike, {
+        foreignKey: 'post_id',
+        as: 'likes',
+        onDelete: 'CASCADE'
+      });
+
+      MyDayPost.belongsToMany(Emotion, {
+        through: 'my_day_emotions',
+        foreignKey: 'post_id',
+        otherKey: 'emotion_id',
+        as: 'emotions'
+      });
+    }
   }
 }
 

@@ -1,74 +1,81 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
-import sequelize from '../config/database';
 
 class Emotion extends Model {
-    public id!: number;
-    public name!: string;
-    public icon!: string;
-    public color?: string;
-    public readonly created_at!: Date;
-    public readonly updated_at!: Date;
+  public emotion_id!: number;  // id에서 emotion_id로 변경
+  public name!: string;
+  public icon!: string;
+  public color?: string;
 
-    // 모델 초기화 메서드 추가
-    public static initialize(sequelize: Sequelize): void {
-        Emotion.init(
-            {
-                id: {
-                    type: DataTypes.INTEGER,
-                    autoIncrement: true,
-                    primaryKey: true,
-                },
-                name: {
-                    type: DataTypes.STRING(50),
-                    allowNull: false,
-                    unique: true,
-                },
-                icon: {
-                    type: DataTypes.STRING(50),
-                    allowNull: false,
-                },
-                color: {
-                    type: DataTypes.STRING(7),
-                    allowNull: true,
-                    validate: {
-                        is: /^#[0-9A-Fa-f]{6}$/,
-                    },
-                },
-            },
-            {
-                sequelize,
-                modelName: 'Emotion',
-                tableName: 'emotions',
-                timestamps: true,
-                underscored: true,
-            }
-        );
+  public static initialize(sequelize: Sequelize) {
+    return Emotion.init(
+      {
+        emotion_id: {  // 기본키 필드명 변경
+          type: DataTypes.TINYINT.UNSIGNED,
+          autoIncrement: true,
+          primaryKey: true,
+          field: 'emotion_id'  // 실제 DB 컬럼명 명시
+        },
+        name: {
+          type: DataTypes.STRING(50),
+          allowNull: false,
+          unique: true
+        },
+        icon: {
+          type: DataTypes.STRING(50),
+          allowNull: false
+        },
+        color: {
+          type: DataTypes.STRING(7),
+          allowNull: true,
+          validate: {
+            is: /^#[0-9A-Fa-f]{6}$/
+          }
+        }
+      },
+      {
+        sequelize,
+        modelName: 'Emotion',
+        tableName: 'emotions',
+        timestamps: true,
+        underscored: true,
+        indexes: [
+          {
+            unique: true,
+            fields: ['name']
+          }
+        ]
+      }
+    );
+  }
+
+  public static associate(models: any) {
+    const { MyDayPost, Challenge, EmotionLog } = models;
+
+    if (MyDayPost) {
+      Emotion.belongsToMany(MyDayPost, {
+        through: 'my_day_emotions',
+        foreignKey: 'emotion_id',
+        otherKey: 'post_id',
+        as: 'myDayPosts'
+      });
     }
 
-    // 모델 관계 설정 메서드
-    public static associate(models: any): void {
-        this.belongsToMany(models.MyDayPost, {
-            through: 'my_day_emotions',
-            foreignKey: 'emotion_id',
-            otherKey: 'post_id',
-            as: 'myDayPosts',
-        });
-
-        this.hasMany(models.EmotionLog, {
-            foreignKey: 'emotion_id',
-            as: 'emotionLogs',
-        });
-
-        this.belongsToMany(models.Challenge, {
-            through: 'challenge_emotions',
-            foreignKey: 'emotion_id',
-            otherKey: 'challenge_id',
-            as: 'challenges',
-        });
+    if (Challenge) {
+      Emotion.belongsToMany(Challenge, {
+        through: 'challenge_emotions',
+        foreignKey: 'emotion_id',
+        otherKey: 'challenge_id',
+        as: 'challenges'
+      });
     }
+
+    if (EmotionLog) {
+      Emotion.hasMany(EmotionLog, {
+        foreignKey: 'emotion_id',
+        as: 'emotionLogs'
+      });
+    }
+  }
 }
-
-// Emotion 모델을 초기화하고 내보냅니다.
-Emotion.initialize(sequelize);
 
 export default Emotion;

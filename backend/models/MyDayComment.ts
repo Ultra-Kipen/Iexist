@@ -1,5 +1,3 @@
-// backend/models/MyDayComment.ts
-
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class MyDayComment extends Model {
@@ -11,8 +9,8 @@ class MyDayComment extends Model {
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  public static initialize(sequelize: Sequelize) {
+    const model = MyDayComment.init(
       {
         id: {
           type: DataTypes.INTEGER,
@@ -64,20 +62,27 @@ class MyDayComment extends Model {
         ]
       }
     );
+
+    return model;
   }
 
-  static associate(models: any): void {
-    // User와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
-    });
+  public static associate(models: any) {
+    const { User, MyDayPost } = models;
 
-    // MyDayPost와의 관계
-    this.belongsTo(models.MyDayPost, {
-      foreignKey: 'post_id',
-      as: 'post'
-    });
+    if (User && MyDayPost) {
+      // User와의 관계
+      MyDayComment.belongsTo(User, {
+        foreignKey: 'user_id',
+        as: 'user'
+      });
+
+      // MyDayPost와의 관계
+      MyDayComment.belongsTo(MyDayPost, {
+        foreignKey: 'post_id',
+        as: 'post',
+        onDelete: 'CASCADE'
+      });
+    }
   }
 }
 

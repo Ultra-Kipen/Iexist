@@ -1,61 +1,62 @@
-// backend/models/Challenge.ts
-
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
-export class Challenge extends Model {
-  public id!: number;
+class Challenge extends Model {
+  public challenge_id!: number;
   public creator_id!: number;
   public title!: string;
-  public description!: string;
+  public description?: string;
   public start_date!: Date;
   public end_date!: Date;
   public is_public!: boolean;
   public max_participants?: number;
   public participant_count!: number;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
 
   public static initialize(sequelize: Sequelize) {
-    Challenge.init(
+    return Challenge.init(
       {
-        id: {
+        challenge_id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
+          field: 'challenge_id'  // 실제 DB 컬럼명과 일치
         },
         creator_id: {
           type: DataTypes.INTEGER,
           allowNull: false,
+          references: {
+            model: 'users',
+            key: 'user_id'
+          }
         },
         title: {
           type: DataTypes.STRING(100),
-          allowNull: false,
+          allowNull: false
         },
         description: {
           type: DataTypes.TEXT,
-          allowNull: false,
+          allowNull: true
         },
         start_date: {
-          type: DataTypes.DATE,
-          allowNull: false,
+          type: DataTypes.DATEONLY,
+          allowNull: false
         },
         end_date: {
-          type: DataTypes.DATE,
-          allowNull: false,
+          type: DataTypes.DATEONLY,
+          allowNull: false
         },
         is_public: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
-          defaultValue: true,
+          defaultValue: true
         },
         max_participants: {
-          type: DataTypes.INTEGER,
-          allowNull: true,
+          type: DataTypes.SMALLINT.UNSIGNED,
+          allowNull: true
         },
         participant_count: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.SMALLINT.UNSIGNED,
           allowNull: false,
-          defaultValue: 0,
+          defaultValue: 0
         }
       },
       {
@@ -64,22 +65,34 @@ export class Challenge extends Model {
         tableName: 'challenges',
         timestamps: true,
         underscored: true,
+        freezeTableName: true,
+        indexes: [
+          {
+            fields: ['creator_id']
+          }
+        ]
       }
     );
-
-    return Challenge;
   }
 
   public static associate(models: any) {
     Challenge.belongsTo(models.User, {
       foreignKey: 'creator_id',
-      as: 'creator',
+      as: 'creator'
     });
 
     Challenge.belongsToMany(models.User, {
       through: 'challenge_participants',
       foreignKey: 'challenge_id',
-      as: 'participants',
+      otherKey: 'user_id',
+      as: 'participants'
+    });
+
+    Challenge.belongsToMany(models.Emotion, {
+      through: 'challenge_emotions',
+      foreignKey: 'challenge_id',
+      otherKey: 'emotion_id',
+      as: 'emotions'
     });
   }
 }

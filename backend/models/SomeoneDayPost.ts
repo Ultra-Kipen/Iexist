@@ -1,5 +1,3 @@
-// backend/models/SomeoneDayPost.ts
-
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class SomeoneDayPost extends Model {
@@ -11,19 +9,18 @@ class SomeoneDayPost extends Model {
   public is_anonymous!: boolean;
   public like_count!: number;
   public comment_count!: number;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  public static initialize(sequelize: Sequelize) {
+    const model = SomeoneDayPost.init(
       {
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.INTEGER.UNSIGNED,
           autoIncrement: true,
           primaryKey: true,
+          allowNull: false
         },
         user_id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
           references: {
             model: 'users',
@@ -32,17 +29,11 @@ class SomeoneDayPost extends Model {
         },
         title: {
           type: DataTypes.STRING(100),
-          allowNull: false,
-          validate: {
-            len: [1, 100]
-          }
+          allowNull: false
         },
         content: {
           type: DataTypes.TEXT,
-          allowNull: false,
-          validate: {
-            len: [1, 2000]
-          }
+          allowNull: false
         },
         image_url: {
           type: DataTypes.STRING(255),
@@ -70,53 +61,34 @@ class SomeoneDayPost extends Model {
         tableName: 'someone_day_posts',
         timestamps: true,
         underscored: true,
-        indexes: [
-          {
-            fields: ['user_id']
-          },
-          {
-            fields: ['created_at']
-          },
-          {
-            fields: ['like_count']
-          }
-        ]
+        charset: 'utf8mb4',
+        collate: 'utf8mb4_unicode_ci'
       }
     );
+
+    return model;
   }
 
-  static associate(models: any): void {
-    // User와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
-    });
+  public static associate(models: any) {
+    const { User, Tag } = models;
 
-    // Tag와의 다대다 관계
-    this.belongsToMany(models.Tag, {
-      through: 'post_tags',
-      foreignKey: 'post_id',
-      otherKey: 'tag_id',
-      as: 'tags'
-    });
+    if (User) {
+      SomeoneDayPost.belongsTo(User, {
+        foreignKey: 'user_id',
+        as: 'user',
+        onDelete: 'CASCADE'
+      });
+    }
 
-    // Comment와의 관계
-    this.hasMany(models.SomeoneDayComment, {
-      foreignKey: 'post_id',
-      as: 'comments'
-    });
-
-    // Like와의 관계
-    this.hasMany(models.SomeoneDayLike, {
-      foreignKey: 'post_id',
-      as: 'likes'
-    });
-
-    // EncouragementMessage와의 관계
-    this.hasMany(models.EncouragementMessage, {
-      foreignKey: 'post_id',
-      as: 'encouragementMessages'
-    });
+    if (Tag) {
+      SomeoneDayPost.belongsToMany(Tag, {
+        through: 'post_tags',
+        foreignKey: 'post_id',
+        otherKey: 'tag_id',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+      });
+    }
   }
 }
 

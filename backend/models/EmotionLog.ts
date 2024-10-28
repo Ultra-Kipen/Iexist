@@ -1,5 +1,3 @@
-// backend/models/EmotionLog.ts
-
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class EmotionLog extends Model {
@@ -8,11 +6,9 @@ class EmotionLog extends Model {
   public emotion_id!: number;
   public note?: string;
   public log_date!: Date;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  public static initialize(sequelize: Sequelize) {
+    const model = EmotionLog.init(
       {
         id: {
           type: DataTypes.INTEGER,
@@ -61,20 +57,24 @@ class EmotionLog extends Model {
         ]
       }
     );
+
+    return model;
   }
 
-  static associate(models: any): void {
-    // User와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
-    });
+  public static associate(models: any) {
+    const { User, Emotion } = models;
 
-    // Emotion과의 관계
-    this.belongsTo(models.Emotion, {
-      foreignKey: 'emotion_id',
-      as: 'emotion'
-    });
+    if (User && Emotion) {
+      EmotionLog.belongsTo(User, {
+        foreignKey: 'user_id',
+        as: 'user'
+      });
+
+      EmotionLog.belongsTo(Emotion, {
+        foreignKey: 'emotion_id',
+        as: 'emotion'
+      });
+    }
   }
 }
 

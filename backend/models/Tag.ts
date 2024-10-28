@@ -1,28 +1,22 @@
-// backend/models/Tag.ts
-
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class Tag extends Model {
   public id!: number;
   public name!: string;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  public static initialize(sequelize: Sequelize) {
+    const model = Tag.init(
       {
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.INTEGER.UNSIGNED,
           autoIncrement: true,
           primaryKey: true,
+          allowNull: false
         },
         name: {
           type: DataTypes.STRING(50),
           allowNull: false,
-          unique: true,
-          validate: {
-            len: [1, 50]
-          }
+          unique: true
         }
       },
       {
@@ -31,23 +25,26 @@ class Tag extends Model {
         tableName: 'tags',
         timestamps: true,
         underscored: true,
-        indexes: [
-          {
-            fields: ['name']
-          }
-        ]
+        charset: 'utf8mb4',
+        collate: 'utf8mb4_unicode_ci'
       }
     );
+
+    return model;
   }
 
-  static associate(models: any): void {
-    // SomeoneDayPost와의 다대다 관계
-    this.belongsToMany(models.SomeoneDayPost, {
-      through: 'post_tags',
-      foreignKey: 'tag_id',
-      otherKey: 'post_id',
-      as: 'posts'
-    });
+  public static associate(models: any) {
+    const { SomeoneDayPost } = models;
+
+    if (SomeoneDayPost) {
+      Tag.belongsToMany(SomeoneDayPost, {
+        through: 'post_tags',
+        foreignKey: 'tag_id',
+        otherKey: 'post_id',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+      });
+    }
   }
 }
 

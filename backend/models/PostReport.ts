@@ -1,54 +1,53 @@
-// backend/models/PostReport.ts
-
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class PostReport extends Model {
-  public id!: number;
-  public post_type!: 'my_day' | 'someone_day';
+  public report_id!: number;
   public post_id!: number;
   public reporter_id!: number;
-  public reason!: string;
-  public status!: 'pending' | 'reviewed' | 'resolved';
-  public admin_note?: string;
+  public report_type!: string;
+  public description?: string;
+  public status!: string;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  public static initialize(sequelize: Sequelize) {
+    return PostReport.init(
       {
-        id: {
+        report_id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
-        },
-        post_type: {
-          type: DataTypes.ENUM('my_day', 'someone_day'),
-          allowNull: false
+          field: 'report_id'
         },
         post_id: {
           type: DataTypes.INTEGER,
-          allowNull: false
+          allowNull: false,
+          references: {
+            model: 'someone_day_posts',
+            key: 'post_id'
+          },
+          onDelete: 'CASCADE'
         },
         reporter_id: {
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
             model: 'users',
-            key: 'id'
+            key: 'user_id'
           }
         },
-        reason: {
-          type: DataTypes.STRING(500),
+        report_type: {
+          type: DataTypes.STRING(50),
           allowNull: false
         },
+        description: {
+          type: DataTypes.TEXT,
+          allowNull: true
+        },
         status: {
-          type: DataTypes.ENUM('pending', 'reviewed', 'resolved'),
+          type: DataTypes.ENUM('pending', 'reviewed', 'resolved', 'dismissed'),
           allowNull: false,
           defaultValue: 'pending'
-        },
-        admin_note: {
-          type: DataTypes.STRING(500),
-          allowNull: true
         }
       },
       {
@@ -59,7 +58,7 @@ class PostReport extends Model {
         underscored: true,
         indexes: [
           {
-            fields: ['post_type', 'post_id']
+            fields: ['post_id']
           },
           {
             fields: ['reporter_id']
@@ -72,9 +71,14 @@ class PostReport extends Model {
     );
   }
 
-  static associate(models: any): void {
-    // Reporter와의 관계
-    this.belongsTo(models.User, {
+  public static associate(models: any) {
+    PostReport.belongsTo(models.SomeoneDayPost, {
+      foreignKey: 'post_id',
+      as: 'post',
+      onDelete: 'CASCADE'
+    });
+
+    PostReport.belongsTo(models.User, {
       foreignKey: 'reporter_id',
       as: 'reporter'
     });
