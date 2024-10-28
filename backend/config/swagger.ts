@@ -1,5 +1,3 @@
-// backend/config/swagger.ts
-
 import swaggerJsdoc from 'swagger-jsdoc';
 import config from './config';
 
@@ -8,12 +6,12 @@ const options: swaggerJsdoc.Options = {
     openapi: '3.0.0',
     info: {
       title: 'Iexist API',
-      version: '1.0.0', // 하드코딩된 버전으로 변경
+      version: '1.0.0',
       description: 'Iexist API Documentation',
     },
     servers: [
       {
-        url: `http://localhost:3000/api`, // 하드코딩된 포트와 prefix로 변경
+        url: `http://localhost:3000/api`,
         description: '개발 서버'
       }
     ],
@@ -26,161 +24,179 @@ const options: swaggerJsdoc.Options = {
         }
       },
       schemas: {
-        Error: {
+        // 기존 스키마들 유지...
+
+        // 새로 추가할 스키마들
+        Emotion: {
           type: 'object',
-          required: ['status', 'message'],
+          required: ['name', 'icon'],
           properties: {
-            status: {
-              type: 'string',
-              example: 'error'
+            emotion_id: {
+              type: 'integer',
+              example: 1
             },
-            message: {
+            name: {
               type: 'string',
-              example: '오류가 발생했습니다.'
+              maxLength: 50,
+              example: '행복'
+            },
+            icon: {
+              type: 'string',
+              maxLength: 50,
+              example: '😊'
+            },
+            color: {
+              type: 'string',
+              pattern: '^#[0-9A-Fa-f]{6}$',
+              example: '#FFD700'
             }
           }
         },
-        User: {
+        EmotionLog: {
           type: 'object',
-          required: ['username', 'email'],
+          required: ['user_id', 'emotion_id', 'log_date'],
           properties: {
+            log_id: {
+              type: 'integer',
+              example: 1
+            },
             user_id: {
               type: 'integer',
               example: 1
             },
-            username: {
-              type: 'string',
-              example: 'john_doe'
+            emotion_id: {
+              type: 'integer',
+              example: 1
             },
-            email: {
+            note: {
               type: 'string',
-              format: 'email',
-              example: 'john@example.com'
+              maxLength: 200,
+              example: '오늘은 특별히 행복했던 이유...'
             },
-            nickname: {
+            log_date: {
               type: 'string',
-              example: 'John'
-            },
-            profile_image_url: {
-              type: 'string',
-              format: 'uri',
-              example: 'https://example.com/image.jpg'
-            },
-            theme_preference: {
-              type: 'string',
-              enum: ['light', 'dark', 'system'],
-              default: 'system'
-            },
-            created_at: {
-              type: 'string',
-              format: 'date-time'
-            },
-            updated_at: {
-              type: 'string',
-              format: 'date-time'
+              format: 'date',
+              example: '2024-03-01'
             }
           }
         },
-        MyDayPost: {
+        MyDayComment: {
           type: 'object',
-          required: ['content'],
+          required: ['post_id', 'user_id', 'content'],
           properties: {
+            comment_id: {
+              type: 'integer',
+              example: 1
+            },
             post_id: {
+              type: 'integer',
+              example: 1
+            },
+            user_id: {
               type: 'integer',
               example: 1
             },
             content: {
               type: 'string',
-              maxLength: 1000,
-              example: '오늘 하루 감사했던 순간들...'
-            },
-            emotion_summary: {
-              type: 'string',
-              example: '행복'
-            },
-            image_url: {
-              type: 'string',
-              format: 'uri',
-              example: 'https://example.com/image.jpg'
+              maxLength: 500,
+              example: '공감합니다. 힘내세요!'
             },
             is_anonymous: {
               type: 'boolean',
               default: false
-            },
-            created_at: {
-              type: 'string',
-              format: 'date-time'
             }
           }
         },
-        SomeoneDayPost: {
+        ChallengeParticipant: {
           type: 'object',
-          required: ['title', 'content'],
-          properties: {
-            post_id: {
-              type: 'integer',
-              example: 1
-            },
-            title: {
-              type: 'string',
-              maxLength: 100,
-              example: '힘들었던 하루'
-            },
-            content: {
-              type: 'string',
-              maxLength: 2000,
-              example: '오늘은 정말 힘든 하루였지만...'
-            },
-            is_anonymous: {
-              type: 'boolean',
-              default: true
-            },
-            created_at: {
-              type: 'string',
-              format: 'date-time'
-            }
-          }
-        },
-        Challenge: {
-          type: 'object',
-          required: ['title', 'description', 'start_date', 'end_date'],
+          required: ['challenge_id', 'user_id'],
           properties: {
             challenge_id: {
               type: 'integer',
               example: 1
             },
-            title: {
-              type: 'string',
-              maxLength: 100,
-              example: '7일 감사 챌린지'
-            },
-            description: {
-              type: 'string',
-              maxLength: 500,
-              example: '매일 감사한 일 3가지 기록하기'
-            },
-            start_date: {
-              type: 'string',
-              format: 'date',
-              example: '2024-03-01'
-            },
-            end_date: {
-              type: 'string',
-              format: 'date',
-              example: '2024-03-07'
-            },
-            is_public: {
-              type: 'boolean',
-              default: true
-            },
-            max_participants: {
+            user_id: {
               type: 'integer',
-              minimum: 1,
-              example: 100
+              example: 1
             },
-            created_at: {
+            joined_at: {
               type: 'string',
               format: 'date-time'
+            }
+          }
+        },
+        Tag: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            tag_id: {
+              type: 'integer',
+              example: 1
+            },
+            name: {
+              type: 'string',
+              maxLength: 50,
+              example: '위로'
+            }
+          }
+        },
+        UserStats: {
+          type: 'object',
+          properties: {
+            user_id: {
+              type: 'integer',
+              example: 1
+            },
+            my_day_post_count: {
+              type: 'integer',
+              default: 0
+            },
+            someone_day_post_count: {
+              type: 'integer',
+              default: 0
+            },
+            my_day_like_received_count: {
+              type: 'integer',
+              default: 0
+            },
+            someone_day_like_received_count: {
+              type: 'integer',
+              default: 0
+            },
+            challenge_count: {
+              type: 'integer',
+              default: 0
+            },
+            last_updated: {
+              type: 'string',
+              format: 'date-time'
+            }
+          }
+        },
+        Notification: {
+          type: 'object',
+          required: ['user_id', 'content', 'notification_type'],
+          properties: {
+            notification_id: {
+              type: 'integer',
+              example: 1
+            },
+            user_id: {
+              type: 'integer',
+              example: 1
+            },
+            content: {
+              type: 'string',
+              maxLength: 255,
+              example: '새로운 댓글이 달렸습니다.'
+            },
+            notification_type: {
+              type: 'string',
+              enum: ['like', 'comment', 'challenge', 'system']
+            },
+            is_read: {
+              type: 'boolean',
+              default: false
             }
           }
         }

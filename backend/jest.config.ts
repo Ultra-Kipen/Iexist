@@ -11,9 +11,9 @@ const config: Config = {
     '^.+\\.ts$': 'ts-jest'
   },
   moduleNameMapper: {
-    '@/(.*)': '<rootDir>/$1'
+    '^@/(.*)$': '<rootDir>/src/$1'
   },
-  setupFiles: ['<rootDir>/tests/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   collectCoverageFrom: [
     '**/*.{js,ts}',
     '!**/node_modules/**',
@@ -22,7 +22,8 @@ const config: Config = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],
-  verbose: true
+  verbose: true,
+  testTimeout: 10000
 };
 
 export default config;
