@@ -1,76 +1,74 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
-class EmotionLog extends Model {
-  public log_id!: number;  // id 대신 log_id 사용
-  public user_id!: number;
-  public emotion_id!: number;
-  public note?: string;
-  public log_date!: Date;
+export interface EmotionLogAttributes {
+  log_id: number;
+  user_id: number;
+  emotion_id: number;
+  log_date: Date;
+  note: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-  public static initialize(sequelize: Sequelize) {
-    return EmotionLog.init(
+export type EmotionLogCreationAttributes = Omit<EmotionLogAttributes, 'log_id' | 'createdAt' | 'updatedAt'>;
+
+export class EmotionLog extends Model<EmotionLogAttributes, EmotionLogCreationAttributes> {
+  declare log_id: number;
+  declare user_id: number;
+  declare emotion_id: number;
+  declare log_date: Date;
+  declare note: string | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
+
+  static initialize(sequelize: Sequelize): void {
+    EmotionLog.init(
       {
-        log_id: {  // 기본키 필드명 변경
-          type: DataTypes.BIGINT,
+        log_id: {
+          type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
-          field: 'log_id'  // 실제 DB 컬럼명
         },
         user_id: {
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
             model: 'users',
-            key: 'user_id'
-          }
+            key: 'id',
+          },
         },
         emotion_id: {
-          type: DataTypes.TINYINT.UNSIGNED,
+          type: DataTypes.INTEGER,
           allowNull: false,
           references: {
             model: 'emotions',
-            key: 'emotion_id'
-          }
-        },
-        note: {
-          type: DataTypes.STRING(200),
-          allowNull: true
+            key: 'emotion_id',
+          },
         },
         log_date: {
           type: DataTypes.DATEONLY,
           allowNull: false,
-          defaultValue: DataTypes.NOW
-        }
+        },
+        note: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
       },
       {
         sequelize,
-        modelName: 'EmotionLog',
         tableName: 'emotion_logs',
         timestamps: true,
-        underscored: true,
-        indexes: [
-          {
-            fields: ['user_id', 'log_date']
-          },
-          {
-            fields: ['emotion_id']
-          }
-        ]
       }
     );
   }
-
-  public static associate(models: any) {
-    EmotionLog.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
-    });
-
-    EmotionLog.belongsTo(models.Emotion, {
-      foreignKey: 'emotion_id',
-      as: 'emotion'
-    });
-  }
 }
-
-export default EmotionLog;

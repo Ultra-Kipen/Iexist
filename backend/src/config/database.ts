@@ -1,51 +1,63 @@
-import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
-import path from 'path';
+import { Options } from 'sequelize';
 
-// .env 파일 경로 설정
-dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+interface DatabaseConfig {
+  development: Options;
+  test: Options;
+  production: Options;
+}
 
-const env = process.env.NODE_ENV || 'development';
-let sequelize: Sequelize;
-
-const defaultOptions = {
-  dialect: 'mysql' as const,
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000
-  },
-  define: {
-    timestamps: true,
-    underscored: true,
-    charset: 'utf8mb4',
-    collate: 'utf8mb4_unicode_ci'
-  },
-  logging: console.log
-};
-
-// 기본 development 환경 설정
-sequelize = new Sequelize(
-  process.env.DB_NAME || 'Iexist',
-  process.env.DB_USER || 'Iexist',
-  process.env.DB_PASSWORD,
-  {
-    ...defaultOptions,
+const config: DatabaseConfig = {
+  development: {
+    username: process.env.DB_USER || 'Iexist',
+    password: process.env.DB_PASSWORD || 'sw309824!@',
+    database: process.env.DB_NAME || 'iexist',
     host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '3306')
-  }
-);
-
-export const testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('Database connection has been established successfully.');
-    return true;
-  } catch (error) {
-    console.error('Unable to connect to the database:', error);
-    return false;
+    port: parseInt(process.env.DB_PORT || '3306'),
+    dialect: 'mysql',
+    timezone: '+09:00',
+    dialectOptions: {
+      connectTimeout: 60000,
+      socketPath: process.platform === 'win32' ? undefined : '/var/run/mysqld/mysqld.sock'
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    logging: console.log
+  },
+  test: {
+    dialect: 'sqlite',
+    storage: ':memory:',
+    logging: false,
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    }
+  },
+  production: {
+    username: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT || '3306'),
+    dialect: 'mysql',
+    timezone: '+09:00',
+    dialectOptions: {
+      connectTimeout: 60000,
+      socketPath: process.platform === 'win32' ? undefined : '/var/run/mysqld/mysqld.sock'
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    logging: false
   }
 };
 
-export default sequelize;
+export default config;

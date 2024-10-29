@@ -1,94 +1,114 @@
-import { Model, DataTypes, Sequelize } from 'sequelize';
-import bcrypt from 'bcrypt';
+import { Model, DataTypes, Optional, Sequelize } from 'sequelize';
 
-interface UserAttributes {
+// UserAttributes 인터페이스 정의
+export interface UserAttributes {
   id: number;
   username: string;
   email: string;
   password: string;
-  nickname?: string;
-  profileImageUrl?: string;
-  backgroundImageUrl?: string;
-  favoriteQuote?: string;
+  nickname: string | null;
+  profileImageUrl: string | null;
+  backgroundImageUrl: string | null;
+  favoriteQuote: string | null;
   themePreference: 'light' | 'dark' | 'system';
   privacySettings: object;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export class User extends Model<UserAttributes> implements UserAttributes {
-  public id!: number;
-  public username!: string;
-  public email!: string;
-  public password!: string;
-  public nickname!: string;
-  public profileImageUrl!: string;
-  public backgroundImageUrl!: string;
-  public favoriteQuote!: string;
-  public themePreference!: 'light' | 'dark' | 'system';
-  public privacySettings!: object;
+// 생성 시 선택적인 필드 정의
+export type UserCreationAttributes = Optional<UserAttributes, 
+  'id' | 
+  'nickname' | 
+  'profileImageUrl' | 
+  'backgroundImageUrl' | 
+  'favoriteQuote' | 
+  'themePreference' | 
+  'privacySettings' | 
+  'createdAt' | 
+  'updatedAt'
+>;
 
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+// User 클래스 정의
+export class User extends Model<UserAttributes, UserCreationAttributes> {
+  declare id: number;
+  declare username: string;
+  declare email: string;
+  declare password: string;
+  declare nickname: string | null;
+  declare profileImageUrl: string | null;
+  declare backgroundImageUrl: string | null;
+  declare favoriteQuote: string | null;
+  declare themePreference: 'light' | 'dark' | 'system';
+  declare privacySettings: object;
+  declare createdAt: Date;
+  declare updatedAt: Date;
 
-  // 비밀번호 검증 메소드
-  public async validatePassword(password: string): Promise<boolean> {
-    return bcrypt.compare(password, this.password);
-  }
-}
-
-export const initUser = (sequelize: Sequelize): void => {
-  User.init(
-    {
-      id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-      },
-      username: {
-        type: DataTypes.STRING(50),
-        unique: true,
-        allowNull: false,
-      },
-      email: {
-        type: DataTypes.STRING(100),
-        unique: true,
-        allowNull: false,
-      },
-      password: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
-      },
-      nickname: {
-        type: DataTypes.STRING(50),
-      },
-      profileImageUrl: {
-        type: DataTypes.STRING(255),
-      },
-      backgroundImageUrl: {
-        type: DataTypes.STRING(255),
-      },
-      favoriteQuote: {
-        type: DataTypes.STRING(255),
-      },
-      themePreference: {
-        type: DataTypes.ENUM('light', 'dark', 'system'),
-        defaultValue: 'system',
-      },
-      privacySettings: {
-        type: DataTypes.JSON,
-        defaultValue: {},
-      },
-    },
-    {
-      sequelize,
-      tableName: 'users',
-      hooks: {
-        beforeSave: async (user: User) => {
-          if (user.changed('password')) {
-            const salt = await bcrypt.genSalt(10);
-            user.password = await bcrypt.hash(user.password, salt);
-          }
+  // 모델 초기화 메서드
+  static initialize(sequelize: Sequelize): void {
+    User.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+        },
+        username: {
+          type: DataTypes.STRING(50),
+          allowNull: false,
+        },
+        email: {
+          type: DataTypes.STRING(100),
+          allowNull: false,
+          unique: true,
+        },
+        password: {
+          type: DataTypes.STRING(255),
+          allowNull: false,
+        },
+        nickname: {
+          type: DataTypes.STRING(50),
+          allowNull: true,
+        },
+        profileImageUrl: {
+          type: DataTypes.STRING(255),
+          allowNull: true,
+        },
+        backgroundImageUrl: {
+          type: DataTypes.STRING(255),
+          allowNull: true,
+        },
+        favoriteQuote: {
+          type: DataTypes.STRING(255),
+          allowNull: true,
+        },
+        themePreference: {
+          type: DataTypes.ENUM('light', 'dark', 'system'),
+          allowNull: false,
+          defaultValue: 'system',
+        },
+        privacySettings: {
+          type: DataTypes.JSON,
+          allowNull: false,
+          defaultValue: {},
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
         },
       },
-    }
-  );
-};
+      {
+        sequelize,
+        modelName: 'User',
+        tableName: 'users',
+        timestamps: true,
+      }
+    );
+  }
+}

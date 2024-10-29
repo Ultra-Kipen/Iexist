@@ -26,7 +26,7 @@ const authMiddleware = async (
     }
 
     req.user = {
-      id: user.user_id,
+      id: user.id,
       username: user.username,
       email: user.email
     };

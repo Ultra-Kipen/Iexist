@@ -1,48 +1,46 @@
-import type { Config } from 'jest';
+import type { JestConfigWithTsJest } from 'ts-jest';
+import { resolve } from 'path';
 
-const config: Config = {
+const config: JestConfigWithTsJest = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/tests'],
-    transform: {
-    '^.+\\.ts$': 'ts-jest'
+  rootDir: '.',
+  modulePaths: [resolve(__dirname)],
+  moduleDirectories: ['node_modules'],
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: resolve(__dirname, './tsconfig.json'),
+      isolatedModules: true
+    }]
   },
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
-  },
-  collectCoverageFrom: [
-    '**/*.{js,ts}',
-    '!**/node_modules/**',
-    '!**/dist/**',
-    '!**/coverage/**'
+  testMatch: [
+    '<rootDir>/tests/**/*.test.ts',
+    '<rootDir>/tests/**/*.spec.ts'
   ],
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   verbose: true,
-  testTimeout: 10000
-};
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  roots: ['<rootDir>'],
+  collectCoverage: true,
+  coverageDirectory: '<rootDir>/coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
+  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    'types/',
+    'config/'
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^@models/(.*)$': '<rootDir>/models/$1',
     '^@controllers/(.*)$': '<rootDir>/controllers/$1',
     '^@middleware/(.*)$': '<rootDir>/middleware/$1',
     '^@routes/(.*)$': '<rootDir>/routes/$1',
-    '^@models/(.*)$': '<rootDir>/models/$1'
-  },
-  testMatch: [
-    "**/tests/**/*.test.ts"
-  ],
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  transform: {
-    '^.+\\.ts$': ['ts-jest', { /* ts-jest 설정 */ }],
-  },
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json'
-    }
+    '^@config/(.*)$': '<rootDir>/config/$1',
+    '^@utils/(.*)$': '<rootDir>/utils/$1',
+    '^@types/(.*)$': '<rootDir>/types/$1',
+    '^@tests/(.*)$': '<rootDir>/tests/$1'
   }
-}
+};
+
 export default config;

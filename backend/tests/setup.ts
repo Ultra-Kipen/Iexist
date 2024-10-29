@@ -1,57 +1,65 @@
-import express from 'express';
-import cors from 'cors';
-import morgan from 'morgan';
-import errorHandler from '../middleware/errorMiddleware';
-import corsMiddleware from '../middleware/corsMiddleware'; 
-import userRoutes from '../routes/users';
-import emotionRoutes from '../routes/emotions';
-import myDayRoutes from '../routes/myDay';
-import someoneDayRoutes from '../routes/someoneDay';
-import challengeRoutes from '../routes/challenges';
-import { sequelize } from '../models/index';
+import { sequelize } from '../models';
+import app from '../app';
 
-const app = express();
+let server: any;
 
-// 미들웨어 설정
-app.use(morgan('dev'));
-app.use(corsMiddleware);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Health check endpoint 추가
-app.get('/api', (_req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    service: 'iexist-backend'
-  });
+beforeAll(async () => {
+  try {
+    // 테스트 환경 설정
+    process.env.NODE_ENV = 'test';
+    
+    // 데이터베이스 연결 확인
+    await sequelize.authenticate();
+    console.log('테스트 데이터베이스 연결 성공');
+    
+    // 테스트용 테이블 생성 (force: true로 테이블 재생성)
+    await sequelize.sync({ force: true });
+    console.log('테스트 테이블 생성 완료');
+    
+    // 테스트 서버 시작
+    const PORT = process.env.TEST_PORT || 3001;
+    server = app.listen(PORT);
+    console.log(`테스트 서버가 포트 ${PORT}에서 실행 중입니다.`);
+  } catch (error) {
+    console.error('테스트 설정 실패:', error);
+    throw error;
+  }
 });
 
-// 라우트 설정
-app.use('/api/users', userRoutes);
-app.use('/api/emotions', emotionRoutes);
-app.use('/api/my-day', myDayRoutes);
-app.use('/api/someone-day', someoneDayRoutes);
-app.use('/api/challenges', challengeRoutes);  // 추가
-
-// 에러 핸들링 미들웨어
-app.use(errorHandler);
-
-// 데이터베이스 연결 및 서버 시작
-const PORT = process.env.PORT || 3000;
-
-const startServer = async () => {
+beforeEach(async () => {
   try {
-    await sequelize.authenticate();
-    console.log('데이터베이스 연결 성공');
-    
-    app.listen(PORT, () => {
-      console.log(`서버가 포트 ${PORT}에서 실행중입니다`);
-    });
+    // 각 테스트 전에 모든 테이블 데이터 초기화
+    for (const model of Object.values(sequelize.models)) {
+      await model.destroy({
+        where: {},
+        truncate: true,
+        cascade: true,
+        restartIdentity: true,
+        force: true
+      });
+    }
+    console.log('테이블 데이터 초기화 완료');
   } catch (error) {
-    console.error('서버 시작 실패:', error);
-    process.exit(1);
+    console.error('테이블 초기화 실패:', error);
+    throw error;
   }
-};
+});
 
-export { app, startServer };
+afterAll(async () => {
+  try {
+    // 서버 종료
+    if (server) {
+      await new Promise((resolve) => {
+        server.close(resolve);
+      });
+      console.log('테스트 서버 종료');
+    }
+    
+    // 데이터베이스 연결 종료
+    await sequelize.close();
+    console.log('테스트 데이터베이스 연결 종료');
+  } catch (error) {
+    console.error('테스트 정리 실패:', error);
+    throw error;
+  }
+});

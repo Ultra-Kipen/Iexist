@@ -1,36 +1,25 @@
-import dotenv from 'dotenv';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
+import { sequelize } from '../models';
+import app from './app';
 
-// Load environment variables
-dotenv.config();
+const PORT = process.env.PORT || 3000;
 
-const app = express();
-const port = process.env.PORT || 3000;
+const startServer = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('데이터베이스 연결 성공');
+    
+    app.listen(PORT, () => {
+      console.log(`서버가 포트 ${PORT}에서 실행중입니다`);
+    });
+  } catch (error) {
+    console.error('서버 시작 실패:', error);
+    process.exit(1);
+  }
+};
 
-// Middleware
-app.use(cors());
-app.use(helmet());
-app.use(express.json());
+// 직접 실행될 때만 서버 시작
+if (require.main === module) {
+  startServer();
+}
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-  max: parseInt(process.env.RATE_LIMIT_MAX || '100')
-});
-app.use(limiter);
-
-// Routes
-app.get('/', (req, res) => {
-  res.send(`Hello, World! API Version: ${process.env.API_VERSION}`);
-});
-
-// Start server
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
-});
-
-export default app;
+export { startServer };
