@@ -1,45 +1,62 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { AuthRequest } from '../types/express';
 import { User } from '../models';
+import { JWT_SECRET } from '../config';
 
-interface JwtPayload {
-  userId: number;
+export interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+  };
 }
 
-const authMiddleware = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      return res.status(401).json({
+        success: false,
+        error: '인증이 필요합니다.'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
     if (!token) {
-      return res.status(401).json({ message: '인증 토큰이 제공되지 않았습니다.' });
+      return res.status(401).json({
+        success: false,
+        error: '유효하지 않은 인증 토큰입니다.'
+      });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-    const user = await User.findByPk(decoded.userId);
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
+      const user = await User.findByPk(decoded.id, {
+        attributes: ['id', 'username', 'email']
+      });
 
-    if (!user) {
-      return res.status(401).json({ message: '유효하지 않은 사용자입니다.' });
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: '사용자를 찾을 수 없습니다.'
+        });
+      }
+
+      req.user = user;
+      next();
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        error: '유효하지 않은 인증 토큰입니다.'
+      });
     }
-
-    req.user = {
-      id: user.id,
-      username: user.username,
-      email: user.email
-    };
-    next();
   } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      return res.status(401).json({ message: '토큰이 만료되었습니다. 다시 로그인해주세요.' });
-    }
-    if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ message: '유효하지 않은 토큰입니다.' });
-    }
-    console.error('인증 미들웨어 오류:', error);
-    next(error);
+    console.error('Auth middleware error:', error);
+    return res.status(500).json({
+      success: false,
+      error: '서버 오류가 발생했습니다.'
+    });
   }
 };
 

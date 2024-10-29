@@ -3,11 +3,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models';
 import { JWT_SECRET } from '../config';
+import { AuthRequest } from '../middleware/authMiddleware';
 
 class UserController {
   async register(req: Request, res: Response) {
     try {
-      const { username, email, password } = req.body;
+      const { username, email, password, nickname } = req.body;
 
       // 이메일 중복 확인
       const existingUser = await User.findOne({ where: { email } });
@@ -26,7 +27,8 @@ class UserController {
       const user = await User.create({
         username,
         email,
-        password: hashedPassword
+        password: hashedPassword,
+        nickname
       });
 
       // JWT 토큰 생성
@@ -43,7 +45,8 @@ class UserController {
           user: {
             id: user.id,
             username: user.username,
-            email: user.email
+            email: user.email,
+            nickname: user.nickname
           }
         }
       });
@@ -62,7 +65,11 @@ class UserController {
       const { email, password } = req.body;
 
       // 사용자 찾기
-      const user = await User.findOne({ where: { email } });
+      const user = await User.findOne({ 
+        where: { email },
+        attributes: ['id', 'username', 'email', 'password', 'nickname'] 
+      });
+      
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -93,7 +100,8 @@ class UserController {
           user: {
             id: user.id,
             username: user.username,
-            email: user.email
+            email: user.email,
+            nickname: user.nickname
           }
         }
       });
@@ -107,21 +115,22 @@ class UserController {
     }
   }
 
-  async getProfile(req: Request, res: Response) {
+  async getProfile(req: AuthRequest, res: Response) {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
+      const user = req.user;
+      if (!user) {
         return res.status(401).json({
           success: false,
           error: '인증이 필요합니다.'
         });
       }
 
-      const user = await User.findByPk(userId, {
+      // 최신 사용자 정보 조회
+      const updatedUser = await User.findByPk(user.id, {
         attributes: ['id', 'username', 'email', 'nickname', 'theme_preference']
       });
 
-      if (!user) {
+      if (!updatedUser) {
         return res.status(404).json({
           success: false,
           error: '사용자를 찾을 수 없습니다.'
@@ -130,7 +139,13 @@ class UserController {
 
       return res.json({
         success: true,
-        data: user
+        data: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          nickname: updatedUser.nickname,
+          theme_preference: updatedUser.theme_preference
+        }
       });
 
     } catch (error) {
@@ -142,10 +157,10 @@ class UserController {
     }
   }
 
-  async updateProfile(req: Request, res: Response) {
+  async updateProfile(req: AuthRequest, res: Response) {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
+      const user = req.user;
+      if (!user) {
         return res.status(401).json({
           success: false,
           error: '인증이 필요합니다.'
@@ -154,15 +169,15 @@ class UserController {
 
       const { nickname, theme_preference } = req.body;
 
-      const user = await User.findByPk(userId);
-      if (!user) {
+      const updatedUser = await User.findByPk(user.id);
+      if (!updatedUser) {
         return res.status(404).json({
           success: false,
           error: '사용자를 찾을 수 없습니다.'
         });
       }
 
-      await user.update({
+      await updatedUser.update({
         nickname,
         theme_preference
       });
@@ -170,11 +185,11 @@ class UserController {
       return res.json({
         success: true,
         data: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          nickname: user.nickname,
-          theme_preference: user.theme_preference
+          id: updatedUser.id,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          nickname: updatedUser.nickname,
+          theme_preference: updatedUser.theme_preference
         }
       });
 

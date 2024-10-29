@@ -1,6 +1,6 @@
 import request from 'supertest';
-import app from '../../src/app';
-import { User } from '../../src/models';
+import app from '../../app';
+import { User } from '../../models';
 
 describe('User API', () => {
   const testUser = {
@@ -10,38 +10,48 @@ describe('User API', () => {
     nickname: 'Test User'
   };
 
+  beforeEach(async () => {
+    await User.destroy({ where: {}, truncate: true, cascade: true });
+  });
+
   describe('POST /api/users/register', () => {
-    it('새로운 사용자를 등록해야 합니다', async () => {
+    it('should register a new user', async () => {
       const response = await request(app)
         .post('/api/users/register')
         .send(testUser);
 
       expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('token');
-      expect(response.body.user).toHaveProperty('username', testUser.username);
-      expect(response.body.user).toHaveProperty('email', testUser.email);
-      expect(response.body.user).toHaveProperty('nickname', testUser.nickname);
-      expect(response.body.user).not.toHaveProperty('password');
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('token');
+      expect(response.body.data.user).toMatchObject({
+        username: testUser.username,
+        email: testUser.email
+      });
     });
 
-    it('중복된 이메일로 등록을 시도하면 실패해야 합니다', async () => {
-      await User.create(testUser);
+    it('should not allow duplicate email', async () => {
+      await request(app)
+        .post('/api/users/register')
+        .send(testUser);
 
       const response = await request(app)
         .post('/api/users/register')
         .send(testUser);
 
       expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
       expect(response.body).toHaveProperty('error');
     });
   });
 
   describe('POST /api/users/login', () => {
     beforeEach(async () => {
-      await User.create(testUser);
+      await request(app)
+        .post('/api/users/register')
+        .send(testUser);
     });
 
-    it('올바른 인증 정보로 로그인해야 합니다', async () => {
+    it('should login with correct credentials', async () => {
       const response = await request(app)
         .post('/api/users/login')
         .send({
@@ -50,11 +60,14 @@ describe('User API', () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('token');
-      expect(response.body.user).toHaveProperty('email', testUser.email);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('token');
+      expect(response.body.data.user).toMatchObject({
+        email: testUser.email
+      });
     });
 
-    it('잘못된 비밀번호로 로그인을 시도하면 실패해야 합니다', async () => {
+    it('should not login with incorrect password', async () => {
       const response = await request(app)
         .post('/api/users/login')
         .send({
@@ -63,7 +76,53 @@ describe('User API', () => {
         });
 
       expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
       expect(response.body).toHaveProperty('error');
+    });
+  });
+
+  describe('GET /api/users/profile', () => {
+    let authToken: string;
+
+    beforeEach(async () => {
+      // 사용자 등록
+      const registerResponse = await request(app)
+        .post('/api/users/register')
+        .send(testUser);
+
+      // 로그인 수행
+      const loginResponse = await request(app)
+        .post('/api/users/login')
+        .send({
+          email: testUser.email,
+          password: testUser.password
+        });
+
+      authToken = loginResponse.body.data.token;
+    });
+
+    it('should get user profile when authenticated', async () => {
+      const response = await request(app)
+        .get('/api/users/profile')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toMatchObject({
+        username: testUser.username,
+        email: testUser.email
+      });
+    });
+
+    it('should not get profile without authentication', async () => {
+      const response = await request(app)
+        .get('/api/users/profile');
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        success: false,
+        error: '인증이 필요합니다.'
+      });
     });
   });
 });

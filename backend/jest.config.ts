@@ -26,9 +26,7 @@ const config: JestConfigWithTsJest = {
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   coveragePathIgnorePatterns: [
     '/node_modules/',
-    '/dist/',
-    'types/',
-    'config/'
+    '/dist/'
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
@@ -38,7 +36,6 @@ const config: JestConfigWithTsJest = {
     '^@routes/(.*)$': '<rootDir>/routes/$1',
     '^@config/(.*)$': '<rootDir>/config/$1',
     '^@utils/(.*)$': '<rootDir>/utils/$1',
-    '^@types/(.*)$': '<rootDir>/types/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1'
   }
 };
