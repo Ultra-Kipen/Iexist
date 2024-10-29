@@ -29,6 +29,39 @@ interface PostParams {
   id: string;
 }
 
+// 모델 인터페이스 추가
+interface SomeoneDayPostModel {
+  post_id: number;
+  user_id: number;
+  title: string;
+  content: string;
+  image_url?: string;
+  summary: string;
+  is_anonymous: boolean;
+  character_count: number;
+  like_count: number;
+  message_count: number;
+  created_at: Date;
+  User?: {
+    nickname: string;
+    profile_image_url: string;
+  };
+  Tags?: Array<{
+    tag_id: number;
+    name: string;
+  }>;
+  EncouragementMessages?: Array<{
+    message_id: number;
+    content: string;
+    User: {
+      nickname: string;
+    };
+    created_at: Date;
+  }>;
+  addTags(tagIds: number[], options: any): Promise<void>;
+  toJSON(): any;
+}
+
 const someoneDayController = {
   createPost: async (req: AuthRequest<SomeoneDayPost>, res: Response) => {
     const transaction = await db.sequelize.transaction();
@@ -179,7 +212,7 @@ const someoneDayController = {
         distinct: true
       });
 
-      const formattedPosts = posts.rows.map(post => ({
+      const formattedPosts = posts.rows.map((post: SomeoneDayPostModel) => ({
         ...post.toJSON(),
         User: post.is_anonymous ? null : post.User,
         message_preview: post.EncouragementMessages?.slice(0, 3),
@@ -218,7 +251,7 @@ const someoneDayController = {
           message: '인증이 필요합니다.'
         });
       }
-
+    
       const posts = await db.SomeoneDayPost.findAll({
         include: [
           {
@@ -256,7 +289,7 @@ const someoneDayController = {
         }
       });
 
-      const formattedPosts = posts.map(post => ({
+      const formattedPosts = posts.map((post: SomeoneDayPostModel) => ({
         ...post.toJSON(),
         User: post.is_anonymous ? null : post.User
       }));

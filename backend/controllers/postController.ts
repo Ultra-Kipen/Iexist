@@ -1,9 +1,7 @@
 import { Response } from 'express';
-import { Op } from 'sequelize';
+import { Op, Model } from 'sequelize';
 import db from '../models';
 import { AuthRequest } from '../types/express';
-import { Model } from 'sequelize';
-
 
 interface MyDayPostModel extends Model {
   post_id: number;
@@ -29,6 +27,10 @@ interface MyDayPostModel extends Model {
     };
     created_at: Date;
   }>;
+  increment(field: string, options?: any): Promise<any>;
+  decrement(field: string, options?: any): Promise<any>;
+  addEmotions(emotionIds: number[], options?: any): Promise<any>;
+  toJSON(): any;
 }
 interface PostCreate {
   content: string;

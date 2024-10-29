@@ -2,7 +2,7 @@ import { Router } from 'express';
 import myDayController from '../controllers/myDayController';
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware';
-import { body } from 'express-validator';
+import { body, query } from 'express-validator';
 
 const router = Router();
 
@@ -21,9 +21,11 @@ router.post('/',
     body('content').isLength({ min: 10, max: 1000 })
       .withMessage('내용은 10자 이상 1000자 이하여야 합니다.'),
     body('emotion_ids').optional().isArray()
-      .withMessage('감정 ID는 배열이어야 합니다.')
+      .withMessage('감정 ID는 배열이어야 합니다.'),
+    body('is_anonymous').optional().isBoolean()
+      .withMessage('익명 여부는 boolean 값이어야 합니다.')
   ]),
-  myDayController.createPost
+  (req, res) => myDayController.createPost(req as any, res)
 );
 
 /**
@@ -35,7 +37,17 @@ router.post('/',
  *     security:
  *       - bearerAuth: []
  */
-router.get('/', authMiddleware, myDayController.getPosts);
+router.get('/', 
+  authMiddleware,
+  validateRequest([
+    query('page').optional().isInt({ min: 1 }).withMessage('page는 1 이상의 정수여야 합니다.'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit는 1에서 100 사이의 정수여야 합니다.'),
+    query('sort_by').optional().isIn(['latest', 'popular']).withMessage('정렬 기준이 올바르지 않습니다.'),
+    query('start_date').optional().isDate().withMessage('시작 날짜 형식이 올바르지 않습니다.'),
+    query('end_date').optional().isDate().withMessage('종료 날짜 형식이 올바르지 않습니다.')
+  ]),
+  (req, res) => myDayController.getPosts(req as any, res)
+);
 
 /**
  * @swagger
@@ -50,9 +62,11 @@ router.post('/:id/comments',
   authMiddleware,
   validateRequest([
     body('content').isLength({ min: 1, max: 300 })
-      .withMessage('댓글은 1자 이상 300자 이하여야 합니다.')
+      .withMessage('댓글은 1자 이상 300자 이하여야 합니다.'),
+    body('is_anonymous').optional().isBoolean()
+      .withMessage('익명 여부는 boolean 값이어야 합니다.')
   ]),
-  myDayController.createComment
+  (req, res) => myDayController.createComment(req as any, res)
 );
 
 /**
@@ -64,6 +78,9 @@ router.post('/:id/comments',
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/like', authMiddleware, myDayController.likePost);
+router.post('/:id/like', 
+  authMiddleware, 
+  (req, res) => myDayController.likePost(req as any, res)
+);
 
 export default router;

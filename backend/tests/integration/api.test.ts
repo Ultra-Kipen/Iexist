@@ -1,20 +1,21 @@
-import { app } from '../../server';
 import request from 'supertest';
-import { sequelize } from '../../models';
+import { app } from '../../server';
+import { setupTestDB, clearTestDB } from '../helpers';
 
 describe('API 테스트', () => {
   beforeAll(async () => {
-    await sequelize.sync({ force: true });
+    await setupTestDB();
   });
 
   afterAll(async () => {
-    await sequelize.close();
+    await clearTestDB();
   });
 
   describe('기본 API 엔드포인트', () => {
     it('서버가 정상적으로 응답해야 합니다', async () => {
-      const response = await request(app).get('/api/users');
-      expect(response.status).toBe(401); // 인증이 필요한 엔드포인트이므로 401 응답
+      const response = await request(app).get('/api/health');
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('status', 'ok');
     });
   });
 });

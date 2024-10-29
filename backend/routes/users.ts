@@ -2,17 +2,35 @@ import { Router } from 'express';
 import { validateRequest } from '../middleware/validationMiddleware';
 import { body } from 'express-validator';
 import authMiddleware from '../middleware/authMiddleware';
-import { Response, Request } from 'express';
+import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../models';
+import { AuthRequest } from '../types/express';
+
+interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+  nickname?: string;
+}
+
+interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+interface ProfileUpdateRequest {
+  nickname?: string;
+  theme_preference?: 'light' | 'dark' | 'system';
+  favorite_quote?: string;
+}
 
 const router = Router();
 
 // 컨트롤러 함수들을 라우터 파일 내에서 정의
 const userController = {
-  // 회원가입
-  register: async (req: Request, res: Response) => {
+  register: async (req: AuthRequest<RegisterRequest>, res: Response) => {
     try {
       const { username, email, password, nickname } = req.body;
 
@@ -54,7 +72,7 @@ const userController = {
   },
 
   // 로그인
-  login: async (req: Request, res: Response) => {
+  login: async (req: AuthRequest<LoginRequest>, res: Response) => {
     try {
       const { email, password } = req.body;
 
@@ -91,9 +109,9 @@ const userController = {
   },
 
   // 프로필 조회
-  getProfile: async (req: Request, res: Response) => {
+  getProfile: async (req: AuthRequest, res: Response) => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.id;
       const user = await db.User.findByPk(userId, {
         attributes: { exclude: ['password_hash'] }
       });
@@ -110,9 +128,9 @@ const userController = {
   },
 
   // 프로필 수정
-  updateProfile: async (req: Request, res: Response) => {
+  updateProfile: async (req: AuthRequest<ProfileUpdateRequest>, res: Response) => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.id;
       const { nickname, theme_preference, favorite_quote } = req.body;
 
       await db.User.update(

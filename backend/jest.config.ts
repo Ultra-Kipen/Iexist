@@ -25,5 +25,18 @@ const config: Config = {
   verbose: true,
   testTimeout: 10000
 };
-
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  testMatch: ['**/tests/**/*.test.ts'],
+  setupFilesAfterEnv: ['./tests/setup.ts'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1'
+  },
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.json'
+    }
+  }
+};
 export default config;

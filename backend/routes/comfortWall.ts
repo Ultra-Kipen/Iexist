@@ -1,8 +1,6 @@
-// backend/routes/comfortWall.ts
-
 import { Router } from 'express';
-import ComfortWallController from '../controllers/comfortWallController';  // 기본 import로 변경
-import authMiddleware from '../middleware/authMiddleware';  // 기본 import로 변경
+import ComfortWallController from '../controllers/comfortWallController';
+import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware';
 import { body, param, query } from 'express-validator';
 
@@ -64,27 +62,30 @@ router.get('/',
 
 /**
  * @swagger
- * /api/comfort-wall/{id}/message:
+ * /comfort-wall:
  *   post:
- *     summary: 위로의 메시지 작성
+ *     summary: 위로의 벽 게시물 작성
  *     tags: [ComfortWall]
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/message',
+router.post('/',
   authMiddleware,
   validateRequest([
-    param('id').isInt().withMessage('유효한 게시물 ID가 필요합니다.'),
-    body('message')
+    body('title')
       .trim()
-      .isLength({ min: 5, max: 500 })
-      .withMessage('위로의 메시지는 5자 이상 500자 이하여야 합니다.'),
+      .isLength({ min: 5, max: 100 })
+      .withMessage('제목은 5자 이상 100자 이하여야 합니다.'),
+    body('content')
+      .trim()
+      .isLength({ min: 20, max: 2000 })
+      .withMessage('내용은 20자 이상 2000자 이하여야 합니다.'),
     body('is_anonymous')
       .optional()
       .isBoolean()
       .withMessage('익명 여부는 boolean 값이어야 합니다.')
   ]),
-  ComfortWallController.createComfortMessage  // 컨트롤러 메서드명 원래대로 변경
+  (req, res) => ComfortWallController.createComfortWallPost(req as any, res)
 );
 
 export default router;
