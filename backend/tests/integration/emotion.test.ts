@@ -1,20 +1,14 @@
 import request from 'supertest';
 import { app } from '../../server';
-import { setupTestDB, clearTestDB } from '../helpers';
-import db from '../../models';
+import { sequelize } from '../../models';
 
 describe('감정 API 테스트', () => {
-  beforeAll(async () => {
-    await setupTestDB();
-    // 기본 감정 데이터 생성
-    await db.Emotion.bulkCreate([
+  beforeEach(async () => {
+    // 테스트 데이터 생성
+    await sequelize.models.Emotion.bulkCreate([
       { name: '행복', icon: '😊' },
       { name: '슬픔', icon: '😢' }
     ]);
-  });
-
-  afterAll(async () => {
-    await clearTestDB();
   });
 
   describe('GET /api/emotions', () => {

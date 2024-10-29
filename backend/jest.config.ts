@@ -4,16 +4,12 @@ const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
-  testMatch: [
-    '**/tests/**/*.test.ts'
-  ],
-  transform: {
+    transform: {
     '^.+\\.ts$': 'ts-jest'
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   collectCoverageFrom: [
     '**/*.{js,ts}',
     '!**/node_modules/**',
@@ -28,15 +24,25 @@ const config: Config = {
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['**/tests/**/*.test.ts'],
-  setupFilesAfterEnv: ['./tests/setup.ts'],
+  roots: ['<rootDir>'],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1'
+    '^@/(.*)$': '<rootDir>/$1',
+    '^@controllers/(.*)$': '<rootDir>/controllers/$1',
+    '^@middleware/(.*)$': '<rootDir>/middleware/$1',
+    '^@routes/(.*)$': '<rootDir>/routes/$1',
+    '^@models/(.*)$': '<rootDir>/models/$1'
+  },
+  testMatch: [
+    "**/tests/**/*.test.ts"
+  ],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  transform: {
+    '^.+\\.ts$': 'ts-jest'
   },
   globals: {
     'ts-jest': {
       tsconfig: 'tsconfig.json'
     }
   }
-};
+}
 export default config;

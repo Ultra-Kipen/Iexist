@@ -1,91 +1,57 @@
-import dotenv from 'dotenv';
-import { sequelize } from '../models';
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import errorHandler from '../middleware/errorMiddleware';
+import corsMiddleware from '../middleware/corsMiddleware'; 
+import userRoutes from '../routes/users';
+import emotionRoutes from '../routes/emotions';
+import myDayRoutes from '../routes/myDay';
+import someoneDayRoutes from '../routes/someoneDay';
+import challengeRoutes from '../routes/challenges';
+import { sequelize } from '../models/index';
 
-dotenv.config({ path: '.env.test' });
+const app = express();
 
-beforeAll(async () => {
+// 미들웨어 설정
+app.use(morgan('dev'));
+app.use(corsMiddleware);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Health check endpoint 추가
+app.get('/api', (_req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'iexist-backend'
+  });
+});
+
+// 라우트 설정
+app.use('/api/users', userRoutes);
+app.use('/api/emotions', emotionRoutes);
+app.use('/api/my-day', myDayRoutes);
+app.use('/api/someone-day', someoneDayRoutes);
+app.use('/api/challenges', challengeRoutes);  // 추가
+
+// 에러 핸들링 미들웨어
+app.use(errorHandler);
+
+// 데이터베이스 연결 및 서버 시작
+const PORT = process.env.PORT || 3000;
+
+const startServer = async () => {
   try {
     await sequelize.authenticate();
-    console.log('Test database connected');
-
-    // 외래키 체크 비활성화
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-
-    // 테이블 삭제 순서 정의 (의존성 역순)
-    const tableOrder = [
-      'post_tags',
-      'challenge_participants',
-      'challenge_emotions',
-      'my_day_emotions',
-      'my_day_likes',
-      'my_day_comments',
-      'someone_day_likes',
-      'someone_day_comments',
-      'emotion_logs',
-      'my_day_posts',
-      'someone_day_posts',
-      'challenges',
-      'emotions',
-      'tags',
-      'users'
-    ];
-
-    // 테이블 순서대로 제거
-    for (const tableName of tableOrder) {
-      await sequelize.query(`DROP TABLE IF EXISTS ${tableName}`);
-    }
-
-    // 테이블 재생성
-    await sequelize.sync({ force: true });
-
-    // 외래키 체크 활성화
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
+    console.log('데이터베이스 연결 성공');
+    
+    app.listen(PORT, () => {
+      console.log(`서버가 포트 ${PORT}에서 실행중입니다`);
+    });
   } catch (error) {
-    console.error('테스트 데이터베이스 초기화 실패:', error);
-    throw error;
+    console.error('서버 시작 실패:', error);
+    process.exit(1);
   }
-});
+};
 
-// 각 테스트 후 데이터 초기화
-afterEach(async () => {
-  try {
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-    
-    // 모든 테이블의 데이터만 삭제
-    for (const model of Object.values(sequelize.models)) {
-      await model.destroy({ 
-        where: {},
-        force: true,
-        truncate: true
-      });
-    }
-    
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
-  } catch (error) {
-    console.error('테스트 데이터 초기화 실패:', error);
-  }
-});
-
-// 모든 테스트 완료 후
-afterAll(async () => {
-  try {
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-    
-    // 테스트 완료 후 테이블 초기화 (옵션)
-    for (const model of Object.values(sequelize.models)) {
-      await model.destroy({ 
-        where: {},
-        force: true,
-        truncate: true
-      });
-    }
-    
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
-    await sequelize.close();
-  } catch (error) {
-    console.error('테스트 데이터베이스 정리 실패:', error);
-  }
-});
-
-// Jest 타임아웃 설정
-jest.setTimeout(30000);
+export { app, startServer };
