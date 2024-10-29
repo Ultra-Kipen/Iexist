@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthRequest } from '../types/express';
-import db from '../models';
+import { User } from '../models';
 
 interface JwtPayload {
   userId: number;
@@ -19,7 +19,7 @@ const authMiddleware = async (
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-    const user = await db.User.findByPk(decoded.userId);
+    const user = await User.findByPk(decoded.userId);
 
     if (!user) {
       return res.status(401).json({ message: '유효하지 않은 사용자입니다.' });

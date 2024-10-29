@@ -37,7 +37,7 @@ module.exports = {
   ],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   transform: {
-    '^.+\\.ts$': 'ts-jest'
+    '^.+\\.ts$': ['ts-jest', { /* ts-jest 설정 */ }],
   },
   globals: {
     'ts-jest': {

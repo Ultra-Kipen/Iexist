@@ -1,79 +1,94 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import bcrypt from 'bcrypt';
 
 interface UserAttributes {
-  user_id: number;
+  id: number;
   username: string;
   email: string;
-  password_hash: string;
-  nickname: string;
-  profile_image_url?: string;
-  theme_preference: 'light' | 'dark' | 'system';
-  created_at: Date;
-  updated_at: Date;
+  password: string;
+  nickname?: string;
+  profileImageUrl?: string;
+  backgroundImageUrl?: string;
+  favoriteQuote?: string;
+  themePreference: 'light' | 'dark' | 'system';
+  privacySettings: object;
 }
 
-class User extends Model<UserAttributes> implements UserAttributes {
-  public user_id!: number;
+export class User extends Model<UserAttributes> implements UserAttributes {
+  public id!: number;
   public username!: string;
   public email!: string;
-  public password_hash!: string;
+  public password!: string;
   public nickname!: string;
-  public profile_image_url?: string;
-  public theme_preference!: 'light' | 'dark' | 'system';
-  public created_at!: Date;
-  public updated_at!: Date;
+  public profileImageUrl!: string;
+  public backgroundImageUrl!: string;
+  public favoriteQuote!: string;
+  public themePreference!: 'light' | 'dark' | 'system';
+  public privacySettings!: object;
 
-  static initialize(sequelize: Sequelize) {
-    User.init({
-      user_id: {
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+
+  // 비밀번호 검증 메소드
+  public async validatePassword(password: string): Promise<boolean> {
+    return bcrypt.compare(password, this.password);
+  }
+}
+
+export const initUser = (sequelize: Sequelize): void => {
+  User.init(
+    {
+      id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
       },
       username: {
         type: DataTypes.STRING(50),
+        unique: true,
         allowNull: false,
       },
       email: {
         type: DataTypes.STRING(100),
-        allowNull: false,
         unique: true,
+        allowNull: false,
       },
-      password_hash: {
+      password: {
         type: DataTypes.STRING(255),
         allowNull: false,
       },
       nickname: {
         type: DataTypes.STRING(50),
-        allowNull: false,
       },
-      profile_image_url: {
+      profileImageUrl: {
         type: DataTypes.STRING(255),
-        allowNull: true,
       },
-      theme_preference: {
+      backgroundImageUrl: {
+        type: DataTypes.STRING(255),
+      },
+      favoriteQuote: {
+        type: DataTypes.STRING(255),
+      },
+      themePreference: {
         type: DataTypes.ENUM('light', 'dark', 'system'),
-        allowNull: false,
-        defaultValue: 'light',
+        defaultValue: 'system',
       },
-      created_at: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
+      privacySettings: {
+        type: DataTypes.JSON,
+        defaultValue: {},
       },
-      updated_at: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-    }, {
+    },
+    {
       sequelize,
       tableName: 'users',
-      timestamps: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-    });
-  }
-}
-
-export { User, UserAttributes };
+      hooks: {
+        beforeSave: async (user: User) => {
+          if (user.changed('password')) {
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(user.password, salt);
+          }
+        },
+      },
+    }
+  );
+};
