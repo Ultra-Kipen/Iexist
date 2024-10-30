@@ -1,128 +1,182 @@
-import { Sequelize } from 'sequelize';
+import { Model, Sequelize } from 'sequelize';
 import { User } from './User';
 import { Emotion } from './Emotion';
 import { EmotionLog } from './EmotionLog';
-import config from '../config';
+import BestPost from './BestPost';
+import Challenge from './Challenge';
+import ChallengeEmotion from './ChallengeEmotion';
+import ChallengeParticipant from './ChallengeParticipant';
+import EncouragementMessage from './EncouragementMessage';
+import MyDayComment from './MyDayComment';
+import MyDayEmotion from './MyDayEmotion';
+import MyDayLike from './MyDayLike';
+import MyDayPost from './MyDayPost';
+import Notification from './Notification';
+import PostRecommendation from './PostRecommendation';
+import PostReport from './PostReport';
+import PostTag from './PostTag';
+import SomeoneDayComment from './SomeoneDayComment';
+import SomeoneDayLike from './SomeoneDayLike';
+import SomeoneDayPost from './SomeoneDayPost';
+import Tag from './Tag';
+import UserGoal from './UserGoal';
+import UserStats from './UserStats';
+import sequelize from '../config/database';
 
-const env = process.env.NODE_ENV || 'development';
+export class Database {
+  public sequelize: Sequelize;
+  
+  // 모델 선언
+  public User!: typeof User;
+  public Emotion!: typeof Emotion;
+  public EmotionLog!: typeof EmotionLog;
+  public BestPost!: typeof BestPost;
+  public Challenge!: typeof Challenge;
+  public ChallengeEmotion!: typeof ChallengeEmotion;
+  public ChallengeParticipant!: typeof ChallengeParticipant;
+  public EncouragementMessage!: typeof EncouragementMessage;
+  public MyDayComment!: typeof MyDayComment;
+  public MyDayEmotion!: typeof MyDayEmotion;
+  public MyDayLike!: typeof MyDayLike;
+  public MyDayPost!: typeof MyDayPost;
+  public Notification!: typeof Notification;
+  public PostRecommendation!: typeof PostRecommendation;
+  public PostReport!: typeof PostReport;
+  public PostTag!: typeof PostTag;
+  public SomeoneDayComment!: typeof SomeoneDayComment;
+  public SomeoneDayLike!: typeof SomeoneDayLike;
+  public SomeoneDayPost!: typeof SomeoneDayPost;
+  public Tag!: typeof Tag;
+  public UserGoal!: typeof UserGoal;
+  public UserStats!: typeof UserStats;
 
-let sequelize: Sequelize;
+  constructor(sequelizeInstance: Sequelize) {
+    this.sequelize = sequelizeInstance;
+    this.initializeModels();
+    this.setupAssociations();
+  }
 
-if (env === 'test') {
-  // 테스트 환경: SQLite 사용
-  sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: ':memory:',
-    logging: false,
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    }
-  });
-  console.log('테스트 환경: SQLite 사용 중');
-} else {
-  // 개발 및 운영 환경: MySQL 사용
-  const dbConfig = {
-    database: config.database.name || 'iexist',
-    username: config.database.user || 'Iexist',
-    password: config.database.password || 'sw309824!@',
-    host: config.database.host || 'localhost',
-    port: config.database.port || 3306,
-    dialect: 'mysql' as const
-  };
+  private initializeModels() {
+    // 기본 모델 초기화
+    User.initialize(this.sequelize);
+    Emotion.initialize(this.sequelize);
+    EmotionLog.initialize(this.sequelize);
+    
+    // Best/Post 관련 모델 초기화
+    BestPost.initialize(this.sequelize);
+    PostRecommendation.initialize(this.sequelize);
+    PostReport.initialize(this.sequelize);
+    PostTag.initialize(this.sequelize);
+    
+    // Challenge 관련 모델 초기화
+    Challenge.initialize(this.sequelize);
+    ChallengeParticipant.initialize(this.sequelize);
+    ChallengeEmotion.initialize(this.sequelize);
+    
+    // MyDay 관련 모델 초기화
+    MyDayPost.initialize(this.sequelize);
+    MyDayComment.initialize(this.sequelize);
+    MyDayLike.initialize(this.sequelize);
+    MyDayEmotion.initialize(this.sequelize);
+    
+    // SomeoneDay 관련 모델 초기화
+    SomeoneDayPost.initialize(this.sequelize);
+    SomeoneDayComment.initialize(this.sequelize);
+    SomeoneDayLike.initModel(this.sequelize);
+    
+    // 기타 모델 초기화
+    EncouragementMessage.init(this.sequelize);
+    Notification.init(this.sequelize);
+    Tag.initialize(this.sequelize);
+    UserGoal.initialize(this.sequelize);
+    // UserStats.init 또는 initModel로 수정
+    UserStats.init(this.sequelize);  // 또는 UserStats.initModel(this.sequelize)
 
-  console.log('데이터베이스 연결 설정:', {
-    ...dbConfig,
-    password: '********' // 보안을 위해 비밀번호 마스킹
-  });
+    // 모델 인스턴스 할당
+    this.User = User;
+    this.Emotion = Emotion;
+    this.EmotionLog = EmotionLog;
+    this.BestPost = BestPost;
+    this.Challenge = Challenge;
+    this.ChallengeEmotion = ChallengeEmotion;
+    this.ChallengeParticipant = ChallengeParticipant;
+    this.EncouragementMessage = EncouragementMessage;
+    this.MyDayComment = MyDayComment;
+    this.MyDayEmotion = MyDayEmotion;
+    this.MyDayLike = MyDayLike;
+    this.MyDayPost = MyDayPost;
+    this.Notification = Notification;
+    this.PostRecommendation = PostRecommendation;
+    this.PostReport = PostReport;
+    this.PostTag = PostTag;
+    this.SomeoneDayComment = SomeoneDayComment;
+    this.SomeoneDayLike = SomeoneDayLike;
+    this.SomeoneDayPost = SomeoneDayPost;
+    this.Tag = Tag;
+    this.UserGoal = UserGoal;
+    this.UserStats = UserStats;
+  }
 
-  sequelize = new Sequelize(
-    dbConfig.database,
-    dbConfig.username,
-    dbConfig.password,
-    {
-      host: dbConfig.host,
-      port: dbConfig.port,
-      dialect: dbConfig.dialect,
-      timezone: '+09:00',
-      logging: env === 'development' ? console.log : false,
-      dialectOptions: {
-        dateStrings: true,
-        typeCast: true,
-        connectTimeout: 60000
-      },
-      pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-      },
-      retry: {
-        max: 3, // 최대 재시도 횟수
-        match: [/Deadlock/i, /ETIMEDOUT/] // 재시도할 에러 패턴
+  private setupAssociations() {
+    const models = {
+      User: this.User,
+      Emotion: this.Emotion,
+      EmotionLog: this.EmotionLog,
+      BestPost: this.BestPost,
+      Challenge: this.Challenge,
+      ChallengeEmotion: this.ChallengeEmotion,
+      ChallengeParticipant: this.ChallengeParticipant,
+      EncouragementMessage: this.EncouragementMessage,
+      MyDayComment: this.MyDayComment,
+      MyDayEmotion: this.MyDayEmotion,
+      MyDayLike: this.MyDayLike,
+      MyDayPost: this.MyDayPost,
+      Notification: this.Notification,
+      PostRecommendation: this.PostRecommendation,
+      PostReport: this.PostReport,
+      PostTag: this.PostTag,
+      SomeoneDayComment: this.SomeoneDayComment,
+      SomeoneDayLike: this.SomeoneDayLike,
+      SomeoneDayPost: this.SomeoneDayPost,
+      Tag: this.Tag,
+      UserGoal: this.UserGoal,
+      UserStats: this.UserStats
+    };
+
+    // 각 모델의 associate 메서드 호출
+    Object.values(models).forEach((model: any) => {
+      if (model.associate) {
+        model.associate(models);
       }
+    });
+  }
+
+  async testConnection(): Promise<boolean> {
+    try {
+      await this.sequelize.authenticate();
+      console.log('데이터베이스 연결 성공');
+      return true;
+    } catch (error) {
+      console.error('데이터베이스 연결 실패:', error);
+      return false;
     }
-  );
-  console.log(`${env} 환경: MySQL 사용 중`);
+  }
+
+  async sync(options = {}): Promise<void> {
+    await this.sequelize.sync(options);
+  }
 }
 
-// 모델 초기화
-User.initialize(sequelize);
-Emotion.initialize(sequelize);
-EmotionLog.initialize(sequelize);
+const db = new Database(sequelize);
 
-// 모델 간 관계 설정
-EmotionLog.belongsTo(User, {
-  foreignKey: 'user_id',
-  as: 'user'
-});
-
-EmotionLog.belongsTo(Emotion, {
-  foreignKey: 'emotion_id',
-  as: 'emotion'
-});
-
-User.hasMany(EmotionLog, {
-  foreignKey: 'user_id',
-  as: 'emotionLogs'
-});
-
-Emotion.hasMany(EmotionLog, {
-  foreignKey: 'emotion_id',
-  as: 'logs'
-});
-
-// 데이터베이스 연결 테스트 함수
-export const testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('데이터베이스 연결 성공');
-    return true;
-  } catch (error) {
-    console.error('데이터베이스 연결 실패:', error);
-    if (error.original?.code === 'ECONNREFUSED') {
-      console.error('MySQL 서버가 실행 중인지 확인하세요.');
-      console.error('XAMPP Control Panel에서 MySQL이 실행 중인지 확인하세요.');
-    }
-    if (error.original?.code === 'ER_ACCESS_DENIED_ERROR') {
-      console.error('데이터베이스 사용자 이름 또는 비밀번호가 잘못되었습니다.');
-    }
-    if (error.original?.code === 'ER_BAD_DB_ERROR') {
-      console.error('데이터베이스가 존재하지 않습니다.');
-    }
-    return false;
-  }
+export {
+  User, Emotion, EmotionLog,
+  BestPost, Challenge, ChallengeEmotion, ChallengeParticipant,
+  EncouragementMessage, MyDayComment, MyDayEmotion, MyDayLike,
+  MyDayPost, Notification, PostRecommendation, PostReport,
+  PostTag, SomeoneDayComment, SomeoneDayLike, SomeoneDayPost,
+  Tag, UserGoal, UserStats,
+  sequelize
 };
 
-const db = {
-  sequelize,
-  User,
-  Emotion,
-  EmotionLog,
-  testConnection
-};
-
-export { sequelize, User, Emotion, EmotionLog };
 export default db;

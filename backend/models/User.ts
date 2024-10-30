@@ -1,9 +1,12 @@
 import { Model, DataTypes, Sequelize, Association } from 'sequelize';
 import { EmotionLog } from './EmotionLog';
-import { Post } from './Post';
-import { Challenge } from './Challenge';
-import { Comment } from './Comment';
-import { Like } from './Like';
+import MyDayPost from './MyDayPost';
+import Challenge from './Challenge';
+import MyDayComment from './MyDayComment';
+import MyDayLike from './MyDayLike';
+import SomeoneDayPost from './SomeoneDayPost';
+import SomeoneDayComment from './SomeoneDayComment';
+import SomeoneDayLike from './SomeoneDayLike';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -20,8 +23,7 @@ interface UserAttributes {
 }
 
 interface UserCreationAttributes extends Omit<UserAttributes, 'id' | 'is_active'> {}
-
-export class User extends Model<UserAttributes, UserCreationAttributes> {
+class User extends Model<UserAttributes, UserCreationAttributes> {
   public id!: number;
   public username!: string;
   public email!: string;
@@ -37,18 +39,24 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
 
   // 관계 타입 선언
   public readonly emotionLogs?: EmotionLog[];
-  public readonly posts?: Post[];
+  public readonly myDayPosts?: MyDayPost[];
+  public readonly someoneDayPosts?: SomeoneDayPost[];
   public readonly challenges?: Challenge[];
-  public readonly comments?: Comment[];
-  public readonly likes?: Like[];
+  public readonly myDayComments?: MyDayComment[];
+  public readonly someoneDayComments?: SomeoneDayComment[];
+  public readonly myDayLikes?: MyDayLike[];
+  public readonly someoneDayLikes?: SomeoneDayLike[];
 
   // 관계 선언
   public static associations: {
     emotionLogs: Association<User, EmotionLog>;
-    posts: Association<User, Post>;
+    myDayPosts: Association<User, MyDayPost>;
+    someoneDayPosts: Association<User, SomeoneDayPost>;
     challenges: Association<User, Challenge>;
-    comments: Association<User, Comment>;
-    likes: Association<User, Like>;
+    myDayComments: Association<User, MyDayComment>;
+    someoneDayComments: Association<User, SomeoneDayComment>;
+    myDayLikes: Association<User, MyDayLike>;
+    someoneDayLikes: Association<User, SomeoneDayLike>;
   };
 
   // 모델 초기화 메서드
@@ -117,46 +125,47 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
           allowNull: true,
         },
       },
-      {
-        sequelize,
-        modelName: 'User',
-        tableName: 'users',
-        timestamps: true,
-        indexes: [
-          {
-            unique: true,
-            fields: ['email'],
-          },
-          {
-            fields: ['username'],
-          },
-          {
-            fields: ['is_active'],
-          },
-        ],
-        defaultScope: {
-          attributes: {
-            exclude: ['password'],
-          },
-          where: {
-            is_active: true,
-          },
-        },
-        scopes: {
-          withPassword: {
+      
+        {
+          sequelize,
+          modelName: 'User',
+          tableName: 'users',
+          timestamps: true,
+          indexes: [
+            {
+              unique: true,
+              fields: ['email'],
+            },
+            {
+              fields: ['username'],
+            },
+            {
+              fields: ['is_active'],
+            },
+          ],
+          defaultScope: {
             attributes: {
-              include: ['password'],
+              exclude: ['password'],
+            },
+            where: {
+              is_active: true,
             },
           },
-          withInactive: {
-            where: {},
+          scopes: {
+            withPassword: {
+              attributes: {
+                include: ['password'],
+              },
+            },
+            withInactive: {
+              where: {},
+            },
           },
-        },
-      }
-    );
-  }
+        }
+      );
+    }
 
-  // 관계 설정 메서드
+  // 관계 설정 메서드 수정
   public static associate(models: any): void {
     // 감정 로그 관계
     User.hasMany(models.EmotionLog, {
@@ -168,13 +177,23 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
       onDelete: 'CASCADE',
     });
 
-    // 게시물 관계
-    User.hasMany(models.Post, {
+    // MyDay 게시물 관계
+    User.hasMany(models.MyDayPost, {
       foreignKey: {
         name: 'user_id',
         allowNull: false,
       },
-      as: 'posts',
+      as: 'myDayPosts',
+      onDelete: 'CASCADE',
+    });
+
+    // SomeoneDay 게시물 관계
+    User.hasMany(models.SomeoneDayPost, {
+      foreignKey: {
+        name: 'user_id',
+        allowNull: false,
+      },
+      as: 'someoneDayPosts',
       onDelete: 'CASCADE',
     });
 
@@ -186,58 +205,82 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
       as: 'challenges',
     });
 
-    // 댓글 관계
-    User.hasMany(models.Comment, {
+    // MyDay 댓글 관계
+    User.hasMany(models.MyDayComment, {
       foreignKey: {
         name: 'user_id',
         allowNull: false,
       },
-      as: 'comments',
+      as: 'myDayComments',
       onDelete: 'CASCADE',
     });
 
-    // 좋아요 관계
-    User.hasMany(models.Like, {
+    // SomeoneDay 댓글 관계
+    User.hasMany(models.SomeoneDayComment, {
       foreignKey: {
         name: 'user_id',
         allowNull: false,
       },
-      as: 'likes',
+      as: 'someoneDayComments',
+      onDelete: 'CASCADE',
+    });
+
+    // MyDay 좋아요 관계
+    User.hasMany(models.MyDayLike, {
+      foreignKey: {
+        name: 'user_id',
+        allowNull: false,
+      },
+      as: 'myDayLikes',
+      onDelete: 'CASCADE',
+    });
+
+    // SomeoneDay 좋아요 관계
+    User.hasMany(models.SomeoneDayLike, {
+      foreignKey: {
+        name: 'user_id',
+        allowNull: false,
+      },
+      as: 'someoneDayLikes',
       onDelete: 'CASCADE',
     });
   }
 
-  // 인스턴스 메서드
-  public toJSON(): object {
-    const values = { ...this.get() };
-    delete values.password;
-    return values;
-  }
 
-  // 사용자 활성화 상태 변경 메서드
-  public async toggleActive(): Promise<void> {
-    this.is_active = !this.is_active;
-    await this.save();
-  }
-
-  // 마지막 로그인 시간 업데이트 메서드
-  public async updateLastLogin(): Promise<void> {
-    this.last_login_at = new Date();
-    await this.save();
-  }
-
-  // 프로필 업데이트 메서드
-  public async updateProfile(data: Partial<UserAttributes>): Promise<void> {
-    const allowedFields = ['nickname', 'theme_preference', 'profile_image_url'];
-    const updateData = Object.keys(data)
-      .filter(key => allowedFields.includes(key))
-      .reduce((obj, key) => {
-        obj[key] = data[key];
-        return obj;
-      }, {});
-
-    await this.update(updateData);
-  }
+ // 인스턴스 메서드
+ public toJSON(): Omit<UserAttributes, 'password'> {
+  const values = this.get() as UserAttributes;
+  const { password, ...rest } = values;
+  return rest;
 }
 
+// 프로필 업데이트 메서드
+public async updateProfile(data: Partial<UserAttributes>): Promise<void> {
+  const updateData: Partial<UserAttributes> = {};
+  
+  if ('nickname' in data) updateData.nickname = data.nickname;
+  if ('theme_preference' in data) updateData.theme_preference = data.theme_preference;
+  if ('profile_image_url' in data) updateData.profile_image_url = data.profile_image_url;
+
+  await this.update(updateData);
+}
+
+// 사용자 활성화 상태 변경 메서드
+public async toggleActive(): Promise<void> {
+  this.is_active = !this.is_active;
+  await this.save();
+}
+
+// 마지막 로그인 시간 업데이트 메서드
+public async updateLastLogin(): Promise<void> {
+  this.last_login_at = new Date();
+  await this.save();
+}
+}
+  
+  // export class User를 제거하고 아래와 같이 export
+export { User };
+export type { UserAttributes, UserCreationAttributes };
+
+// 기본 내보내기
 export default User;

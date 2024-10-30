@@ -3,28 +3,31 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
 import {
   Provider as PaperProvider,
   MD3LightTheme as DefaultTheme,
   adaptNavigationTheme,
 } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { enableScreens } from 'react-native-screens';
+
+// 스크린 임포트 시 절대 경로 사용
+import HomeScreen from '@screens/HomeScreen';
 import ComfortScreen from '@screens/ComfortScreen';
 import ReviewScreen from '@screens/ReviewScreen';
 import ChallengeScreen from '@screens/ChallengeScreen';
-import 'react-native-gesture-handler';
-import { enableScreens } from 'react-native-screens';
-import HomeScreen from '@screens/HomeScreen';
 
 enableScreens();
+
 type RootTabParamList = {
   Home: undefined;
   Comfort: undefined;
   Review: undefined;
   Challenge: undefined;
 };
+
 const Tab = createBottomTabNavigator<RootTabParamList>();
+
 const theme = {
   ...DefaultTheme,
   colors: {
@@ -37,7 +40,7 @@ const theme = {
 
 const { LightTheme } = adaptNavigationTheme({ reactNavigationLight: theme });
 
-const App: React.FC = () => {
+const App = () => {
   return (
     <PaperProvider theme={theme}>
       <SafeAreaProvider>
@@ -45,7 +48,7 @@ const App: React.FC = () => {
           <Tab.Navigator
             screenOptions={({ route }) => ({
               tabBarIcon: ({ color, size }) => {
-                let iconName: string;
+                let iconName: string = 'help-circle';
               
                 switch (route.name) {
                   case 'Home':
@@ -60,8 +63,6 @@ const App: React.FC = () => {
                   case 'Challenge':
                     iconName = 'lightbulb-on';
                     break;
-                  default:
-                    iconName = 'help-circle';
                 }
               
                 return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
@@ -75,8 +76,6 @@ const App: React.FC = () => {
               headerTitleStyle: {
                 fontWeight: 'bold',
               },
-              tabBarStyle: { display: 'flex' },
-              tabBarLabelStyle: { display: 'flex' },
             })}
           >
             <Tab.Screen
@@ -87,9 +86,27 @@ const App: React.FC = () => {
                 headerTitle: '나의 오늘',
               }}
             />
-            <Tab.Screen name="Comfort" component={ComfortScreen} options={{ tabBarLabel: '위로와 공감' }} />
-            <Tab.Screen name="Review" component={ReviewScreen} options={{ tabBarLabel: '일상 돌아보기' }} />
-            <Tab.Screen name="Challenge" component={ChallengeScreen} options={{ tabBarLabel: '감정 챌린지' }} />
+            <Tab.Screen 
+              name="Comfort" 
+              component={ComfortScreen} 
+              options={{ 
+                tabBarLabel: '위로와 공감' 
+              }} 
+            />
+            <Tab.Screen 
+              name="Review" 
+              component={ReviewScreen} 
+              options={{ 
+                tabBarLabel: '일상 돌아보기' 
+              }} 
+            />
+            <Tab.Screen 
+              name="Challenge" 
+              component={ChallengeScreen} 
+              options={{ 
+                tabBarLabel: '감정 챌린지' 
+              }} 
+            />
           </Tab.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

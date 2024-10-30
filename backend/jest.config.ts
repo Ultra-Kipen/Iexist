@@ -1,42 +1,50 @@
-import type { JestConfigWithTsJest } from 'ts-jest';
-import { resolve } from 'path';
+import type { Config } from '@jest/types';
 
-const config: JestConfigWithTsJest = {
+const config: Config.InitialOptions = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  rootDir: '.',
-  modulePaths: [resolve(__dirname)],
-  moduleDirectories: ['node_modules'],
-  transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: resolve(__dirname, './tsconfig.json'),
-      isolatedModules: true
-    }]
-  },
-  testMatch: [
-    '<rootDir>/tests/**/*.test.ts',
-    '<rootDir>/tests/**/*.spec.ts'
-  ],
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  verbose: true,
-  collectCoverage: true,
-  coverageDirectory: '<rootDir>/coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-  coveragePathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/'
-  ],
+  moduleFileExtensions: ['ts', 'js', 'json'],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
-    '^@models/(.*)$': '<rootDir>/models/$1',
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@config/(.*)$': '<rootDir>/config/$1',
     '^@controllers/(.*)$': '<rootDir>/controllers/$1',
     '^@middleware/(.*)$': '<rootDir>/middleware/$1',
+    '^@models/(.*)$': '<rootDir>/models/$1',
     '^@routes/(.*)$': '<rootDir>/routes/$1',
-    '^@config/(.*)$': '<rootDir>/config/$1',
+    '^@services/(.*)$': '<rootDir>/services/$1',
     '^@utils/(.*)$': '<rootDir>/utils/$1',
-    '^@tests/(.*)$': '<rootDir>/tests/$1'
+    '^@types/(.*)$': '<rootDir>/types/$1'
+  },
+  testRegex: '(/tests/.*\\.(test|spec))\\.[tj]s$',
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/coverage/'
+  ],
+  coverageDirectory: 'coverage',
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/tests/',
+    '/dist/'
+  ],
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.json'
+    }
+  },
+  setupFilesAfterEnv: ['./tests/setup.ts'],
+  verbose: true,
+  forceExit: true,
+  clearMocks: true,
+  resetMocks: true,
+  restoreMocks: true,
+  roots: [
+    '<rootDir>/tests',
+    '<rootDir>/src'
+  ],
+  displayName: {
+    name: 'BACKEND',
+    color: 'blue'
   }
 };
 
