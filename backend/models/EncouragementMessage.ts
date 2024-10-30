@@ -1,18 +1,54 @@
-// backend/models/EncouragementMessage.ts
+import { 
+  Model, 
+  DataTypes, 
+  Sequelize, 
+  InferAttributes, 
+  InferCreationAttributes,
+  CreationOptional,
+  ForeignKey,
+  NonAttribute
+} from 'sequelize';
+import { User } from './User';
+import SomeoneDayPost from '../models/SomeoneDayPost';
 
-import { Model, DataTypes, Sequelize } from 'sequelize';
+class EncouragementMessage extends Model<
+  InferAttributes<EncouragementMessage>,
+  InferCreationAttributes<EncouragementMessage>
+> {
+  declare id: CreationOptional<number>;
+  declare sender_id: ForeignKey<User['id']>;
+  declare receiver_id: ForeignKey<User['id']>;
+  declare post_id: ForeignKey<SomeoneDayPost['post_id']>;
+  declare message: string;
+  declare is_anonymous: CreationOptional<boolean>;
+  declare created_at: CreationOptional<Date>;
 
-class EncouragementMessage extends Model {
-  public id!: number;
-  public sender_id!: number;
-  public receiver_id!: number;
-  public post_id!: number;
-  public message!: string;
-  public is_anonymous!: boolean;
-  public readonly created_at!: Date;
+  declare sender?: NonAttribute<User>;
+  declare receiver?: NonAttribute<User>;
+  declare post?: NonAttribute<SomeoneDayPost>;
 
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static associate(models: any) {
+    // Sender와의 관계
+    this.belongsTo(models.User, {
+      foreignKey: 'sender_id',
+      as: 'sender'
+    });
+
+    // Receiver와의 관계
+    this.belongsTo(models.User, {
+      foreignKey: 'receiver_id',
+      as: 'receiver'
+    });
+
+    // SomeoneDayPost와의 관계
+    this.belongsTo(models.SomeoneDayPost, {
+      foreignKey: 'post_id',
+      as: 'post'
+    });
+  }
+
+  static initModel(sequelize: Sequelize): typeof EncouragementMessage {
+    EncouragementMessage.init(
       {
         id: {
           type: DataTypes.INTEGER,
@@ -54,6 +90,10 @@ class EncouragementMessage extends Model {
           type: DataTypes.BOOLEAN,
           allowNull: false,
           defaultValue: true
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          defaultValue: DataTypes.NOW
         }
       },
       {
@@ -76,26 +116,8 @@ class EncouragementMessage extends Model {
         ]
       }
     );
-  }
 
-  static associate(models: any): void {
-    // Sender와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'sender_id',
-      as: 'sender'
-    });
-
-    // Receiver와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'receiver_id',
-      as: 'receiver'
-    });
-
-    // SomeoneDayPost와의 관계
-    this.belongsTo(models.SomeoneDayPost, {
-      foreignKey: 'post_id',
-      as: 'post'
-    });
+    return EncouragementMessage;
   }
 }
 

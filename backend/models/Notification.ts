@@ -1,18 +1,27 @@
-// backend/models/Notification.ts
+import { 
+  Model, 
+  DataTypes, 
+  Sequelize, 
+  InferAttributes, 
+  InferCreationAttributes,
+  CreationOptional,
+  ForeignKey 
+} from 'sequelize';
 
-import { Model, DataTypes, Sequelize } from 'sequelize';
+class Notification extends Model<
+  InferAttributes<Notification>,
+  InferCreationAttributes<Notification>
+> {
+  declare id: CreationOptional<number>;
+  declare user_id: ForeignKey<number>;
+  declare content: string;
+  declare notification_type: 'like' | 'comment' | 'challenge' | 'system';
+  declare related_id: CreationOptional<number>;
+  declare is_read: CreationOptional<boolean>;
+  declare created_at: CreationOptional<Date>;
 
-class Notification extends Model {
-  public id!: number;
-  public user_id!: number;
-  public content!: string;
-  public notification_type!: 'like' | 'comment' | 'challenge' | 'system';
-  public related_id?: number;
-  public is_read!: boolean;
-  public readonly created_at!: Date;
-
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initModel(sequelize: Sequelize): typeof Notification {
+    Notification.init(
       {
         id: {
           type: DataTypes.INTEGER,
@@ -43,6 +52,10 @@ class Notification extends Model {
           type: DataTypes.BOOLEAN,
           allowNull: false,
           defaultValue: false
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          defaultValue: DataTypes.NOW
         }
       },
       {
@@ -62,10 +75,11 @@ class Notification extends Model {
         ]
       }
     );
+
+    return Notification;
   }
 
   static associate(models: any): void {
-    // User와의 관계
     this.belongsTo(models.User, {
       foreignKey: 'user_id',
       as: 'user'

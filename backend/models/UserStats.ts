@@ -1,21 +1,30 @@
-// backend/models/UserStats.ts
+import { 
+  Model, 
+  DataTypes, 
+  Sequelize,
+  InferAttributes,
+  InferCreationAttributes,
+  CreationOptional,
+  ForeignKey
+} from 'sequelize';
 
-import { Model, DataTypes, Sequelize } from 'sequelize';
+class UserStats extends Model<
+  InferAttributes<UserStats>,
+  InferCreationAttributes<UserStats>
+> {
+  declare id: CreationOptional<number>;
+  declare user_id: ForeignKey<number>;
+  declare my_day_post_count: number;
+  declare someone_day_post_count: number;
+  declare my_day_like_received_count: number;
+  declare someone_day_like_received_count: number;
+  declare my_day_comment_received_count: number;
+  declare someone_day_comment_received_count: number;
+  declare challenge_count: number;
+  declare last_updated: CreationOptional<Date>;
 
-class UserStats extends Model {
-  public id!: number;
-  public user_id!: number;
-  public my_day_post_count!: number;
-  public someone_day_post_count!: number;
-  public my_day_like_received_count!: number;
-  public someone_day_like_received_count!: number;
-  public my_day_comment_received_count!: number;
-  public someone_day_comment_received_count!: number;
-  public challenge_count!: number;
-  public readonly last_updated!: Date;
-
-  static init(sequelize: Sequelize): void {
-    super.init(
+  static initModel(sequelize: Sequelize): typeof UserStats {
+    UserStats.init(
       {
         id: {
           type: DataTypes.INTEGER,
@@ -80,10 +89,11 @@ class UserStats extends Model {
         underscored: true
       }
     );
+
+    return UserStats;
   }
 
   static associate(models: any): void {
-    // User와의 1:1 관계
     this.belongsTo(models.User, {
       foreignKey: 'user_id',
       as: 'user'

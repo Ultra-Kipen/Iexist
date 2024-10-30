@@ -57,40 +57,40 @@ export class Database {
   }
 
   private initializeModels() {
-    // 기본 모델 초기화
-    User.initialize(this.sequelize);
-    Emotion.initialize(this.sequelize);
-    EmotionLog.initialize(this.sequelize);
-    
-    // Best/Post 관련 모델 초기화
-    BestPost.initialize(this.sequelize);
-    PostRecommendation.initialize(this.sequelize);
-    PostReport.initialize(this.sequelize);
-    PostTag.initialize(this.sequelize);
-    
-    // Challenge 관련 모델 초기화
-    Challenge.initialize(this.sequelize);
-    ChallengeParticipant.initialize(this.sequelize);
-    ChallengeEmotion.initialize(this.sequelize);
-    
-    // MyDay 관련 모델 초기화
-    MyDayPost.initialize(this.sequelize);
-    MyDayComment.initialize(this.sequelize);
-    MyDayLike.initialize(this.sequelize);
-    MyDayEmotion.initialize(this.sequelize);
-    
-    // SomeoneDay 관련 모델 초기화
-    SomeoneDayPost.initialize(this.sequelize);
-    SomeoneDayComment.initialize(this.sequelize);
-    SomeoneDayLike.initModel(this.sequelize);
-    
-    // 기타 모델 초기화
-    EncouragementMessage.init(this.sequelize);
-    Notification.init(this.sequelize);
-    Tag.initialize(this.sequelize);
-    UserGoal.initialize(this.sequelize);
-    // UserStats.init 또는 initModel로 수정
-    UserStats.init(this.sequelize);  // 또는 UserStats.initModel(this.sequelize)
+   // 기본 모델 초기화
+   User.initialize(this.sequelize);
+   Emotion.initialize(this.sequelize);
+   EmotionLog.initialize(this.sequelize);
+   
+   // Best/Post 관련 모델 초기화
+   BestPost.initialize(this.sequelize);
+   PostRecommendation.initialize(this.sequelize);
+   PostReport.initialize(this.sequelize);
+   PostTag.initialize(this.sequelize);
+   
+   // Challenge 관련 모델 초기화
+   Challenge.initialize(this.sequelize);
+   ChallengeParticipant.initialize(this.sequelize);
+   ChallengeEmotion.initialize(this.sequelize);
+   
+   // MyDay 관련 모델 초기화
+   MyDayPost.initialize(this.sequelize);
+   MyDayComment.initialize(this.sequelize);
+   MyDayLike.initialize(this.sequelize);
+   MyDayEmotion.initialize(this.sequelize);
+   
+   // SomeoneDay 관련 모델 초기화
+   SomeoneDayPost.initialize(this.sequelize);
+   SomeoneDayComment.initialize(this.sequelize);
+   SomeoneDayLike.initModel(this.sequelize);
+   
+   // 기타 모델 초기화
+   // 기타 모델 초기화
+EncouragementMessage.initModel(this.sequelize);
+Notification.initModel(this.sequelize);
+Tag.initialize(this.sequelize);
+UserGoal.initialize(this.sequelize);
+UserStats.initModel(this.sequelize);  // init -> initModel로 변경
 
     // 모델 인스턴스 할당
     this.User = User;

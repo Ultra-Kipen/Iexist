@@ -1,111 +1,73 @@
 // backend/routes/challenges.ts
 
 import { Router } from 'express';
+import { Request, Response, RequestHandler } from 'express';
 import challengeController from '../controllers/challengeController';
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware';
 import { body, param, query } from 'express-validator';
 
+interface ChallengeParams {
+  id: number;
+}
+
+interface ChallengeProgressBody {
+  progress_note: string;
+  emotion_id: number;
+}
+
+interface AuthRequest<B = any, Q = any, P = any> extends Request<P, any, B, Q> {
+  user?: {
+    id: number;
+    [key: string]: any;
+  };
+}
+
 const router = Router();
 
-/**
- * @swagger
- * /challenges:
- *   post:
- *     summary: 새로운 챌린지 생성
- *     tags: [Challenges]
- *     security:
- *       - bearerAuth: []
- */
-router.post('/',
+router.post(
+  '/',
   authMiddleware,
   validateRequest([
-    body('title')
-      .trim()
-      .isLength({ min: 5, max: 100 })
-      .withMessage('제목은 5자 이상 100자 이하여야 합니다.'),
-    body('description')
-      .trim()
-      .isLength({ min: 20, max: 500 })
-      .withMessage('설명은 20자 이상 500자 이하여야 합니다.'),
-    body('start_date')
-      .exists()
-      .withMessage('시작일은 필수입니다.'),
-    body('end_date')
-      .exists()
-      .withMessage('종료일은 필수입니다.')
+    body('title').trim().isLength({ min: 5, max: 100 }).withMessage('제목은 5자 이상 100자 이하여야 합니다.'),
+    body('description').optional().trim().isLength({ min: 20, max: 500 }).withMessage('설명은 20자 이상 500자 이하여야 합니다.'),
+    body('start_date').isISO8601().withMessage('올바른 시작일 형식이 필요합니다.'),
+    body('end_date').isISO8601().withMessage('올바른 종료일 형식이 필요합니다.'),
+    body('max_participants').optional().isInt({ min: 2 }).withMessage('최대 참가자 수는 2명 이상이어야 합니다.')
   ]),
-  challengeController.createChallenge
+  challengeController.createChallenge as unknown as RequestHandler
 );
 
-/**
- * @swagger
- * /challenges:
- *   get:
- *     summary: 챌린지 목록 조회
- *     tags: [Challenges]
- */
-router.get('/',
+router.get(
+  '/',
   validateRequest([
-    query('page')
-      .optional()
-      .isInt({ min: 1 })
-      .withMessage('페이지 번호는 1 이상이어야 합니다.'),
-    query('limit')
-      .optional()
-      .isInt({ min: 1, max: 50 })
-      .withMessage('한 페이지당 1~50개의 항목을 조회할 수 있습니다.'),
-    query('status')
-      .optional()
-      .isIn(['active', 'completed', 'upcoming'])
-      .withMessage('상태는 active, completed, upcoming 중 하나여야 합니다.'),
-    query('sort_by')
-      .optional()
-      .isIn(['start_date', 'participant_count', 'created_at'])
-      .withMessage('정렬 기준이 올바르지 않습니다.')
+    query('page').optional().isInt({ min: 1 }).toInt().withMessage('페이지 번호는 1 이상이어야 합니다.'),
+    query('limit').optional().isInt({ min: 1, max: 50 }).toInt().withMessage('한 페이지당 1~50개의 항목을 조회할 수 있습니다.'),
+    query('status').optional().isIn(['active', 'completed', 'upcoming']).withMessage('상태는 active, completed, upcoming 중 하나여야 합니다.'),
+    query('sort_by').optional().isIn(['start_date', 'participant_count', 'created_at']).withMessage('정렬 기준이 올바르지 않습니다.'),
+    query('order').optional().isIn(['asc', 'desc']).withMessage('정렬 순서는 asc 또는 desc여야 합니다.')
   ]),
-  challengeController.getChallenges
+  challengeController.getChallenges as unknown as RequestHandler
 );
 
-/**
- * @swagger
- * /challenges/{id}/participate:
- *   post:
- *     summary: 챌린지 참여
- *     tags: [Challenges]
- *     security:
- *       - bearerAuth: []
- */
-router.post('/:id/participate',
+router.post(
+  '/:id/participate',
   authMiddleware,
   validateRequest([
-    param('id').isInt().withMessage('유효한 챌린지 ID가 필요합니다.')
+    param('id').isInt({ min: 1 }).toInt().withMessage('유효한 챌린지 ID가 필요합니다.')
   ]),
-  challengeController.participateInChallenge
+  challengeController.participateInChallenge as unknown as RequestHandler
 );
 
-/**
- * @swagger
- * /challenges/{id}/progress:
- *   post:
- *     summary: 챌린지 진행 상황 업데이트
- *     tags: [Challenges]
- *     security:
- *       - bearerAuth: []
- */
-router.post('/:id/progress',
+router.post(
+  '/:id/progress',
   authMiddleware,
   validateRequest([
-    param('id').isInt().withMessage('유효한 챌린지 ID가 필요합니다.'),
-    body('progress_note')
-      .trim()
-      .isLength({ min: 1, max: 500 })
-      .withMessage('진행 상황 노트는 1자 이상 500자 이하여야 합니다.'),
-    body('emotion_id')
-      .isInt()
-      .withMessage('감정 ID가 필요합니다.')
+    param('id').isInt({ min: 1 }).toInt().withMessage('유효한 챌린지 ID가 필요합니다.'),
+    body('progress_note').trim().isLength({ min: 1, max: 500 }).withMessage('진행 상황 노트는 1자 이상 500자 이하여야 합니다.'),
+    body('emotion_id').isInt({ min: 1 }).toInt().withMessage('유효한 감정 ID가 필요합니다.')
   ]),
-  challengeController.updateChallengeProgress
+  challengeController.updateChallengeProgress as unknown as RequestHandler
 );
 
 export default router;

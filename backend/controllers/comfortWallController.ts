@@ -4,11 +4,12 @@ import db from '../models';
 import { AuthRequest, PaginationQuery } from '../types/express';
 
 interface SomeoneDayPost {
+  post_id: number;  // post_id 추가
   user_id: number;
   title: string;
   content: string;
   is_anonymous: boolean;
-  message_count: number;
+  comment_count: number;  // message_count를 comment_count로 변경
   User: {
     nickname: string;
     profile_image_url: string;
@@ -25,6 +26,7 @@ interface SomeoneDayPost {
   updated_at: Date;
   toJSON(): any;
 }
+
 
 interface ComfortWallPost {
   title: string;
@@ -76,10 +78,16 @@ const comfortWallController = {
         character_count: content.length,
         summary: content.slice(0, 200)
       }, { transaction });
-
+      
       if (emotion_ids && emotion_ids.length > 0) {
-        await post.addEmotions(emotion_ids, { transaction });
-      }
+        await db.SomeoneDayTags.bulkCreate(
+          emotion_ids.map(tag_id => ({
+            post_id: post.post_id,
+            tag_id
+          })), 
+          { transaction }
+        );
+       }
 
       await transaction.commit();
       res.status(201).json({
@@ -93,87 +101,91 @@ const comfortWallController = {
     }
   },
 
-  getComfortWallPosts: async (req: AuthRequest<never, ComfortWallQuery>, res: Response) => {
-    try {
-      const { page = '1', limit = '10', emotion, sortBy = 'latest' } = req.query;
-      const offset = (Number(page) - 1) * Number(limit);
+  
+    getComfortWallPosts: async (req: AuthRequest<never, ComfortWallQuery>, res: Response) => {
+      try {
+        const { page = '1', limit = '10', emotion, sortBy = 'latest' } = req.query;
+        const offset = (Number(page) - 1) * Number(limit);
+  
+        const whereClause: any = {};
+        if (emotion) {
+          whereClause['$Emotions.name$'] = emotion;
+        }
 
-      const whereClause: any = {};
-      if (emotion) {
-        whereClause['$Emotions.name$'] = emotion;
-      }
-
-      const orderClause = sortBy === 'popular' 
-        ? [['message_count', 'DESC'], ['created_at', 'DESC']]
+        const orderClause = sortBy === 'popular' 
+        ? [['comment_count', 'DESC'], ['created_at', 'DESC']]  // message_count를 comment_count로 변경
         : [['created_at', 'DESC']];
 
-      const posts = await db.SomeoneDayPost.findAndCountAll({
-        where: whereClause,
-        include: [
-          {
-            model: db.User,
-            attributes: ['nickname', 'profile_image_url'],
-            where: { user_id: { [Op.ne]: req.user?.id } }
-          },
-          { 
-            model: db.Emotion,
-            through: { attributes: [] },
-            attributes: ['name', 'icon']
-          },
-          {
-            model: db.EncouragementMessage,
-            separate: true,
-            limit: 3,
-            order: [['created_at', 'DESC']],
-            include: [{
+        const posts = await db.SomeoneDayPost.findAndCountAll({
+          where: whereClause,
+          include: [
+            {
               model: db.User,
-              attributes: ['nickname']
-            }]
-          }
-        ],
-        order: orderClause,
-        limit: Number(limit),
-        offset,
-        distinct: true
-      });
+              attributes: ['nickname', 'profile_image_url'],
+              where: { user_id: { [Op.ne]: req.user?.id } }
+            },
+            { 
+              model: db.Emotion,
+              through: { attributes: [] },
+              attributes: ['name', 'icon']
+            },
+            {
+              model: db.EncouragementMessage,
+              separate: true,
+              limit: 3,
+              order: [['created_at', 'DESC']],
+              include: [{
+                model: db.User,
+                attributes: ['nickname']
+              }]
+            }
+          ],
+          order: orderClause,
+          limit: Number(limit),
+          offset,
+          distinct: true
+        });
     
-      const formattedPosts = posts.rows.map((post: SomeoneDayPost) => ({
-        ...post.toJSON(),
-        User: post.is_anonymous ? null : post.User,
-        message_preview: post.EncouragementMessages?.slice(0, 3),
-        total_messages: post.message_count
-      }));
-      res.json({
-        posts: formattedPosts,
-        totalPages: Math.ceil(posts.count / Number(limit)),
-        currentPage: Number(page),
-        totalCount: posts.count
-      });
-    } catch (error) {
-      console.error('위로와 공감 게시물 조회 오류:', error);
-      res.status(500).json({ message: '게시물 조회 중 오류가 발생했습니다.' });
-    }
-  },
-
-  createComfortMessage: async (req: AuthRequest<ComfortMessage, any, ComfortParams>, res: Response) => {
-    const transaction = await db.sequelize.transaction();
-    try {
-      const { id } = req.params;
-      const { message } = req.body;
-      const sender_id = req.user?.id;
-
-      if (!sender_id) {
-        await transaction.rollback();
-        return res.status(401).json({ message: '인증이 필요합니다.' });
+        const formattedPosts = posts.rows.map((post) => {
+          const postData = post.toJSON();
+          return {
+            ...postData,
+            User: postData.is_anonymous ? null : postData.User,
+            encouragement_message: postData.EncouragementMessages?.slice(0, 3) || [],
+            total_comments: postData.comment_count
+          };
+         });
+        
+  
+        res.json({
+          posts: formattedPosts,
+          totalPages: Math.ceil(posts.count / Number(limit)),
+          currentPage: Number(page),
+          totalCount: posts.count
+        });
+      } catch (error) {
+        console.error('위로와 공감 게시물 조회 오류:', error);
+        res.status(500).json({ message: '게시물 조회 중 오류가 발생했습니다.' });
       }
+    },
 
-      // 게시물 존재 여부 확인
-      const post = await db.SomeoneDayPost.findByPk(id, { transaction });
-      if (!post) {
-        await transaction.rollback();
-        return res.status(404).json({ message: '게시물을 찾을 수 없습니다.' });
-      }
-
+    createComfortMessage: async (req: AuthRequest<ComfortMessage, any, ComfortParams>, res: Response) => {
+      const transaction = await db.sequelize.transaction();
+      try {
+        const postId = Number(req.params.id);  // id를 number로 변환
+        const { message } = req.body;
+        const sender_id = req.user?.id;
+  
+        if (!sender_id) {
+          await transaction.rollback();
+          return res.status(401).json({ message: '인증이 필요합니다.' });
+        }
+  
+        const post = await db.SomeoneDayPost.findByPk(postId, { transaction });
+        if (!post) {
+          await transaction.rollback();
+          return res.status(404).json({ message: '게시물을 찾을 수 없습니다.' });
+        }
       // 자신의 게시물에는 위로 메시지를 보낼 수 없음
       if (post.user_id === sender_id) {
         await transaction.rollback();
@@ -188,24 +200,16 @@ const comfortWallController = {
       const encouragementMessage = await db.EncouragementMessage.create({
         sender_id,
         receiver_id: post.user_id,
-        post_id: id,
+        post_id: postId,
         message
       }, { transaction });
-
-      await post.increment('message_count', { transaction });
-
-      // 알림 생성
-      await db.Notification.create({
-        user_id: post.user_id,
-        content: '회원님의 게시물에 새로운 위로의 메시지가 도착했습니다.',
-        notification_type: 'comment',
-        related_id: encouragementMessage.message_id
-      }, { transaction });
-
+      
+      await post.increment('comment_count', { transaction });
+      
       await transaction.commit();
       res.status(201).json({
         message: "위로의 메시지가 성공적으로 전송되었습니다.",
-        message_id: encouragementMessage.message_id
+        encouragement_message_id: encouragementMessage.get('message_id') // 또는 encouragementMessage.dataValues.message_id
       });
     } catch (error) {
       await transaction.rollback();

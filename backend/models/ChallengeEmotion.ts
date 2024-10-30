@@ -1,7 +1,7 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 export class ChallengeEmotion extends Model {
-  public id!: number;
+  public challenge_emotion_id!: number; // 필드명 수정
   public challenge_id!: number;
   public user_id!: number;
   public emotion_id!: number;
@@ -13,7 +13,7 @@ export class ChallengeEmotion extends Model {
   public static initialize(sequelize: Sequelize) {
     ChallengeEmotion.init(
       {
-        id: {
+        challenge_emotion_id: { // 기존 id를 challenge_emotion_id로 수정
           type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
