@@ -80,7 +80,7 @@ const comfortWallController = {
       }, { transaction });
       
       if (emotion_ids && emotion_ids.length > 0) {
-        await db.SomeoneDayTags.bulkCreate(
+        await db.SomeoneDayTag.bulkCreate(
           emotion_ids.map(tag_id => ({
             post_id: post.post_id,
             tag_id
@@ -113,38 +113,41 @@ const comfortWallController = {
         }
 
         const orderClause = sortBy === 'popular' 
-        ? [['comment_count', 'DESC'], ['created_at', 'DESC']]  // message_count를 comment_count로 변경
-        : [['created_at', 'DESC']];
-
-        const posts = await db.SomeoneDayPost.findAndCountAll({
-          where: whereClause,
-          include: [
-            {
+        ? [
+            ['comment_count', 'DESC'],
+            ['created_at', 'DESC']
+          ] as [string, string][]
+        : [['created_at', 'DESC']] as [string, string][];
+      
+      const posts = await db.SomeoneDayPost.findAndCountAll({
+        where: whereClause,
+        include: [
+          {
+            model: db.User,
+            attributes: ['nickname', 'profile_image_url'],
+            where: { user_id: { [Op.ne]: req.user?.id } }
+          },
+          { 
+            model: db.Emotion,
+            through: { attributes: [] },
+            attributes: ['name', 'icon']
+          },
+          {
+            model: db.EncouragementMessage,
+            separate: true,
+            limit: 3,
+            order: [['created_at', 'DESC']] as [string, string][],
+            include: [{
               model: db.User,
-              attributes: ['nickname', 'profile_image_url'],
-              where: { user_id: { [Op.ne]: req.user?.id } }
-            },
-            { 
-              model: db.Emotion,
-              through: { attributes: [] },
-              attributes: ['name', 'icon']
-            },
-            {
-              model: db.EncouragementMessage,
-              separate: true,
-              limit: 3,
-              order: [['created_at', 'DESC']],
-              include: [{
-                model: db.User,
-                attributes: ['nickname']
-              }]
-            }
-          ],
-          order: orderClause,
-          limit: Number(limit),
-          offset,
-          distinct: true
-        });
+              attributes: ['nickname']
+            }]
+          }
+        ],
+        order: orderClause,
+        limit: Number(limit),
+        offset,
+        distinct: true
+      });
     
         const formattedPosts = posts.rows.map((post) => {
           const postData = post.toJSON();

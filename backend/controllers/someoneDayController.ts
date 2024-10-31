@@ -212,13 +212,15 @@ const someoneDayController = {
         distinct: true
       });
 
-      const formattedPosts = posts.rows.map((post: SomeoneDayPostModel) => ({
-        ...post.toJSON(),
-        User: post.is_anonymous ? null : post.User,
-        message_preview: post.EncouragementMessages?.slice(0, 3),
-        total_messages: post.message_count,
-        total_likes: post.like_count
-      }));
+      const formattedPosts = posts.rows.map((post) => {
+        const postData = post.toJSON();
+        return {
+          ...postData,
+          User: postData.is_anonymous ? null : postData.User,
+          encouragement_message: postData.EncouragementMessages?.slice(0, 3) || [],
+          total_comments: postData.comment_count
+        };
+       });
 
       res.json({
         status: 'success',

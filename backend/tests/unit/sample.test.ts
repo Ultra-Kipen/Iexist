@@ -1,9 +1,13 @@
+// tests/unit/sample.test.ts
 import db from '../../models';
 
 describe('Sample Unit Test', () => {
-  // 각 테스트 전에 테이블 초기화
   beforeEach(async () => {
-    await db.sequelize.sync({ force: true });
+    await Promise.all([
+      db.SomeoneDayPost.destroy({ where: {}, force: true }),
+      db.SomeoneDayTag.destroy({ where: {}, force: true }),
+      db.EncouragementMessage.destroy({ where: {}, force: true })
+    ]);
   });
 
   it('should pass', () => {

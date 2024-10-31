@@ -18,6 +18,7 @@ import PostTag from './PostTag';
 import SomeoneDayComment from './SomeoneDayComment';
 import SomeoneDayLike from './SomeoneDayLike';
 import SomeoneDayPost from './SomeoneDayPost';
+import SomeoneDayTag from './SomeoneDayTag';  // 새로 추가
 import Tag from './Tag';
 import UserGoal from './UserGoal';
 import UserStats from './UserStats';
@@ -46,6 +47,7 @@ export class Database {
   public SomeoneDayComment!: typeof SomeoneDayComment;
   public SomeoneDayLike!: typeof SomeoneDayLike;
   public SomeoneDayPost!: typeof SomeoneDayPost;
+  public SomeoneDayTag!: typeof SomeoneDayTag;  // 새로 추가
   public Tag!: typeof Tag;
   public UserGoal!: typeof UserGoal;
   public UserStats!: typeof UserStats;
@@ -83,7 +85,8 @@ export class Database {
    SomeoneDayPost.initialize(this.sequelize);
    SomeoneDayComment.initialize(this.sequelize);
    SomeoneDayLike.initModel(this.sequelize);
-   
+   SomeoneDayTag.initialize(this.sequelize);
+
    // 기타 모델 초기화
    // 기타 모델 초기화
 EncouragementMessage.initModel(this.sequelize);
@@ -112,6 +115,7 @@ UserStats.initModel(this.sequelize);  // init -> initModel로 변경
     this.SomeoneDayComment = SomeoneDayComment;
     this.SomeoneDayLike = SomeoneDayLike;
     this.SomeoneDayPost = SomeoneDayPost;
+    this.SomeoneDayTag = SomeoneDayTag;
     this.Tag = Tag;
     this.UserGoal = UserGoal;
     this.UserStats = UserStats;
@@ -138,6 +142,7 @@ UserStats.initModel(this.sequelize);  // init -> initModel로 변경
       SomeoneDayComment: this.SomeoneDayComment,
       SomeoneDayLike: this.SomeoneDayLike,
       SomeoneDayPost: this.SomeoneDayPost,
+      SomeoneDayTag: this.SomeoneDayTag,
       Tag: this.Tag,
       UserGoal: this.UserGoal,
       UserStats: this.UserStats
@@ -175,7 +180,7 @@ export {
   EncouragementMessage, MyDayComment, MyDayEmotion, MyDayLike,
   MyDayPost, Notification, PostRecommendation, PostReport,
   PostTag, SomeoneDayComment, SomeoneDayLike, SomeoneDayPost,
-  Tag, UserGoal, UserStats,
+  Tag, UserGoal, UserStats,SomeoneDayTag, 
   sequelize
 };
 
