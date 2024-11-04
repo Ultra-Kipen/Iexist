@@ -1,7 +1,17 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
-
-class MyDayPost extends Model {
-  public post_id!: number;  // id 대신 post_id 사용
+interface MyDayPostAttributes {
+  post_id: number;
+  user_id: number;
+  content: string;
+  emotion_summary?: string;
+  image_url?: string;
+  is_anonymous: boolean;
+  character_count?: number;
+  like_count: number;
+  comment_count: number;
+}
+class MyDayPost extends Model<MyDayPostAttributes> {
+  public post_id!: number;  // id -> post_id 변경
   public user_id!: number;
   public content!: string;
   public emotion_summary?: string;
@@ -10,17 +20,13 @@ class MyDayPost extends Model {
   public character_count?: number;
   public like_count!: number;
   public comment_count!: number;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
-
   public static initialize(sequelize: Sequelize) {
-    return MyDayPost.init(
+    const model = MyDayPost.init(
       {
-        post_id: {
+        post_id: {  // id -> post_id 변경
           type: DataTypes.INTEGER,
           autoIncrement: true,
-          primaryKey: true,
-          field: 'post_id'  // 실제 DB 컬럼명 명시
+          primaryKey: true
         },
         user_id: {
           type: DataTypes.INTEGER,
@@ -51,7 +57,7 @@ class MyDayPost extends Model {
           defaultValue: false
         },
         character_count: {
-          type: DataTypes.SMALLINT.UNSIGNED,
+          type: DataTypes.INTEGER,
           allowNull: true
         },
         like_count: {
@@ -81,15 +87,15 @@ class MyDayPost extends Model {
         ]
       }
     );
+    return model;
   }
 
-  public static associate(models: any) {
+  public static associate(models: any): void {
     const { User, MyDayComment, MyDayLike, Emotion } = models;
 
     MyDayPost.belongsTo(User, {
       foreignKey: 'user_id',
-      as: 'user',
-      onDelete: 'CASCADE'
+      as: 'user'
     });
 
     MyDayPost.hasMany(MyDayComment, {

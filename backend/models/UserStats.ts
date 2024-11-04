@@ -12,19 +12,8 @@ class UserStats extends Model<
   InferAttributes<UserStats>,
   InferCreationAttributes<UserStats>
 > {
-  declare id: CreationOptional<number>;
-  declare user_id: ForeignKey<number>;
-  declare my_day_post_count: number;
-  declare someone_day_post_count: number;
-  declare my_day_like_received_count: number;
-  declare someone_day_like_received_count: number;
-  declare my_day_comment_received_count: number;
-  declare someone_day_comment_received_count: number;
-  declare challenge_count: number;
-  declare last_updated: CreationOptional<Date>;
-
-  static initModel(sequelize: Sequelize): typeof UserStats {
-    UserStats.init(
+  public static initialize(sequelize: Sequelize) {  // initModel -> initialize
+    const model = UserStats.init(
       {
         id: {
           type: DataTypes.INTEGER,
@@ -37,7 +26,7 @@ class UserStats extends Model<
           unique: true,
           references: {
             model: 'users',
-            key: 'id'
+            key: 'user_id'  // id -> user_id로 수정
           }
         },
         my_day_post_count: {
@@ -85,17 +74,19 @@ class UserStats extends Model<
         sequelize,
         modelName: 'UserStats',
         tableName: 'user_stats',
-        timestamps: false,
+        timestamps: true,
         underscored: true
       }
     );
-
-    return UserStats;
+    return model;
   }
 
-  static associate(models: any): void {
-    this.belongsTo(models.User, {
+  public static associate(models: {
+    User: any;
+  }): void {
+    UserStats.belongsTo(models.User, {
       foreignKey: 'user_id',
+      targetKey: 'user_id',
       as: 'user'
     });
   }

@@ -1,21 +1,23 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import { User } from '../models/User';
+import MyDayPost from '../models/MyDayPost';
 
-class MyDayComment extends Model {
-  public comment_id!: number;  // id 대신 comment_id 사용
-  public post_id!: number;
-  public user_id!: number;
-  public content!: string;
-  public is_anonymous!: boolean;
-  public readonly created_at!: Date;
+interface MyDayCommentAttributes {
+  comment_id: number;
+  post_id: number;
+  user_id: number;
+  content: string;
+  is_anonymous: boolean;
+}
 
+class MyDayComment extends Model<MyDayCommentAttributes> {
   public static initialize(sequelize: Sequelize) {
-    return MyDayComment.init(
+    const model = MyDayComment.init(
       {
-        comment_id: {  // 기본키 필드명을 DB와 일치시킴
+        comment_id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
-          primaryKey: true,
-          field: 'comment_id'
+          primaryKey: true
         },
         post_id: {
           type: DataTypes.INTEGER,
@@ -41,18 +43,13 @@ class MyDayComment extends Model {
           type: DataTypes.BOOLEAN,
           allowNull: true,
           defaultValue: false
-        },
-        created_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
         }
       },
       {
         sequelize,
         modelName: 'MyDayComment',
         tableName: 'my_day_comments',
-        timestamps: false,  // created_at만 사용하므로 false로 설정
+        timestamps: true,
         underscored: true,
         indexes: [
           {
@@ -64,26 +61,23 @@ class MyDayComment extends Model {
         ]
       }
     );
+    return model;
   }
 
-  public static associate(models: any) {
+  public static associate(models: any): void {
     const { User, MyDayPost } = models;
 
-    if (User) {
-      MyDayComment.belongsTo(User, {
-        foreignKey: 'user_id',
-        as: 'user'
-      });
-    }
+    MyDayComment.belongsTo(User, {
+      foreignKey: 'user_id',
+      as: 'user'
+    });
 
-    if (MyDayPost) {
-      MyDayComment.belongsTo(MyDayPost, {
-        foreignKey: 'post_id',
-        as: 'post',
-        onDelete: 'CASCADE'
-      });
-    }
+    MyDayComment.belongsTo(MyDayPost, {
+      foreignKey: 'post_id',
+      as: 'post'
+    });
   }
 }
+
 
 export default MyDayComment;

@@ -60,13 +60,14 @@ class User extends Model<UserAttributes, UserCreationAttributes> {
   };
 
   // 모델 초기화 메서드
-  public static initialize(sequelize: Sequelize): void {
-    User.init(
+  public static initialize(sequelize: Sequelize) {
+    const model = User.init(
       {
         id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
+          field: 'user_id'  // DB 컬럼명과 매핑
         },
         username: {
           type: DataTypes.STRING(50),
@@ -75,6 +76,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> {
             notEmpty: true,
             len: [2, 50],
           },
+          field: 'username'  // DB 컬럼명과 매핑
         },
         email: {
           type: DataTypes.STRING(100),
@@ -128,9 +130,10 @@ class User extends Model<UserAttributes, UserCreationAttributes> {
       
         {
           sequelize,
-          modelName: 'User',
-          tableName: 'users',
-          timestamps: true,
+        modelName: 'User',
+        tableName: 'users',
+        timestamps: true,
+        underscored: true,
           indexes: [
             {
               unique: true,
@@ -163,88 +166,68 @@ class User extends Model<UserAttributes, UserCreationAttributes> {
           },
         }
       );
+      return model;
     }
 
   // 관계 설정 메서드 수정
   public static associate(models: any): void {
     // 감정 로그 관계
     User.hasMany(models.EmotionLog, {
-      foreignKey: {
-        name: 'user_id',
-        allowNull: false,
-      },
+      foreignKey: 'user_id',  // 단순화
       as: 'emotionLogs',
-      onDelete: 'CASCADE',
+      onDelete: 'CASCADE'
     });
 
     // MyDay 게시물 관계
     User.hasMany(models.MyDayPost, {
-      foreignKey: {
-        name: 'user_id',
-        allowNull: false,
-      },
+      foreignKey: 'user_id',  // 단순화
       as: 'myDayPosts',
-      onDelete: 'CASCADE',
+      onDelete: 'CASCADE'
     });
 
     // SomeoneDay 게시물 관계
     User.hasMany(models.SomeoneDayPost, {
-      foreignKey: {
-        name: 'user_id',
-        allowNull: false,
-      },
+      foreignKey: 'user_id',  // 단순화
       as: 'someoneDayPosts',
-      onDelete: 'CASCADE',
+      onDelete: 'CASCADE'
     });
 
     // 챌린지 참여 관계
     User.belongsToMany(models.Challenge, {
       through: 'challenge_participants',
-      foreignKey: 'user_id',
+      foreignKey: 'user_id',  // 이미 단순한 형태
       otherKey: 'challenge_id',
-      as: 'challenges',
+      as: 'challenges'
     });
 
     // MyDay 댓글 관계
     User.hasMany(models.MyDayComment, {
-      foreignKey: {
-        name: 'user_id',
-        allowNull: false,
-      },
+      foreignKey: 'user_id',  // 단순화
       as: 'myDayComments',
-      onDelete: 'CASCADE',
+      onDelete: 'CASCADE'
     });
 
     // SomeoneDay 댓글 관계
     User.hasMany(models.SomeoneDayComment, {
-      foreignKey: {
-        name: 'user_id',
-        allowNull: false,
-      },
+      foreignKey: 'user_id',  // 단순화
       as: 'someoneDayComments',
-      onDelete: 'CASCADE',
+      onDelete: 'CASCADE'
     });
 
     // MyDay 좋아요 관계
     User.hasMany(models.MyDayLike, {
-      foreignKey: {
-        name: 'user_id',
-        allowNull: false,
-      },
+      foreignKey: 'user_id',  // 단순화
       as: 'myDayLikes',
-      onDelete: 'CASCADE',
+      onDelete: 'CASCADE'
     });
 
     // SomeoneDay 좋아요 관계
     User.hasMany(models.SomeoneDayLike, {
-      foreignKey: {
-        name: 'user_id',
-        allowNull: false,
-      },
+      foreignKey: 'user_id',  // 단순화
       as: 'someoneDayLikes',
-      onDelete: 'CASCADE',
+      onDelete: 'CASCADE'
     });
-  }
+}
 
 
  // 인스턴스 메서드

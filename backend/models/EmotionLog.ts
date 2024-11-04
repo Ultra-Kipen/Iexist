@@ -1,74 +1,81 @@
+// backend/models/EmotionLog.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import { User } from './User';
+import { Emotion } from './Emotion';
 
-export interface EmotionLogAttributes {
+interface EmotionLogAttributes {
   log_id: number;
   user_id: number;
   emotion_id: number;
-  log_date: Date;
   note: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  log_date: Date;
 }
 
-export type EmotionLogCreationAttributes = Omit<EmotionLogAttributes, 'log_id' | 'createdAt' | 'updatedAt'>;
+export class EmotionLog extends Model<EmotionLogAttributes> {
+  public log_id!: number;
+  public user_id!: number;
+  public emotion_id!: number;
+  public note!: string | null;
+  public log_date!: Date;
 
-export class EmotionLog extends Model<EmotionLogAttributes, EmotionLogCreationAttributes> {
-  declare log_id: number;
-  declare user_id: number;
-  declare emotion_id: number;
-  declare log_date: Date;
-  declare note: string | null;
-  declare readonly createdAt: Date;
-  declare readonly updatedAt: Date;
-
-  static initialize(sequelize: Sequelize): void {
-    EmotionLog.init(
+  public static initialize(sequelize: Sequelize) {
+    return EmotionLog.init(
       {
         log_id: {
           type: DataTypes.INTEGER,
-          autoIncrement: true,
           primaryKey: true,
+          autoIncrement: true
         },
         user_id: {
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
             model: 'users',
-            key: 'id',
-          },
+            key: 'user_id'
+          }
         },
         emotion_id: {
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
             model: 'emotions',
-            key: 'emotion_id',
-          },
-        },
-        log_date: {
-          type: DataTypes.DATEONLY,
-          allowNull: false,
+            key: 'emotion_id'
+          }
         },
         note: {
-          type: DataTypes.TEXT,
-          allowNull: true,
+          type: DataTypes.STRING(200),
+          allowNull: true
         },
-        createdAt: {
+        log_date: {
           type: DataTypes.DATE,
           allowNull: false,
-          defaultValue: DataTypes.NOW,
-        },
-        updatedAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW,
-        },
+          defaultValue: DataTypes.NOW
+        }
       },
       {
         sequelize,
+        modelName: 'EmotionLog',
         tableName: 'emotion_logs',
         timestamps: true,
+        underscored: true
       }
     );
   }
+
+  public static associate(models: {
+    User: typeof User;
+    Emotion: typeof Emotion;
+  }): void {
+    EmotionLog.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'user'
+    });
+
+    EmotionLog.belongsTo(models.Emotion, {
+      foreignKey: 'emotion_id',
+      as: 'emotion'
+    });
+  }
 }
+
+export default EmotionLog;

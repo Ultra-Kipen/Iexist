@@ -1,29 +1,39 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import Challenge from '../models/Challenge';
+import { User } from '../models/User';
+import { Emotion } from '../models/Emotion';
 
-export class ChallengeEmotion extends Model {
-  public challenge_emotion_id!: number; // 필드명 수정
+interface ChallengeEmotionAttributes {
+  challenge_emotion_id: number;
+  challenge_id: number;
+  user_id: number;
+  emotion_id: number;
+  note?: string;
+  log_date: Date;
+}
+
+class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
+  public challenge_emotion_id!: number;
   public challenge_id!: number;
   public user_id!: number;
   public emotion_id!: number;
   public note?: string;
   public log_date!: Date;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
 
   public static initialize(sequelize: Sequelize) {
-    ChallengeEmotion.init(
+    const model = ChallengeEmotion.init(
       {
-        challenge_emotion_id: { // 기존 id를 challenge_emotion_id로 수정
+        challenge_emotion_id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
-          primaryKey: true,
+          primaryKey: true
         },
         challenge_id: {
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
             model: 'challenges',
-            key: 'id'
+            key: 'challenge_id'
           }
         },
         user_id: {
@@ -31,7 +41,7 @@ export class ChallengeEmotion extends Model {
           allowNull: false,
           references: {
             model: 'users',
-            key: 'id'
+            key: 'user_id'
           }
         },
         emotion_id: {
@@ -39,7 +49,7 @@ export class ChallengeEmotion extends Model {
           allowNull: false,
           references: {
             model: 'emotions',
-            key: 'id'
+            key: 'emotion_id'
           }
         },
         note: {
@@ -69,11 +79,14 @@ export class ChallengeEmotion extends Model {
         ]
       }
     );
-
-    return ChallengeEmotion;
+    return model;
   }
 
-  public static associate(models: any) {
+  public static associate(models: {
+    Challenge: typeof Challenge;
+    User: typeof User;
+    Emotion: typeof Emotion;
+  }): void {
     ChallengeEmotion.belongsTo(models.Challenge, {
       foreignKey: 'challenge_id',
       as: 'challenge'

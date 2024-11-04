@@ -1,7 +1,8 @@
 import { Response } from 'express';
 import { Op } from 'sequelize';
 import db from '../models';
-import { AuthRequest } from '../types/express';
+import { AuthRequestGeneric } from '../types/express';
+import { validateRequest, query } from '../middleware/validationMiddleware';
 
 interface StatsQuery {
   start_date?: string;
@@ -16,8 +17,26 @@ interface EmotionStats {
   percentage: number;
 }
 
+// 통계 관련 validation rules
+export const statsValidations = {
+  getStats: [
+    query('start_date')
+      .optional()
+      .isISO8601()
+      .withMessage('시작 날짜는 유효한 날짜 형식이어야 합니다.'),
+    query('end_date')
+      .optional()
+      .isISO8601()
+      .withMessage('종료 날짜는 유효한 날짜 형식이어야 합니다.'),
+    query('type')
+      .optional()
+      .isIn(['daily', 'weekly', 'monthly'])
+      .withMessage('유효하지 않은 통계 타입입니다.')
+  ]
+};
+
 const statsController = {
-  getUserStats: async (req: AuthRequest<never, StatsQuery>, res: Response) => {
+  getUserStats: async (req: AuthRequestGeneric<never, StatsQuery>, res: Response) => {
     try {
       const user_id = req.user?.id;
 
@@ -32,15 +51,15 @@ const statsController = {
 
       const whereClause: any = { user_id };
       if (start_date && end_date) {
-        whereClause.last_updated = {
+        whereClause.log_date = {
           [Op.between]: [new Date(start_date), new Date(end_date)]
         };
       }
 
-      const stats = await db.UserStats.findOne({ 
-        where: whereClause,
+      // 기본 통계 조회
+      const stats = await db.UserStats.findOne({
+        where: { user_id },
         attributes: [
-          'user_id',
           'my_day_post_count',
           'someone_day_post_count',
           'my_day_like_received_count',
@@ -67,30 +86,25 @@ const statsController = {
         ],
         include: [{
           model: db.Emotion,
-          attributes: ['name']
+          attributes: ['name'],
+          required: true
         }],
-        where: {
-          user_id,
-          ...(start_date && end_date ? {
-            log_date: {
-              [Op.between]: [start_date, end_date]
-            }
-          } : {})
-        },
+        where: whereClause,
         group: ['emotion_id', 'Emotion.name'],
         order: [[db.sequelize.literal('count'), 'DESC']]
       });
 
-      const totalEmotions = emotionStats.reduce((sum, stat) => sum + Number(stat.getDataValue('count')), 0);
+      const totalEmotions = emotionStats.reduce((sum, stat: any) => 
+        sum + Number(stat.dataValues.count), 0);
       
-      const formattedEmotionStats: EmotionStats[] = emotionStats.map(stat => ({
+      const formattedEmotionStats: EmotionStats[] = emotionStats.map((stat: any) => ({
         emotion_id: stat.emotion_id,
-        emotion_name: stat.Emotion.name,
-        count: Number(stat.getDataValue('count')),
-        percentage: Number(((Number(stat.getDataValue('count')) / totalEmotions) * 100).toFixed(1))
+        emotion_name: stat.get('Emotion').name,
+        count: Number(stat.dataValues.count),
+        percentage: Number(((Number(stat.dataValues.count) / totalEmotions * 100)).toFixed(1))
       }));
 
-      res.json({
+      return res.json({
         status: 'success',
         data: {
           basic_stats: stats,
@@ -104,111 +118,14 @@ const statsController = {
       });
     } catch (error) {
       console.error('사용자 통계 조회 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '사용자 통계 조회 중 오류가 발생했습니다.'
       });
     }
   },
 
-  updateUserStats: async (req: AuthRequest, res: Response) => {
-    const transaction = await db.sequelize.transaction();
-    try {
-      const user_id = req.user?.id;
-
-      if (!user_id) {
-        await transaction.rollback();
-        return res.status(401).json({
-          status: 'error',
-          message: '인증이 필요합니다.'
-        });
-      }
-
-      // 게시물 수 집계
-      const [
-        myDayPostCount,
-        someoneDayPostCount,
-        myDayLikeCount,
-        someoneDayLikeCount,
-        myDayCommentCount,
-        someoneDayCommentCount,
-        challengeCount
-      ] = await Promise.all([
-        db.MyDayPost.count({
-          where: { user_id },
-          transaction
-        }),
-        db.SomeoneDayPost.count({
-          where: { user_id },
-          transaction
-        }),
-        db.MyDayLike.count({
-          include: [{
-            model: db.MyDayPost,
-            where: { user_id }
-          }],
-          transaction
-        }),
-        db.SomeoneDayLike.count({
-          include: [{
-            model: db.SomeoneDayPost,
-            where: { user_id }
-          }],
-          transaction
-        }),
-        db.MyDayComment.count({
-          include: [{
-            model: db.MyDayPost,
-            where: { user_id }
-          }],
-          transaction
-        }),
-        db.EncouragementMessage.count({
-          include: [{
-            model: db.SomeoneDayPost,
-            where: { user_id }
-          }],
-          transaction
-        }),
-        db.ChallengeParticipant.count({
-          where: { 
-            user_id,
-            joined_at: {
-              [Op.lte]: new Date()
-            }
-          },
-          transaction
-        })
-      ]);
-
-      const [stats] = await db.UserStats.upsert({
-        user_id,
-        my_day_post_count: myDayPostCount,
-        someone_day_post_count: someoneDayPostCount,
-        my_day_like_received_count: myDayLikeCount,
-        someone_day_like_received_count: someoneDayLikeCount,
-        my_day_comment_received_count: myDayCommentCount,
-        someone_day_comment_received_count: someoneDayCommentCount,
-        challenge_count: challengeCount
-      }, { transaction });
-
-      await transaction.commit();
-      res.json({
-        status: 'success',
-        message: '통계가 성공적으로 업데이트되었습니다.',
-        data: { stats }
-      });
-    } catch (error) {
-      await transaction.rollback();
-      console.error('사용자 통계 업데이트 오류:', error);
-      res.status(500).json({
-        status: 'error',
-        message: '사용자 통계 업데이트 중 오류가 발생했습니다.'
-      });
-    }
-  },
-
-  getEmotionTrends: async (req: AuthRequest<never, StatsQuery>, res: Response) => {
+  getEmotionTrends: async (req: AuthRequestGeneric<never, StatsQuery>, res: Response) => {
     try {
       const user_id = req.user?.id;
 
@@ -224,7 +141,7 @@ const statsController = {
       const whereClause: any = { user_id };
       if (start_date && end_date) {
         whereClause.log_date = {
-          [Op.between]: [start_date, end_date]
+          [Op.between]: [new Date(start_date), new Date(end_date)]
         };
       }
 
@@ -245,14 +162,15 @@ const statsController = {
         ],
         include: [{
           model: db.Emotion,
-          attributes: ['name', 'icon']
+          attributes: ['name', 'icon'],
+          required: true
         }],
         where: whereClause,
         group: [groupByClause, 'emotion_id', 'Emotion.name', 'Emotion.icon'],
         order: [[db.sequelize.col('date'), 'ASC']]
       });
 
-      res.json({
+      return res.json({
         status: 'success',
         data: {
           trends,
@@ -265,7 +183,7 @@ const statsController = {
       });
     } catch (error) {
       console.error('감정 트렌드 조회 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '감정 트렌드 조회 중 오류가 발생했습니다.'
       });

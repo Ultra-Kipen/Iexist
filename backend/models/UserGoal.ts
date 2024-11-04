@@ -1,13 +1,6 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class UserGoal extends Model {
-  public goal_id!: number;
-  public user_id!: number;
-  public target_emotion_id!: number;
-  public start_date!: Date;
-  public end_date!: Date;
-  public progress!: number;
-
   public static initialize(sequelize: Sequelize) {
     return UserGoal.init(
       {
@@ -21,15 +14,15 @@ class UserGoal extends Model {
           allowNull: false,
           references: {
             model: 'users',
-            key: 'user_id'
+            key: 'user_id'  // id -> user_id로 변경
           }
         },
         target_emotion_id: {
-          type: DataTypes.TINYINT.UNSIGNED,
+          type: DataTypes.INTEGER,  // SQLite에서는 UNSIGNED 지원하지 않음
           allowNull: false,
           references: {
             model: 'emotions',
-            key: 'emotion_id'
+            key: 'emotion_id'  // id -> emotion_id로 변경
           }
         },
         start_date: {
@@ -41,7 +34,7 @@ class UserGoal extends Model {
           allowNull: false
         },
         progress: {
-          type: DataTypes.TINYINT.UNSIGNED,
+          type: DataTypes.INTEGER,
           allowNull: false,
           defaultValue: 0
         }
@@ -50,19 +43,21 @@ class UserGoal extends Model {
         sequelize,
         modelName: 'UserGoal',
         tableName: 'user_goals',
-        timestamps: false
+        timestamps: true,
+        underscored: true
       }
     );
   }
-
   public static associate(models: any) {
     UserGoal.belongsTo(models.User, {
       foreignKey: 'user_id',
+      targetKey: 'user_id',  // targetKey 추가
       as: 'user'
     });
 
     UserGoal.belongsTo(models.Emotion, {
       foreignKey: 'target_emotion_id',
+      targetKey: 'emotion_id',  // targetKey 추가
       as: 'targetEmotion'
     });
   }

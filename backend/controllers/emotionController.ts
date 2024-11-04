@@ -1,17 +1,16 @@
-import { Request, Response } from 'express';
-import { Op } from 'sequelize';
+import { Response } from 'express';
+import { Op, QueryTypes } from 'sequelize';
 import db from '../models';
-import { AuthRequest } from '../types/express';
+import { AuthRequest, AuthRequestGeneric, EmotionCreate, EmotionTrendQuery } from '../types/express';
 
+// 인터페이스 정의
 interface EmotionStat {
-  emotion: string;
-  icon: string;
-  count: number;
-}
-
-interface EmotionCreate {
-  emotion_ids: number[];
-  note?: string;
+  date: string;
+  emotions: Array<{
+    name: string;
+    icon: string;
+    count: number;
+  }>;
 }
 
 interface EmotionQuery {
@@ -19,60 +18,31 @@ interface EmotionQuery {
   offset?: string;
 }
 
-interface EmotionTrendQuery {
-  start_date: string;
-  end_date: string;
-  group_by?: 'day' | 'week' | 'month';
-}
-
 interface EmotionStatRecord {
-  get(field: string): string | number;
+  date: string;
+  name: string;
+  icon: string;
+  count: string | number;
 }
 
-// 헬퍼 함수들을 객체 외부에서 정의
-function formatEmotionStats(stats: EmotionStatRecord[]): Record<string, EmotionStat[]> {
-  return stats.reduce((acc: Record<string, EmotionStat[]>, curr) => {
-    const date = curr.get('date') as string;
+// 헬퍼 함수
+function formatEmotionStats(stats: EmotionStatRecord[]): Record<string, EmotionStat> {
+  return stats.reduce((acc: Record<string, EmotionStat>, curr) => {
+    const { date, name, icon, count } = curr;
     if (!acc[date]) {
-      acc[date] = [];
+      acc[date] = { date, emotions: [] };
     }
-    acc[date].push({
-      emotion: curr.get('name') as string,
-      icon: curr.get('icon') as string,
-      count: parseInt(curr.get('count') as string)
+    acc[date].emotions.push({
+      name,
+      icon,
+      count: typeof count === 'string' ? parseInt(count) : count
     });
     return acc;
   }, {});
-}
-
-function formatEmotionTrend(trend: EmotionStatRecord[], groupBy: string): Record<string, EmotionStat[]> {
-  return trend.reduce((acc: Record<string, EmotionStat[]>, curr) => {
-    const date = curr.get('date') as string;
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push({
-      emotion: curr.get('name') as string,
-      icon: curr.get('icon') as string,
-      count: parseInt(curr.get('count') as string)
-    });
-    return acc;
-  }, {});
-}
-
-function getGroupByClause(groupBy: string) {
-  switch (groupBy) {
-    case 'week':
-      return db.sequelize.fn('DATE_FORMAT', db.sequelize.col('log_date'), '%Y-%U');
-    case 'month':
-      return db.sequelize.fn('DATE_FORMAT', db.sequelize.col('log_date'), '%Y-%m');
-    default:
-      return db.sequelize.fn('DATE', db.sequelize.col('log_date'));
-  }
 }
 
 const emotionController = {
-  getAllEmotions: async (_req: Request, res: Response) => {
+  getAllEmotions: async (_req: AuthRequest, res: Response) => {
     try {
       const emotions = await db.Emotion.findAll({
         attributes: ['emotion_id', 'name', 'icon'],
@@ -92,7 +62,7 @@ const emotionController = {
     }
   },
 
-  getEmotions: async (req: AuthRequest<never, EmotionQuery>, res: Response) => {
+  getEmotions: async (req: AuthRequestGeneric<never, EmotionQuery>, res: Response) => {
     try {
       const user_id = req.user?.id;
       if (!user_id) {
@@ -135,7 +105,7 @@ const emotionController = {
     }
   },
 
-  createEmotion: async (req: AuthRequest<EmotionCreate>, res: Response) => {
+  createEmotion: async (req: AuthRequest, res: Response) => {
     const transaction = await db.sequelize.transaction();
     try {
       const { emotion_ids, note } = req.body;
@@ -163,7 +133,10 @@ const emotionController = {
       const existingLog = await db.EmotionLog.findOne({
         where: {
           user_id,
-          log_date: today
+          log_date: {
+            [Op.gte]: today,
+            [Op.lt]: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          }
         },
         transaction
       });
@@ -204,7 +177,7 @@ const emotionController = {
     }
   },
 
-  getEmotionStats: async (req: AuthRequest<never, EmotionTrendQuery>, res: Response) => {
+  getEmotionStats: async (req: AuthRequest, res: Response) => {
     try {
       const user_id = req.user?.id;
       if (!user_id) {
@@ -216,39 +189,30 @@ const emotionController = {
 
       const { start_date, end_date } = req.query;
 
-      const stats = await db.EmotionLog.findAll({
-        attributes: [
-          [db.sequelize.fn('DATE', db.sequelize.col('log_date')), 'date'],
-          'Emotion.name',
-          'Emotion.icon',
-          [db.sequelize.fn('COUNT', db.sequelize.col('EmotionLog.emotion_id')), 'count']
-        ],
-        include: [{
-          model: db.Emotion,
-          attributes: []
-        }],
-        where: {
-          user_id,
-          log_date: {
-            [Op.between]: [start_date, end_date]
-          }
-        },
-        group: [
-          db.sequelize.fn('DATE', db.sequelize.col('log_date')),
-          'Emotion.name',
-          'Emotion.icon'
-        ],
-        order: [
-          [db.sequelize.fn('DATE', db.sequelize.col('log_date')), 'ASC'],
-          [db.sequelize.literal('count'), 'DESC']
-        ]
+      const query = `
+        SELECT 
+          DATE(el.log_date) as date,
+          e.name,
+          e.icon,
+          COUNT(*) as count
+        FROM emotion_logs el
+        JOIN emotions e ON el.emotion_id = e.emotion_id
+        WHERE el.user_id = :user_id
+          AND el.log_date BETWEEN :start_date AND :end_date
+        GROUP BY DATE(el.log_date), e.name, e.icon
+        ORDER BY date ASC, count DESC
+      `;
+
+      const stats = await db.sequelize.query<EmotionStatRecord>(query, {
+        replacements: { user_id, start_date, end_date },
+        type: QueryTypes.SELECT
       });
 
-      const formattedStats = formatEmotionStats(stats as EmotionStatRecord[]);
+      const formattedStats = formatEmotionStats(stats);
 
       res.json({
         status: 'success',
-        data: formattedStats
+        data: Object.values(formattedStats)
       });
     } catch (error) {
       console.error('감정 통계 조회 오류:', error);
@@ -259,7 +223,7 @@ const emotionController = {
     }
   },
 
-  getEmotionTrend: async (req: AuthRequest<never, EmotionTrendQuery>, res: Response) => {
+  getEmotionTrend: async (req: AuthRequest, res: Response) => {
     try {
       const user_id = req.user?.id;
       if (!user_id) {
@@ -271,31 +235,36 @@ const emotionController = {
 
       const { start_date, end_date, group_by = 'day' } = req.query;
 
-      const groupByClause = getGroupByClause(group_by);
-      const trend = await db.EmotionLog.findAll({
-        attributes: [
-          [groupByClause, 'date'],
-          'Emotion.name',
-          'Emotion.icon',
-          [db.sequelize.fn('COUNT', '*'), 'count']
-        ],
-        include: [{
-          model: db.Emotion,
-          attributes: []
-        }],
-        where: {
-          user_id,
-          log_date: { [Op.between]: [start_date, end_date] }
-        },
-        group: [groupByClause, 'Emotion.name', 'Emotion.icon'],
-        order: [[groupByClause, 'ASC']]
+      const dateFormat = group_by === 'week' 
+        ? 'DATE_FORMAT(el.log_date, "%Y-%u")'
+        : group_by === 'month'
+          ? 'DATE_FORMAT(el.log_date, "%Y-%m")'
+          : 'DATE(el.log_date)';
+
+      const query = `
+        SELECT 
+          ${dateFormat} as date,
+          e.name,
+          e.icon,
+          COUNT(*) as count
+        FROM emotion_logs el
+        JOIN emotions e ON el.emotion_id = e.emotion_id
+        WHERE el.user_id = :user_id
+          AND el.log_date BETWEEN :start_date AND :end_date
+        GROUP BY ${dateFormat}, e.name, e.icon
+        ORDER BY date ASC, count DESC
+      `;
+
+      const trend = await db.sequelize.query<EmotionStatRecord>(query, {
+        replacements: { user_id, start_date, end_date },
+        type: QueryTypes.SELECT
       });
 
-      const formattedTrend = formatEmotionTrend(trend as EmotionStatRecord[], group_by);
+      const formattedTrend = formatEmotionStats(trend);
 
       res.json({
         status: 'success',
-        data: formattedTrend
+        data: Object.values(formattedTrend)
       });
     } catch (error) {
       console.error('감정 추세 조회 오류:', error);
@@ -322,7 +291,10 @@ const emotionController = {
       const check = await db.EmotionLog.findOne({
         where: {
           user_id,
-          log_date: today
+          log_date: {
+            [Op.gte]: today,
+            [Op.lt]: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          }
         },
         include: [{
           model: db.Emotion,

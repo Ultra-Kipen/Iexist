@@ -1,4 +1,4 @@
-// src/models/Emotion.ts
+// backend/models/Emotion.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 export interface EmotionAttributes {
@@ -6,58 +6,45 @@ export interface EmotionAttributes {
   name: string;
   description: string | null;
   icon: string | null;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
-export type EmotionCreationAttributes = Omit<EmotionAttributes, 'emotion_id' | 'createdAt' | 'updatedAt'>;
+export class Emotion extends Model<EmotionAttributes> {
+  public emotion_id!: number;
+  public name!: string;
+  public description!: string | null;
+  public icon!: string | null;
 
-export class Emotion extends Model<EmotionAttributes, EmotionCreationAttributes> {
-  declare emotion_id: number;
-  declare name: string;
-  declare description: string | null;
-  declare icon: string | null;
-  declare readonly createdAt: Date;
-  declare readonly updatedAt: Date;
-
-  static initialize(sequelize: Sequelize): void {
-    Emotion.init(
+  public static initialize(sequelize: Sequelize) {
+    const model = Emotion.init(
       {
         emotion_id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
-          primaryKey: true,
+          primaryKey: true
         },
         name: {
           type: DataTypes.STRING(50),
           allowNull: false,
-          unique: true,
+          unique: true
         },
         description: {
           type: DataTypes.STRING(200),
-          allowNull: true,
+          allowNull: true
         },
         icon: {
           type: DataTypes.STRING(50),
-          allowNull: true,
-        },
-        createdAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW,
-        },
-        updatedAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW,
-        },
+          allowNull: true
+        }
       },
       {
         sequelize,
+        modelName: 'Emotion',
         tableName: 'emotions',
         timestamps: true,
+        underscored: true
       }
     );
+    return model;
   }
 }
 
@@ -77,11 +64,4 @@ export const defaultEmotions = [
   { name: '편함', description: '평화롭고 편안한 감정', icon: 'sofa-outline' }
 ];
 
-export function seedEmotions(sequelize: Sequelize) {
-  return Emotion.bulkCreate(defaultEmotions, {
-    ignoreDuplicates: true
-  }).catch(error => {
-    console.error('감정 데이터 시딩 중 오류 발생:', error);
-    throw error;
-  });
-}
+export default Emotion;

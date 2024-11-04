@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { Op, Order } from 'sequelize';
 import db from '../models';
-import { AuthRequest, PaginationQuery } from '../types/express';
+import { AuthRequestGeneric, PaginationQuery } from '../types/express';
 
 interface CreateChallengeBody {
   title: string;
@@ -29,7 +29,7 @@ interface ChallengeQuery extends PaginationQuery {
 
 const challengeController = {
   createChallenge: async (
-    req: AuthRequest<CreateChallengeBody>,
+    req: AuthRequestGeneric<CreateChallengeBody>,
     res: Response
   ) => {
     const transaction = await db.sequelize.transaction();
@@ -117,7 +117,7 @@ const challengeController = {
   },
 
   getChallenges: async (
-    req: AuthRequest<any, ChallengeQuery>,
+    req: AuthRequestGeneric<any, ChallengeQuery>,
     res: Response
   ) => {
     try {
@@ -202,7 +202,7 @@ const challengeController = {
     }
   },
   participateInChallenge: async (
-    req: AuthRequest<any, any, ChallengeParams>,
+    req: AuthRequestGeneric<any, any, ChallengeParams>,
     res: Response
   ) => {
     const transaction = await db.sequelize.transaction();
@@ -286,7 +286,7 @@ const challengeController = {
   },
 
   updateChallengeProgress: async (
-    req: AuthRequest<ChallengeProgressBody, any, ChallengeParams>,
+    req: AuthRequestGeneric<ChallengeProgressBody, any, ChallengeParams>,
     res: Response
   ) => {
     const transaction = await db.sequelize.transaction();
@@ -337,7 +337,7 @@ const challengeController = {
         status: 'success',
         message: '진행 상황이 기록되었습니다.',
         data: {
-          challenge_emotion_id: emotionLog.challenge_emotion_id  // 이미 올바르게 설정됨
+          challenge_emotion_id: emotionLog.challenge_emotion_id  // 올바른 속성 이름 사용
         }
       });
     } catch (error) {

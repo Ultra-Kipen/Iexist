@@ -1,11 +1,18 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import SomeoneDayPost from '../models/SomeoneDayPost';
+import Tag from '../models/Tag';
 
-export class SomeoneDayTag extends Model {
+interface SomeoneDayTagAttributes {
+  post_id: number;
+  tag_id: number;
+}
+
+class SomeoneDayTag extends Model<SomeoneDayTagAttributes> {
   public post_id!: number;
   public tag_id!: number;
 
-  static initialize(sequelize: Sequelize) {
-    SomeoneDayTag.init(
+  public static initialize(sequelize: Sequelize) {
+    const model = SomeoneDayTag.init(
       {
         post_id: {
           type: DataTypes.INTEGER,
@@ -16,7 +23,7 @@ export class SomeoneDayTag extends Model {
           }
         },
         tag_id: {
-          type: DataTypes.SMALLINT.UNSIGNED,
+          type: DataTypes.INTEGER,
           primaryKey: true,
           references: {
             model: 'tags',
@@ -26,21 +33,35 @@ export class SomeoneDayTag extends Model {
       },
       {
         sequelize,
+        modelName: 'SomeoneDayTag',
         tableName: 'someone_day_tags',
-        timestamps: false
+        timestamps: true,
+        underscored: true,
+        indexes: [
+          {
+            fields: ['post_id']
+          },
+          {
+            fields: ['tag_id']
+          }
+        ]
       }
     );
+    return model;
   }
 
-  static associate(models: {
-    SomeoneDayPost: any;
-    Tag: any;
-  }) {
+  public static associate(models: {
+    SomeoneDayPost: typeof SomeoneDayPost;
+    Tag: typeof Tag;
+  }): void {
     SomeoneDayTag.belongsTo(models.SomeoneDayPost, {
-      foreignKey: 'post_id'
+      foreignKey: 'post_id',
+      as: 'post'
     });
+    
     SomeoneDayTag.belongsTo(models.Tag, {
-      foreignKey: 'tag_id'
+      foreignKey: 'tag_id',
+      as: 'tag'
     });
   }
 }

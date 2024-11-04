@@ -14,7 +14,7 @@ interface NotificationUpdate {
 }
 
 const notificationController = {
-  getNotifications: async (req: AuthRequest<never, NotificationQuery>, res: Response) => {
+  getNotifications: async (req: AuthRequest, res: Response) => {
     try {
       const user_id = req.user?.id;
       
@@ -80,7 +80,7 @@ const notificationController = {
     }
   },
 
-  markNotificationAsRead: async (req: AuthRequest<NotificationUpdate>, res: Response) => {
+  markNotificationAsRead: async (req: AuthRequest, res: Response) => {
     const transaction = await db.sequelize.transaction();
     try {
       const { id } = req.params;
@@ -96,7 +96,7 @@ const notificationController = {
 
       const notification = await db.Notification.findOne({
         where: { 
-          notification_id: id,
+          id: id,
           user_id 
         },
         transaction
@@ -144,7 +144,7 @@ const notificationController = {
 
       const result = await db.Notification.destroy({
         where: { 
-          notification_id: id, 
+          id: id, 
           user_id 
         },
         transaction

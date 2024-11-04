@@ -1,9 +1,29 @@
 import { Response } from 'express';
-import { Op, Transaction } from 'sequelize';
+import { 
+  Op, 
+  Model, 
+  IncrementDecrementOptions, 
+  CreateOptions, 
+  BelongsToManyAddAssociationsMixin,
+  FindAndCountOptions
+} from 'sequelize';
 import db from '../models';
-import { AuthRequest } from '../types/express';
+import { AuthRequest, AuthRequestGeneric } from '../types/express';
+// 인터페이스 정의
+interface MyDayPostAttributes {
+  post_id: number;
+  user_id: number;
+  content: string;
+  emotion_summary: string | null;
+  image_url: string | null;
+  is_anonymous: boolean;
+  character_count: number;
+  like_count: number;
+  comment_count: number;
+  created_at: Date;
+        updated_at: Date;
+    }
 
-// 기본 인터페이스 정의
 interface MyDayPost {
   content: string;
   emotion_summary?: string;
@@ -29,9 +49,48 @@ interface MyDayComment {
 interface PostParams {
   id: string;
 }
+interface EmotionInstance extends Model<EmotionAttributes>, EmotionAttributes {}
+// 모델 인터페이스
+interface MyDayPostInstance extends Model<MyDayPostAttributes, MyDayPostAttributes> {
+  post_id: number;
+  user_id: number;
+  content: string;
+  emotion_summary: string | null;
+  image_url: string | null;
+  is_anonymous: boolean;
+  character_count: number;
+  like_count: number;
+  comment_count: number;
+  created_at: Date;
+  updated_at: Date;
 
-// 확장 모델 인터페이스
-interface MyDayPostModel {
+  // Sequelize 관련 메서드들
+  addEmotions: BelongsToManyAddAssociationsMixin<EmotionInstance, number>;
+  getUser: () => Promise<Model<UserAttributes>>;
+  getEmotions: () => Promise<EmotionInstance[]>;
+  getMyDayComments: () => Promise<Model<MyDayCommentAttributes>[]>;
+
+  // increment/decrement 메서드
+  increment: <K extends keyof MyDayPostAttributes>(
+    fields: K | readonly K[] | Partial<MyDayPostAttributes>,
+    options?: IncrementDecrementOptions
+  ) => Promise<this>;
+  
+  decrement: <K extends keyof MyDayPostAttributes>(
+    fields: K | readonly K[] | Partial<MyDayPostAttributes>,
+    options?: IncrementDecrementOptions
+  ) => Promise<this>;
+  // dataValues 정의
+  dataValues: MyDayPostAttributes & {
+    User?: UserAttributes;
+    Emotions?: EmotionAttributes[];
+    MyDayComments?: MyDayCommentAttributes[];
+  };
+}
+
+
+// JSON 변환 결과 인터페이스 추가
+interface MyDayPostJSON {
   post_id: number;
   user_id: number;
   content: string;
@@ -43,28 +102,72 @@ interface MyDayPostModel {
   comment_count: number;
   created_at: Date;
   updated_at: Date;
-  increment(field: string, options?: any): Promise<any>;
-  decrement(field: string, options?: any): Promise<any>;
-  addEmotions(emotionIds: number[], options?: any): Promise<any>;
+  User?: UserAttributes;
+  Emotions?: EmotionAttributes[];
+  MyDayComments?: MyDayCommentAttributes[];
+}
+// 조회 시 사용할 where절 타입 정의
+interface WhereClause {
+  [key: string]: any;
+  created_at?: {
+    [Op.between]: [Date, Date];
+  };
+  '$Emotions.name$'?: string;
+}
+
+// 추가 인터페이스 정의
+interface UserAttributes {
+  user_id: number;
+  username: string;
+  email: string;
+  nickname: string | null;
+  profile_image_url: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+interface EmotionAttributes {
+  emotion_id: number;
+  name: string;
+  icon: string;
+}
+
+interface MyDayCommentAttributes {
+  comment_id: number;
+  post_id: number;
+  user_id: number;
+  content: string;
+  is_anonymous: boolean;
+  created_at: Date;
   User?: {
     nickname: string;
-    profile_image_url: string;
+    profile_image_url: string | null;
   };
-  Emotions?: Array<{
-    emotion_id: number;
-    name: string;
-    icon: string;
-  }>;
-  MyDayComments?: Array<{
-    comment_id: number;
-    content: string;
-    User: {
-      nickname: string;
-    };
-    created_at: Date;
-  }>;
-  toJSON(): any;
 }
+interface MyDayLikeAttributes {
+  user_id: number;
+  post_id: number;
+  created_at: Date;
+}
+
+// 5. Controller에서 사용할 타입들 수정
+interface MyDayPostCreateInput {
+  content: string;
+  emotion_summary?: string;
+  image_url?: string;
+  is_anonymous?: boolean;
+  emotion_ids?: number[];
+}
+interface FindAndCountResult<T> {
+  rows: T[];
+  count: number;
+}
+// getPosts 메서드에서 사용할 타입 정의
+type OrderClause = [
+  ['like_count' | 'comment_count' | 'created_at', 'DESC'],
+  ...['comment_count' | 'created_at', 'DESC'][]
+];
+
 
 // 유틸리티 함수
 const checkAuth = (userId: number | undefined): boolean => {
@@ -76,10 +179,12 @@ const validateContent = (content: string | undefined | null, minLength: number, 
   return content.length >= minLength && content.length <= maxLength;
 };
 
-const getTodayStart = (): Date => {
+const getTodayRange = () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return today;
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return { start: today, end: tomorrow };
 };
 
 const formatPaginationData = (count: number, page: number, limit: number, offset: number) => ({
@@ -90,7 +195,7 @@ const formatPaginationData = (count: number, page: number, limit: number, offset
 });
 
 const myDayController = {
-  createPost: async (req: AuthRequest<MyDayPost>, res: Response) => {
+  createPost: async (req: AuthRequestGeneric<MyDayPost>, res: Response) => {
     const transaction = await db.sequelize.transaction();
     try {
       const { content, emotion_summary, image_url, is_anonymous, emotion_ids } = req.body;
@@ -112,13 +217,13 @@ const myDayController = {
         });
       }
 
-      // 오늘 하루 게시물 체크
-      const today = getTodayStart();
+      const { start, end } = getTodayRange();
       const existingPost = await db.MyDayPost.findOne({
         where: {
           user_id,
           created_at: {
-            [Op.gte]: today
+            [Op.gte]: start,
+            [Op.lt]: end
           }
         },
         transaction
@@ -132,7 +237,6 @@ const myDayController = {
         });
       }
 
-      // 게시물 생성
       const post = await db.MyDayPost.create({
         user_id,
         content,
@@ -140,15 +244,14 @@ const myDayController = {
         image_url,
         is_anonymous: is_anonymous || false,
         character_count: content.length
-      }, { transaction });
-
-      // 감정 태그 처리
+      }, { transaction }) as MyDayPostInstance;
+      
       if (emotion_ids?.length) {
         const emotions = await db.Emotion.findAll({
           where: { emotion_id: { [Op.in]: emotion_ids } },
           transaction
         });
-
+      
         if (emotions.length !== emotion_ids.length) {
           await transaction.rollback();
           return res.status(400).json({
@@ -156,11 +259,10 @@ const myDayController = {
             message: '유효하지 않은 감정이 포함되어 있습니다.'
           });
         }
-
-        await post.addEmotions(emotion_ids, { transaction });
+      
+        await post.addEmotions(emotions.map(emotion => emotion.emotion_id), { transaction });
       }
 
-      // 통계 업데이트
       await db.UserStats.increment('my_day_post_count', {
         where: { user_id },
         transaction
@@ -170,9 +272,7 @@ const myDayController = {
       res.status(201).json({
         status: 'success',
         message: "오늘 하루의 기록이 성공적으로 저장되었습니다.",
-        data: {
-          post_id: post.post_id
-        }
+        data: { post_id: post.post_id }
       });
     } catch (error) {
       await transaction.rollback();
@@ -184,7 +284,7 @@ const myDayController = {
     }
   },
 
-  getPosts: async (req: AuthRequest<never, MyDayQuery>, res: Response) => {
+  getPosts: async (req: AuthRequestGeneric<never, MyDayQuery>, res: Response) => {
     try {
       const user_id = req.user?.id;
       if (!checkAuth(user_id)) {
@@ -207,8 +307,7 @@ const myDayController = {
       const limitNum = Number(limit);
       const offset = (pageNum - 1) * limitNum;
 
-      // 쿼리 조건 구성
-      const whereClause: any = {};
+      const whereClause: WhereClause = {};
       if (emotion) {
         whereClause['$Emotions.name$'] = emotion;
       }
@@ -218,49 +317,51 @@ const myDayController = {
         };
       }
 
-      const orderClause = sort_by === 'popular' 
+      const orderClause: OrderClause = sort_by === 'popular' 
         ? [['like_count', 'DESC'], ['comment_count', 'DESC'], ['created_at', 'DESC']]
-        : [['created_at', 'DESC']];
+        : [['created_at', 'DESC']] as OrderClause;
 
-      const posts = await db.MyDayPost.findAndCountAll({
-        where: whereClause,
-        include: [
-          {
-            model: db.User,
-            attributes: ['nickname', 'profile_image_url']
-          },
-          {
-            model: db.Emotion,
-            through: { attributes: [] },
-            attributes: ['emotion_id', 'name', 'icon']
-          },
-          {
-            model: db.MyDayComment,
-            separate: true,
-            limit: 3,
-            order: [['created_at', 'DESC']],
-            include: [{
+        const posts = await db.MyDayPost.findAndCountAll({
+          where: whereClause,
+          include: [
+            {
               model: db.User,
-              attributes: ['nickname']
-            }]
-          }
-        ],
-        order: orderClause,
-        limit: limitNum,
-        offset,
-        distinct: true
-      });
+              attributes: ['nickname', 'profile_image_url']
+            },
+            {
+              model: db.Emotion,
+              through: { attributes: [] },
+              attributes: ['emotion_id', 'name', 'icon']
+            },
+            {
+              model: db.MyDayComment,
+              separate: true,
+              limit: 3,
+              order: [['created_at', 'DESC']],
+              include: [{
+                model: db.User,
+                attributes: ['nickname']
+              }]
+            }
+          ],
+          order: orderClause,
+          limit: limitNum,
+          offset,
+          distinct: true
+        }) as unknown as FindAndCountResult<MyDayPostInstance>;
 
-      const formattedPosts = posts.rows.map((post: MyDayPostModel) => {
-        const postJson = post.toJSON();
-        return {
-          ...postJson,
-          User: post.is_anonymous ? null : postJson.User,
-          comment_preview: postJson.MyDayComments?.slice(0, 3),
-          total_comments: post.comment_count,
-          total_likes: post.like_count
-        };
-      });
+   
+
+        const formattedPosts = posts.rows.map((post: MyDayPostInstance) => {
+          const data = post.dataValues;
+          return {
+            ...data,
+            User: data.is_anonymous ? null : data.User,
+            comment_preview: data.MyDayComments?.slice(0, 3),
+            total_comments: data.comment_count,
+            total_likes: data.like_count
+          };
+        });
 
       res.json({
         status: 'success',
@@ -278,7 +379,7 @@ const myDayController = {
     }
   },
 
-  createComment: async (req: AuthRequest<MyDayComment, never, PostParams>, res: Response) => {
+  createComment: async (req: AuthRequestGeneric<MyDayComment, never, PostParams>, res: Response) => {
     const transaction = await db.sequelize.transaction();
     try {
       const { id } = req.params;
@@ -332,9 +433,7 @@ const myDayController = {
       res.status(201).json({
         status: 'success',
         message: '댓글이 성공적으로 작성되었습니다.',
-        data: {
-          comment_id: comment.comment_id
-        }
+        data: { comment_id: comment.comment_id }
       });
     } catch (error) {
       await transaction.rollback();
@@ -346,7 +445,7 @@ const myDayController = {
     }
   },
 
-  likePost: async (req: AuthRequest<never, never, PostParams>, res: Response) => {
+  likePost: async (req: AuthRequestGeneric<never, never, PostParams>, res: Response) => {
     const transaction = await db.sequelize.transaction();
     try {
       const { id } = req.params;

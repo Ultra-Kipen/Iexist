@@ -1,4 +1,4 @@
-import { Model, Sequelize } from 'sequelize';
+import { Sequelize } from 'sequelize';
 import { User } from './User';
 import { Emotion } from './Emotion';
 import { EmotionLog } from './EmotionLog';
@@ -18,7 +18,7 @@ import PostTag from './PostTag';
 import SomeoneDayComment from './SomeoneDayComment';
 import SomeoneDayLike from './SomeoneDayLike';
 import SomeoneDayPost from './SomeoneDayPost';
-import SomeoneDayTag from './SomeoneDayTag';  // 새로 추가
+import SomeoneDayTag from './SomeoneDayTag';
 import Tag from './Tag';
 import UserGoal from './UserGoal';
 import UserStats from './UserStats';
@@ -27,7 +27,6 @@ import sequelize from '../config/database';
 export class Database {
   public sequelize: Sequelize;
   
-  // 모델 선언
   public User!: typeof User;
   public Emotion!: typeof Emotion;
   public EmotionLog!: typeof EmotionLog;
@@ -47,7 +46,7 @@ export class Database {
   public SomeoneDayComment!: typeof SomeoneDayComment;
   public SomeoneDayLike!: typeof SomeoneDayLike;
   public SomeoneDayPost!: typeof SomeoneDayPost;
-  public SomeoneDayTag!: typeof SomeoneDayTag;  // 새로 추가
+  public SomeoneDayTag!: typeof SomeoneDayTag;
   public Tag!: typeof Tag;
   public UserGoal!: typeof UserGoal;
   public UserStats!: typeof UserStats;
@@ -59,42 +58,40 @@ export class Database {
   }
 
   private initializeModels() {
-   // 기본 모델 초기화
-   User.initialize(this.sequelize);
-   Emotion.initialize(this.sequelize);
-   EmotionLog.initialize(this.sequelize);
-   
-   // Best/Post 관련 모델 초기화
-   BestPost.initialize(this.sequelize);
-   PostRecommendation.initialize(this.sequelize);
-   PostReport.initialize(this.sequelize);
-   PostTag.initialize(this.sequelize);
-   
-   // Challenge 관련 모델 초기화
-   Challenge.initialize(this.sequelize);
-   ChallengeParticipant.initialize(this.sequelize);
-   ChallengeEmotion.initialize(this.sequelize);
-   
-   // MyDay 관련 모델 초기화
-   MyDayPost.initialize(this.sequelize);
-   MyDayComment.initialize(this.sequelize);
-   MyDayLike.initialize(this.sequelize);
-   MyDayEmotion.initialize(this.sequelize);
-   
-   // SomeoneDay 관련 모델 초기화
-   SomeoneDayPost.initialize(this.sequelize);
-   SomeoneDayComment.initialize(this.sequelize);
-   SomeoneDayLike.initModel(this.sequelize);
-   SomeoneDayTag.initialize(this.sequelize);
+    // 기본 모델 초기화
+    User.initialize(this.sequelize);
+    Emotion.initialize(this.sequelize);
+    EmotionLog.initialize(this.sequelize);  
+    
+    // Best/Post 관련 모델 초기화
+    BestPost.initialize(this.sequelize);
+    PostRecommendation.initialize(this.sequelize);
+    PostReport.initialize(this.sequelize);
+    PostTag.initialize(this.sequelize);
+    
+    // Challenge 관련 모델 초기화
+    Challenge.initialize(this.sequelize);
+    ChallengeParticipant.initialize(this.sequelize);
+    ChallengeEmotion.initialize(this.sequelize);
+    
+    // MyDay 관련 모델 초기화
+    MyDayPost.initialize(this.sequelize);
+    MyDayComment.initialize(this.sequelize);
+    MyDayLike.initialize(this.sequelize);
+    MyDayEmotion.initialize(this.sequelize);
+    
+    // SomeoneDay 관련 모델 초기화
+    SomeoneDayPost.initialize(this.sequelize);
+    SomeoneDayComment.initialize(this.sequelize);
+    SomeoneDayLike.initialize(this.sequelize);
+    SomeoneDayTag.initialize(this.sequelize);
 
-   // 기타 모델 초기화
-   // 기타 모델 초기화
-EncouragementMessage.initModel(this.sequelize);
-Notification.initModel(this.sequelize);
-Tag.initialize(this.sequelize);
-UserGoal.initialize(this.sequelize);
-UserStats.initModel(this.sequelize);  // init -> initModel로 변경
-
+    // 기타 모델 초기화
+    EncouragementMessage.initialize(this.sequelize);
+    Notification.initialize(this.sequelize);
+    Tag.initialize(this.sequelize);
+    UserGoal.initialize(this.sequelize);
+    UserStats.initialize(this.sequelize);
     // 모델 인스턴스 할당
     this.User = User;
     this.Emotion = Emotion;
@@ -180,8 +177,7 @@ export {
   EncouragementMessage, MyDayComment, MyDayEmotion, MyDayLike,
   MyDayPost, Notification, PostRecommendation, PostReport,
   PostTag, SomeoneDayComment, SomeoneDayLike, SomeoneDayPost,
-  Tag, UserGoal, UserStats,SomeoneDayTag, 
+  Tag, UserGoal, UserStats, SomeoneDayTag,
   sequelize
 };
-
-export default db;
+export default new Database(sequelize);

@@ -1,13 +1,19 @@
+// backend/models/MyDayLike.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import { User } from '../models/User';
+import MyDayPost from '../models/MyDayPost';
 
-class MyDayLike extends Model {
+interface MyDayLikeAttributes {
+  user_id: number;
+  post_id: number;
+}
+
+class MyDayLike extends Model<MyDayLikeAttributes> {
   public user_id!: number;
   public post_id!: number;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
 
   public static initialize(sequelize: Sequelize) {
-    return MyDayLike.init(
+    const model = MyDayLike.init(
       {
         user_id: {
           type: DataTypes.INTEGER,
@@ -44,9 +50,13 @@ class MyDayLike extends Model {
         ]
       }
     );
+    return model;
   }
 
-  public static associate(models: any) {
+  public static associate(models: {
+    User: typeof User;
+    MyDayPost: typeof MyDayPost;
+  }): void {
     MyDayLike.belongsTo(models.User, {
       foreignKey: 'user_id',
       as: 'user'

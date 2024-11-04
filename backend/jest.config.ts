@@ -3,6 +3,11 @@ import type { Config } from '@jest/types';
 const config: Config.InitialOptions = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: 'tsconfig.json'
+    }]
+  },
   moduleFileExtensions: ['ts', 'js', 'json'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -27,11 +32,6 @@ const config: Config.InitialOptions = {
     '/tests/',
     '/dist/'
   ],
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json'
-    }
-  },
   setupFilesAfterEnv: ['./tests/setup.ts'],
   verbose: true,
   forceExit: true,

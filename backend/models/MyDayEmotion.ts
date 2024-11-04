@@ -1,13 +1,19 @@
+// backend/models/MyDayEmotion.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import MyDayPost from '../models/MyDayPost';
+import { Emotion } from '../models/Emotion';
 
-class MyDayEmotion extends Model {
+interface MyDayEmotionAttributes {
+  post_id: number;
+  emotion_id: number;
+}
+
+class MyDayEmotion extends Model<MyDayEmotionAttributes> {
   public post_id!: number;
   public emotion_id!: number;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
 
   public static initialize(sequelize: Sequelize) {
-    return MyDayEmotion.init(
+    const model = MyDayEmotion.init(
       {
         post_id: {
           type: DataTypes.INTEGER,
@@ -16,18 +22,16 @@ class MyDayEmotion extends Model {
           references: {
             model: 'my_day_posts',
             key: 'post_id'
-          },
-          onDelete: 'CASCADE'
+          }
         },
         emotion_id: {
-          type: DataTypes.TINYINT.UNSIGNED,
+          type: DataTypes.INTEGER,
           primaryKey: true,
           allowNull: false,
           references: {
             model: 'emotions',
             key: 'emotion_id'
-          },
-          onDelete: 'CASCADE'
+          }
         }
       },
       {
@@ -46,16 +50,18 @@ class MyDayEmotion extends Model {
         ]
       }
     );
+    return model;
   }
 
-  public static associate(models: any) {
-    // MyDayPost와의 관계
+  public static associate(models: {
+    MyDayPost: typeof MyDayPost;
+    Emotion: typeof Emotion;
+  }): void {
     MyDayEmotion.belongsTo(models.MyDayPost, {
       foreignKey: 'post_id',
       as: 'post'
     });
 
-    // Emotion과의 관계
     MyDayEmotion.belongsTo(models.Emotion, {
       foreignKey: 'emotion_id',
       as: 'emotion'

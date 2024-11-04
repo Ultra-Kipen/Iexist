@@ -8,17 +8,17 @@ import {
   ForeignKey,
   NonAttribute
 } from 'sequelize';
-import { User } from './User';
+import { User } from '../models/User';
 import SomeoneDayPost from '../models/SomeoneDayPost';
 
 class EncouragementMessage extends Model<
   InferAttributes<EncouragementMessage>,
   InferCreationAttributes<EncouragementMessage>
 > {
-  declare id: CreationOptional<number>;
-  declare sender_id: ForeignKey<User['id']>;
-  declare receiver_id: ForeignKey<User['id']>;
-  declare post_id: ForeignKey<SomeoneDayPost['post_id']>;
+  declare message_id: CreationOptional<number>;
+  declare sender_id: ForeignKey<number>;
+  declare receiver_id: ForeignKey<number>;
+  declare post_id: ForeignKey<number>;
   declare message: string;
   declare is_anonymous: CreationOptional<boolean>;
   declare created_at: CreationOptional<Date>;
@@ -27,30 +27,10 @@ class EncouragementMessage extends Model<
   declare receiver?: NonAttribute<User>;
   declare post?: NonAttribute<SomeoneDayPost>;
 
-  static associate(models: any) {
-    // Sender와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'sender_id',
-      as: 'sender'
-    });
-
-    // Receiver와의 관계
-    this.belongsTo(models.User, {
-      foreignKey: 'receiver_id',
-      as: 'receiver'
-    });
-
-    // SomeoneDayPost와의 관계
-    this.belongsTo(models.SomeoneDayPost, {
-      foreignKey: 'post_id',
-      as: 'post'
-    });
-  }
-
-  static initModel(sequelize: Sequelize): typeof EncouragementMessage {
-    EncouragementMessage.init(
+  public static initialize(sequelize: Sequelize) {  // initModel -> initialize
+    const model = EncouragementMessage.init(
       {
-        id: {
+        message_id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
@@ -60,7 +40,7 @@ class EncouragementMessage extends Model<
           allowNull: false,
           references: {
             model: 'users',
-            key: 'id'
+            key: 'user_id'
           }
         },
         receiver_id: {
@@ -68,7 +48,7 @@ class EncouragementMessage extends Model<
           allowNull: false,
           references: {
             model: 'users',
-            key: 'id'
+            key: 'user_id'
           }
         },
         post_id: {
@@ -76,8 +56,9 @@ class EncouragementMessage extends Model<
           allowNull: false,
           references: {
             model: 'someone_day_posts',
-            key: 'id'
-          }
+            key: 'post_id'
+          },
+          onDelete: 'CASCADE'
         },
         message: {
           type: DataTypes.TEXT,
@@ -89,10 +70,11 @@ class EncouragementMessage extends Model<
         is_anonymous: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
-          defaultValue: true
+          defaultValue: false
         },
         created_at: {
           type: DataTypes.DATE,
+          allowNull: false,
           defaultValue: DataTypes.NOW
         }
       },
@@ -112,13 +94,48 @@ class EncouragementMessage extends Model<
           },
           {
             fields: ['post_id']
+          },
+          {
+            fields: ['created_at']
           }
         ]
       }
     );
+  }
 
-    return EncouragementMessage;
+  static associate(models: {
+    User: typeof User;
+    SomeoneDayPost: typeof SomeoneDayPost;
+  }): void {
+    this.belongsTo(models.User, {
+      foreignKey: 'sender_id',
+      as: 'sender',
+      targetKey: 'user_id'
+    });
+
+    this.belongsTo(models.User, {
+      foreignKey: 'receiver_id',
+      as: 'receiver',
+      targetKey: 'user_id'
+    });
+
+    this.belongsTo(models.SomeoneDayPost, {
+      foreignKey: 'post_id',
+      as: 'post',
+      targetKey: 'post_id',
+      onDelete: 'CASCADE'
+    });
+  }
+
+  toJSON() {
+    const values = super.toJSON();
+    if (values && (values as any).is_anonymous) {
+      const { sender_id, sender, ...rest } = values as any;
+      return rest;
+    }
+    return values;
   }
 }
 
+export { EncouragementMessage };
 export default EncouragementMessage;
