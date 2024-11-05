@@ -2,16 +2,17 @@ import { Model, DataTypes, Sequelize } from 'sequelize';
 import { User } from '../models/User';
 import { Emotion } from '../models/Emotion';
 interface ChallengeAttributes {
-challenge_id: number;
-creator_id: number;
-title: string;
-description?: string;
-start_date: Date;
-end_date: Date;
-is_public: boolean;
-max_participants?: number;
-participant_count: number;
+  challenge_id: number;
+  creator_id: number;
+  title: string;
+  description: string | null;  // TEXT, nullable
+  start_date: Date;
+  end_date: Date;
+  is_public: boolean;
+  max_participants: number | null;  // UNSIGNED, nullable
+  participant_count: number;
 }
+
 class Challenge extends Model<ChallengeAttributes> {
 public challenge_id!: number;
 public creator_id!: number;

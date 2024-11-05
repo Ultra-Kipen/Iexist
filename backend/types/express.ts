@@ -2,7 +2,7 @@ import { Request } from 'express';
 
 // 기본 사용자 인터페이스
 export interface AuthUser {
-  user_id: number;  // id에서 user_id로 변경
+  user_id: number;
   email: string;
   nickname?: string;
 }

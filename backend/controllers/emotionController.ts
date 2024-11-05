@@ -1,9 +1,8 @@
 import { Response } from 'express';
 import { Op, QueryTypes } from 'sequelize';
 import db from '../models';
-import { AuthRequest, AuthRequestGeneric, EmotionCreate, EmotionTrendQuery } from '../types/express';
+import { AuthRequestGeneric } from '../types/express';
 
-// 인터페이스 정의
 interface EmotionStat {
   date: string;
   emotions: Array<{
@@ -18,6 +17,12 @@ interface EmotionQuery {
   offset?: string;
 }
 
+interface EmotionTrendQuery {
+  start_date?: string;
+  end_date?: string;
+  group_by?: 'day' | 'week' | 'month';
+}
+
 interface EmotionStatRecord {
   date: string;
   name: string;
@@ -25,7 +30,6 @@ interface EmotionStatRecord {
   count: string | number;
 }
 
-// 헬퍼 함수
 function formatEmotionStats(stats: EmotionStatRecord[]): Record<string, EmotionStat> {
   return stats.reduce((acc: Record<string, EmotionStat>, curr) => {
     const { date, name, icon, count } = curr;
@@ -42,20 +46,20 @@ function formatEmotionStats(stats: EmotionStatRecord[]): Record<string, EmotionS
 }
 
 const emotionController = {
-  getAllEmotions: async (_req: AuthRequest, res: Response) => {
+  getAllEmotions: async (req: AuthRequestGeneric<never>, res: Response) => {
     try {
-      const emotions = await db.Emotion.findAll({
+      const emotions = await db.sequelize.models.emotions.findAll({
         attributes: ['emotion_id', 'name', 'icon'],
         order: [['name', 'ASC']]
       });
 
-      res.json({
+      return res.json({
         status: 'success',
         data: emotions
       });
     } catch (error) {
       console.error('감정 목록 조회 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '감정 목록 조회 중 오류가 발생했습니다.'
       });
@@ -64,7 +68,7 @@ const emotionController = {
 
   getEmotions: async (req: AuthRequestGeneric<never, EmotionQuery>, res: Response) => {
     try {
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
       if (!user_id) {
         return res.status(401).json({
           status: 'error',
@@ -74,10 +78,10 @@ const emotionController = {
 
       const { limit = '30', offset = '0' } = req.query;
 
-      const emotions = await db.EmotionLog.findAndCountAll({
+      const emotions = await db.sequelize.models.emotion_logs.findAndCountAll({
         where: { user_id },
         include: [{
-          model: db.Emotion,
+          model: db.sequelize.models.emotions,
           attributes: ['name', 'icon']
         }],
         order: [['log_date', 'DESC']],
@@ -86,7 +90,7 @@ const emotionController = {
         attributes: ['log_id', 'log_date', 'note']
       });
 
-      res.json({
+      return res.json({
         status: 'success',
         data: emotions.rows,
         pagination: {
@@ -98,18 +102,21 @@ const emotionController = {
       });
     } catch (error) {
       console.error('감정 조회 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '감정 조회 중 오류가 발생했습니다.'
       });
     }
   },
 
-  createEmotion: async (req: AuthRequest, res: Response) => {
+  createEmotion: async (
+    req: AuthRequestGeneric<{ emotion_ids: number[]; note?: string }>,
+    res: Response
+  ) => {
     const transaction = await db.sequelize.transaction();
     try {
       const { emotion_ids, note } = req.body;
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
 
       if (!user_id) {
         await transaction.rollback();
@@ -119,7 +126,7 @@ const emotionController = {
         });
       }
 
-      if (!emotion_ids || !Array.isArray(emotion_ids) || emotion_ids.length === 0) {
+      if (!emotion_ids?.length) {
         await transaction.rollback();
         return res.status(400).json({
           status: 'error',
@@ -130,7 +137,7 @@ const emotionController = {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const existingLog = await db.EmotionLog.findOne({
+      const existingLog = await db.sequelize.models.emotion_logs.findOne({
         where: {
           user_id,
           log_date: {
@@ -151,18 +158,17 @@ const emotionController = {
 
       const emotionLogs = await Promise.all(
         emotion_ids.map(emotion_id =>
-          db.EmotionLog.create({
+          db.sequelize.models.emotion_logs.create({
             user_id,
             emotion_id,
             log_date: today,
-            note
+            note: note || null
           }, { transaction })
         )
       );
 
       await transaction.commit();
-
-      res.status(201).json({
+      return res.status(201).json({
         status: 'success',
         message: "감정이 성공적으로 기록되었습니다.",
         data: emotionLogs
@@ -170,16 +176,19 @@ const emotionController = {
     } catch (error) {
       await transaction.rollback();
       console.error('감정 기록 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '감정 기록 중 오류가 발생했습니다.'
       });
     }
   },
 
-  getEmotionStats: async (req: AuthRequest, res: Response) => {
+  getEmotionStats: async (
+    req: AuthRequestGeneric<never, { start_date?: string; end_date?: string }>,
+    res: Response
+  ) => {
     try {
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
       if (!user_id) {
         return res.status(401).json({
           status: 'error',
@@ -204,28 +213,32 @@ const emotionController = {
       `;
 
       const stats = await db.sequelize.query<EmotionStatRecord>(query, {
-        replacements: { user_id, start_date, end_date },
+        replacements: { 
+          user_id, 
+          start_date: start_date || new Date(), 
+          end_date: end_date || new Date() 
+        },
         type: QueryTypes.SELECT
       });
 
       const formattedStats = formatEmotionStats(stats);
 
-      res.json({
+      return res.json({
         status: 'success',
         data: Object.values(formattedStats)
       });
     } catch (error) {
       console.error('감정 통계 조회 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '감정 통계 조회 중 오류가 발생했습니다.'
       });
     }
   },
 
-  getEmotionTrend: async (req: AuthRequest, res: Response) => {
+  getEmotionTrend: async (req: AuthRequestGeneric<never, EmotionTrendQuery>, res: Response) => {
     try {
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
       if (!user_id) {
         return res.status(401).json({
           status: 'error',
@@ -256,28 +269,32 @@ const emotionController = {
       `;
 
       const trend = await db.sequelize.query<EmotionStatRecord>(query, {
-        replacements: { user_id, start_date, end_date },
+        replacements: { 
+          user_id, 
+          start_date: start_date || new Date(), 
+          end_date: end_date || new Date() 
+        },
         type: QueryTypes.SELECT
       });
 
       const formattedTrend = formatEmotionStats(trend);
 
-      res.json({
+      return res.json({
         status: 'success',
         data: Object.values(formattedTrend)
       });
     } catch (error) {
       console.error('감정 추세 조회 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '감정 추세 조회 중 오류가 발생했습니다.'
       });
     }
   },
 
-  getDailyEmotionCheck: async (req: AuthRequest, res: Response) => {
+  getDailyEmotionCheck: async (req: AuthRequestGeneric<never>, res: Response) => {
     try {
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
       if (!user_id) {
         return res.status(401).json({
           status: 'error',
@@ -288,7 +305,7 @@ const emotionController = {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const check = await db.EmotionLog.findOne({
+      const check = await db.sequelize.models.emotion_logs.findOne({
         where: {
           user_id,
           log_date: {
@@ -297,21 +314,21 @@ const emotionController = {
           }
         },
         include: [{
-          model: db.Emotion,
+          model: db.sequelize.models.emotions,
           attributes: ['name', 'icon']
         }]
       });
 
-      res.json({
+      return res.json({
         status: 'success',
         data: {
           hasDailyCheck: !!check,
-          lastCheck: check
+          lastCheck: check?.get() || null
         }
       });
     } catch (error) {
       console.error('일일 감정 체크 확인 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '일일 감정 체크 확인 중 오류가 발생했습니다.'
       });

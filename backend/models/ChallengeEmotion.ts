@@ -4,12 +4,12 @@ import { User } from '../models/User';
 import { Emotion } from '../models/Emotion';
 
 interface ChallengeEmotionAttributes {
- challenge_emotion_id: number;
- challenge_id: number;
- user_id: number;
- emotion_id: number;
- note: string | null;  // 수정: null 명시적 허용
- log_date: Date;
+  challenge_emotion_id: number;
+  challenge_id: number;
+  user_id: number;
+  emotion_id: number;
+  note: string | null;  // VARCHAR(200), nullable
+  log_date: Date;
 }
 
 class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
