@@ -16,9 +16,10 @@ import {
   related_id?: number;
   is_read: boolean;
   }
-  class Notification extends Model
-  InferAttributes<Notification>,
-  InferCreationAttributes<Notification>
+  class Notification extends Model<
+    InferAttributes<Notification>,
+    InferCreationAttributes<Notification>
+  >
   
   {
   declare id: CreationOptional<number>;
@@ -58,9 +59,14 @@ import {
   allowNull: true
   },
   is_read: {
-  type: DataTypes.BOOLEAN,
-  allowNull: false,
-  defaultValue: false
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  created_at: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
   }
   },
   {

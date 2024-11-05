@@ -5,15 +5,15 @@ import { AuthRequestGeneric, PaginationQuery } from '../types/express';
 
 interface CreateChallengeBody {
   title: string;
-  description?: string;
+  description: string | undefined;  // TEXT 타입이므로 undefined 허용
   start_date: string;
   end_date: string;
-  is_public?: boolean;
-  max_participants?: number;
+  is_public: boolean;
+  max_participants: number | undefined;  // SMALLINT UNSIGNED이므로 undefined 허용
 }
 
 interface ChallengeProgressBody {
-  progress_note: string;
+  note: string | undefined;  // VARCHAR(200)이므로 undefined 허용
   emotion_id: number;
 }
 
@@ -35,9 +35,10 @@ const challengeController = {
     const transaction = await db.sequelize.transaction();
     try {
       const { title, description, start_date, end_date, is_public, max_participants } = req.body;
-      const creator_id = req.user?.id;
+      const user_id = req.user?.user_id;
+      
 
-      if (!creator_id) {
+      if (!user_id) {
         await transaction.rollback();
         return res.status(401).json({
           status: 'error',
@@ -45,7 +46,6 @@ const challengeController = {
         });
       }
 
-      // Validation
       if (!title || title.length < 5 || title.length > 100) {
         await transaction.rollback();
         return res.status(400).json({
@@ -53,53 +53,24 @@ const challengeController = {
           message: '챌린지 제목은 5자 이상 100자 이하여야 합니다.'
         });
       }
-
-      if (description && (description.length < 20 || description.length > 500)) {
-        await transaction.rollback();
-        return res.status(400).json({
-          status: 'error',
-          message: '챌린지 설명은 20자 이상 500자 이하여야 합니다.'
-        });
-      }
-
-      const startDate = new Date(start_date);
-      const endDate = new Date(end_date);
-      const now = new Date();
-
-      if (startDate < now) {
-        await transaction.rollback();
-        return res.status(400).json({
-          status: 'error',
-          message: '시작일은 현재 시간 이후여야 합니다.'
-        });
-      }
-
-      if (endDate <= startDate) {
-        await transaction.rollback();
-        return res.status(400).json({
-          status: 'error',
-          message: '종료일은 시작일 이후여야 합니다.'
-        });
-      }
-
       const challenge = await db.Challenge.create({
-        creator_id,
+        creator_id: user_id,
         title,
-        description,
-        start_date: startDate,
-        end_date: endDate,
-        is_public: is_public ?? true,
-        max_participants,
+        description: description === undefined ? null : description,  
+        start_date: new Date(start_date),
+        end_date: new Date(end_date),
+        is_public: is_public ?? true,  // 기본값 true
+        max_participants: max_participants === undefined ? null : max_participants,
         participant_count: 1
-      }, { transaction });
-
+    }, { transaction });
       await db.ChallengeParticipant.create({
         challenge_id: challenge.challenge_id,
-        user_id: creator_id
+        user_id,
+        joined_at: new Date()
       }, { transaction });
 
       await transaction.commit();
-      res.status(201).json({
+      return res.status(201).json({
         status: 'success',
         message: "챌린지가 성공적으로 생성되었습니다.",
         data: {
@@ -109,7 +80,7 @@ const challengeController = {
     } catch (error) {
       await transaction.rollback();
       console.error('챌린지 생성 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '챌린지 생성 중 오류가 발생했습니다.'
       });
@@ -128,8 +99,7 @@ const challengeController = {
         sort_by = 'start_date',
         order = 'asc'
       } = req.query;
-      
-      
+
       const offset = (Number(page) - 1) * Number(limit);
       const currentDate = new Date();
 
@@ -156,12 +126,12 @@ const challengeController = {
       }
 
       const orderClause: Order = [[sort_by, order.toUpperCase()]];
-      
+
       const challenges = await db.Challenge.findAndCountAll({
         include: [
           {
             model: db.User,
-            as: 'Creator',
+            as: 'creator',
             attributes: ['nickname', 'profile_image_url']
           },
           {
@@ -181,6 +151,7 @@ const challengeController = {
         offset,
         distinct: true
       });
+
       res.json({
         status: 'success',
         data: {
@@ -201,14 +172,15 @@ const challengeController = {
       });
     }
   },
+
   participateInChallenge: async (
     req: AuthRequestGeneric<any, any, ChallengeParams>,
     res: Response
   ) => {
     const transaction = await db.sequelize.transaction();
     try {
-      const challengeId = Number(req.params.id); // id를 number로 변환
-      const user_id = req.user?.id;
+      const challengeId = Number(req.params.id);
+      const user_id = req.user?.user_id; 
 
       if (!user_id) {
         await transaction.rollback();
@@ -260,7 +232,6 @@ const challengeController = {
 
       await challenge.increment('participant_count', { transaction });
 
-      // 챌린지 생성자에게 알림 전송
       if (challenge.creator_id !== user_id) {
         await db.Notification.create({
           user_id: challenge.creator_id,
@@ -292,10 +263,10 @@ const challengeController = {
     const transaction = await db.sequelize.transaction();
     try {
       const challengeId = Number(req.params.id);
-      const userId = req.user?.id;
-      const { progress_note, emotion_id } = req.body;
+      const user_id = req.user?.user_id; 
+      const { note, emotion_id } = req.body;
 
-      if (!userId) {
+      if (!user_id) {
         await transaction.rollback();
         return res.status(401).json({
           status: 'error',
@@ -306,7 +277,7 @@ const challengeController = {
       const existingLog = await db.ChallengeEmotion.findOne({
         where: {
           challenge_id: challengeId,
-          user_id: userId,
+          user_id,
           log_date: {
             [Op.gte]: new Date().setHours(0,0,0,0),
             [Op.lt]: new Date().setHours(23,59,59,999)
@@ -325,30 +296,27 @@ const challengeController = {
 
       const emotionLog = await db.ChallengeEmotion.create({
         challenge_id: challengeId,
-        user_id: userId,
+        user_id,
         emotion_id,
         log_date: new Date(),
-        progress_note: progress_note  // note -> progress_note로 변경
-      }, { transaction });
-      
-      await transaction.commit();
-      
-      res.json({
+        note: note === undefined ? null : note
+    }, { transaction });
+      return res.json({
         status: 'success',
         message: '진행 상황이 기록되었습니다.',
         data: {
-          challenge_emotion_id: emotionLog.challenge_emotion_id  // 올바른 속성 이름 사용
+          challenge_emotion_id: emotionLog.challenge_emotion_id
         }
       });
     } catch (error) {
       await transaction.rollback();
-      res.status(500).json({
+      console.error('진행 상황 기록 오류:', error);
+      return res.status(500).json({
         status: 'error',
         message: '진행 상황 기록 중 오류가 발생했습니다.'
       });
     }
   }
-
-}; // challengeController 객체 닫기가 필요
+};
 
 export default challengeController;
