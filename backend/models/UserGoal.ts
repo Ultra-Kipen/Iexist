@@ -51,13 +51,11 @@ class UserGoal extends Model {
   public static associate(models: any) {
     UserGoal.belongsTo(models.User, {
       foreignKey: 'user_id',
-      targetKey: 'user_id',  // targetKey 추가
       as: 'user'
     });
 
     UserGoal.belongsTo(models.Emotion, {
       foreignKey: 'target_emotion_id',
-      targetKey: 'emotion_id',  // targetKey 추가
       as: 'targetEmotion'
     });
   }

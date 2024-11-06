@@ -11,7 +11,7 @@ import SomeoneDayLike from './SomeoneDayLike';
 export type ThemePreference = 'light' | 'dark' | 'system';
 
 interface UserAttributes {
-  id: number;
+  user_id: number;
   username: string;
   email: string;
   password: string;
@@ -22,9 +22,9 @@ interface UserAttributes {
   last_login_at?: Date;
 }
 
-interface UserCreationAttributes extends Omit<UserAttributes, 'id' | 'is_active'> {}
+interface UserCreationAttributes extends Omit<UserAttributes, 'user_id' | 'is_active'> {}
 class User extends Model<UserAttributes, UserCreationAttributes> {
-  public id!: number;
+  public user_id!: number; 
   public username!: string;
   public email!: string;
   public password!: string;
@@ -60,23 +60,21 @@ class User extends Model<UserAttributes, UserCreationAttributes> {
   };
 
   // 모델 초기화 메서드
-  public static initialize(sequelize: Sequelize) {
-    const model = User.init(
+  public static initialize(sequelize: Sequelize): typeof User {
+    return User.init(
       {
-        id: {
+        user_id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
-          primaryKey: true,
-          field: 'user_id'  // DB 컬럼명과 매핑
+          primaryKey: true
         },
         username: {
           type: DataTypes.STRING(50),
           allowNull: false,
           validate: {
             notEmpty: true,
-            len: [2, 50],
-          },
-          field: 'username'  // DB 컬럼명과 매핑
+            len: [2, 50]
+          }
         },
         email: {
           type: DataTypes.STRING(100),
@@ -84,90 +82,52 @@ class User extends Model<UserAttributes, UserCreationAttributes> {
           unique: true,
           validate: {
             isEmail: true,
-            notEmpty: true,
-          },
+            notEmpty: true
+          }
         },
         password: {
           type: DataTypes.STRING,
           allowNull: false,
           validate: {
             notEmpty: true,
-            len: [6, 100],
-          },
+            len: [6, 100]
+          }
         },
         nickname: {
           type: DataTypes.STRING(50),
           allowNull: true,
           validate: {
-            len: [2, 50],
-          },
+            len: [2, 50]
+          }
         },
         theme_preference: {
           type: DataTypes.ENUM('light', 'dark', 'system'),
           allowNull: true,
-          defaultValue: 'system',
-          validate: {
-            isIn: [['light', 'dark', 'system']],
-          },
+          defaultValue: 'system'
         },
         profile_image_url: {
           type: DataTypes.STRING(255),
-          allowNull: true,
-          validate: {
-            isUrl: true,
-          },
+          allowNull: true
         },
         is_active: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
-          defaultValue: true,
+          defaultValue: true
         },
         last_login_at: {
           type: DataTypes.DATE,
-          allowNull: true,
-        },
+          allowNull: true
+        }
       },
-      
-        {
-          sequelize,
+      {
+        sequelize,
         modelName: 'User',
         tableName: 'users',
         timestamps: true,
-        underscored: true,
-          indexes: [
-            {
-              unique: true,
-              fields: ['email'],
-            },
-            {
-              fields: ['username'],
-            },
-            {
-              fields: ['is_active'],
-            },
-          ],
-          defaultScope: {
-            attributes: {
-              exclude: ['password'],
-            },
-            where: {
-              is_active: true,
-            },
-          },
-          scopes: {
-            withPassword: {
-              attributes: {
-                include: ['password'],
-              },
-            },
-            withInactive: {
-              where: {},
-            },
-          },
-        }
-      );
-      return model;
-    }
+        underscored: true
+      }
+    );
+}
 
   // 관계 설정 메서드 수정
   public static associate(models: any): void {

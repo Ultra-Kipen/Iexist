@@ -118,7 +118,7 @@ const comfortWallController = {
             model: db.sequelize.models.encouragement_messages,
             separate: true,
             limit: 3,
-            order: [['created_at', 'DESC']] as const,
+            order: [['createdAt', 'DESC']], // 수정된 부분
             include: [{
               model: db.sequelize.models.users,
               attributes: ['nickname']

@@ -62,7 +62,12 @@ export class Database {
     User.initialize(this.sequelize);
     Emotion.initialize(this.sequelize);
     EmotionLog.initialize(this.sequelize);  
-    
+    MyDayPost.initialize(this.sequelize);
+    SomeoneDayPost.initialize(this.sequelize);
+    Challenge.initialize(this.sequelize);
+    ChallengeParticipant.initialize(this.sequelize);
+    ChallengeEmotion.initialize(this.sequelize);
+    UserGoal.initialize(this.sequelize);
     // Best/Post 관련 모델 초기화
     BestPost.initialize(this.sequelize);
     PostRecommendation.initialize(this.sequelize);
@@ -70,18 +75,16 @@ export class Database {
     PostTag.initialize(this.sequelize);
     
     // Challenge 관련 모델 초기화
-    Challenge.initialize(this.sequelize);
-    ChallengeParticipant.initialize(this.sequelize);
-    ChallengeEmotion.initialize(this.sequelize);
+  
     
     // MyDay 관련 모델 초기화
-    MyDayPost.initialize(this.sequelize);
+    
     MyDayComment.initialize(this.sequelize);
     MyDayLike.initialize(this.sequelize);
     MyDayEmotion.initialize(this.sequelize);
     
     // SomeoneDay 관련 모델 초기화
-    SomeoneDayPost.initialize(this.sequelize);
+   
     SomeoneDayComment.initialize(this.sequelize);
     SomeoneDayLike.initialize(this.sequelize);
     SomeoneDayTag.initialize(this.sequelize);
@@ -90,7 +93,7 @@ export class Database {
     EncouragementMessage.initialize(this.sequelize);
     Notification.initialize(this.sequelize);
     Tag.initialize(this.sequelize);
-    UserGoal.initialize(this.sequelize);
+    
     UserStats.initialize(this.sequelize);
     // 모델 인스턴스 할당
     this.User = User;

@@ -8,6 +8,17 @@ import { AuthRequest, EmotionTrendQuery, EmotionCreate } from '../types/express'
 
 const router = Router();
 
+// getEmotionStats 함수 정의
+function getEmotionStats(req: Request, res: Response) {
+  // 함수 로직
+  res.send('Emotion stats');
+}
+
+// getEmotionTrend 함수 정의
+function getEmotionTrend(req: Request, res: Response) {
+  // 함수 로직
+  res.send('Emotion trend');
+}
 // 감정 통계 라우트
 router.get('/stats',
   authMiddleware,
@@ -21,7 +32,7 @@ router.get('/stats',
   ],
   validateRequest,
   (req: AuthRequest, res: Response) => {
-    return emotionController.getEmotionStats(req, res);
+    return emotionController.getEmotionStats(req as any, res);
   }
 );
 
@@ -42,7 +53,7 @@ router.get('/trend',
   ],
   validateRequest,
   (req: AuthRequest, res: Response) => {
-    return emotionController.getEmotionTrend(req, res);
+    return emotionController.getEmotionTrend(req as any, res);
   }
 );
 

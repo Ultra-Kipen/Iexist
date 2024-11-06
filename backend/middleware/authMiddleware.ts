@@ -43,7 +43,9 @@ const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunctio
         });
       }
 
-      req.user = user;
+      interface CustomRequest extends Request {
+        user?: any; // 적절한 타입으로 변경
+      }
       next();
     } catch (error) {
       return res.status(401).json({

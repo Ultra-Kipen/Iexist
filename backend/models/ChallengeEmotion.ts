@@ -45,13 +45,13 @@ class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
          }
        },
        emotion_id: {
-         type: DataTypes.TINYINT.UNSIGNED,
-         allowNull: false,
-         references: {
-           model: 'emotions',
-           key: 'emotion_id'
-         }
-       },
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'emotions',
+          key: 'emotion_id'
+        }
+      },
        note: {
          type: DataTypes.STRING(200),
          allowNull: true,
