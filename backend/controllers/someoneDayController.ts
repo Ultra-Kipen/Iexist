@@ -4,6 +4,23 @@ import db from '../models';
 import { AuthRequestGeneric } from '../types/express';
 import { validateRequest, body, query, param } from '../middleware/validationMiddleware';
 
+
+
+
+
+
+// SomeoneDayPost 모델 인터페이스
+interface TagData {
+  get: () => any;
+}
+
+interface PostData {
+  get: () => any;
+  User: any;
+  tags: Array<TagData>;
+  is_anonymous: boolean;
+}
+
 // SomeoneDayPost 모델 인터페이스
 interface SomeoneDayPostAttributes {
   post_id: number;
@@ -27,14 +44,14 @@ interface SomeoneDayPostAttributes {
     name: string;
   }>;
 }
-
-interface PostReportCreate {
-  post_id: number;
-  reporter_id: number;
-  report_type: 'spam' | 'inappropriate' | 'harassment' | 'other' | 'content';
-  description: string;
-  status: 'pending' | 'reviewed' | 'resolved' | 'dismissed';
-}
+  
+  interface PostReportCreate {
+    post_id: number;
+    reporter_id: number;
+    report_type: PostReportType;
+    description: string;
+    status: PostReportStatus;
+  }
 // 파일 상단에 타입 정의 추가
 type PostReportType = 'spam' | 'inappropriate' | 'harassment' | 'other' | 'content';
 type PostReportStatus = 'pending' | 'reviewed' | 'resolved' | 'dismissed';
@@ -159,7 +176,7 @@ const someoneDayController = {
     const transaction = await db.sequelize.transaction();
     try {
       const { title, content, image_url, is_anonymous, tag_ids } = req.body;
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
 
       if (!user_id) {
         await transaction.rollback();
@@ -169,7 +186,7 @@ const someoneDayController = {
         });
       }
 
-      const post = await db.SomeoneDayPost.create({
+      const post = await db.sequelize.models.someone_day_posts.create({
         user_id,
         title: title.trim(),
         content: content.trim(),
@@ -182,7 +199,7 @@ const someoneDayController = {
       }, { transaction });
 
       if (tag_ids?.length) {
-        const tags = await db.Tag.findAll({
+        const tags = await db.sequelize.models.tags.findAll({
           where: {
             tag_id: {
               [Op.in]: tag_ids
@@ -199,10 +216,16 @@ const someoneDayController = {
           });
         }
 
-        await (post as any).setTags(tags, { transaction });
+        await db.sequelize.models.someone_day_tags.bulkCreate(
+          tag_ids.map(tag_id => ({
+            post_id: post.get('post_id'),
+            tag_id
+          })),
+          { transaction }
+        );
       }
 
-      await db.UserStats.increment('someone_day_post_count', {
+      await db.sequelize.models.user_stats.increment('someone_day_post_count', {
         where: { user_id },
         transaction
       });
@@ -211,7 +234,7 @@ const someoneDayController = {
       return res.status(201).json({
         status: 'success',
         message: "게시물이 성공적으로 생성되었습니다.",
-        data: { post_id: post.post_id }
+        data: { post_id: post.get('post_id') }
       });
     } catch (error) {
       await transaction.rollback();
@@ -225,7 +248,7 @@ const someoneDayController = {
 
   getPosts: async (req: AuthRequestGeneric<never, SomeoneDayQuery>, res: Response) => {
     try {
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
  
       if (!user_id) {
         return res.status(401).json({
@@ -243,21 +266,24 @@ const someoneDayController = {
       }
       if (start_date && end_date) {
         whereClause.created_at = {
-          [Op.between]: [new Date(start_date), new Date(end_date)]
+          [Op.between]: [
+            new Date(start_date).setHours(0, 0, 0, 0),
+            new Date(end_date).setHours(23, 59, 59, 999)
+          ]
         };
       }
  
-      const posts = await db.SomeoneDayPost.findAndCountAll({
+      const posts = await db.sequelize.models.someone_day_posts.findAndCountAll({
         where: whereClause,
         include: [
           {
-            model: db.User,
+            model: db.sequelize.models.users,
             as: 'user',
             attributes: ['nickname', 'profile_image_url'],
             required: false
           },
           {
-            model: db.Tag,
+            model: db.sequelize.models.tags,
             as: 'tags',
             through: { attributes: [] },
             attributes: ['tag_id', 'name']
@@ -287,7 +313,7 @@ const someoneDayController = {
         data: {
           posts: posts.rows.map(post => ({
             ...post.get({ plain: true }),
-            user: post.is_anonymous ? null : post.get('user')
+            user: post.get('is_anonymous') ? null : post.get('user')
           })),
           pagination: {
             current_page: page,
@@ -309,7 +335,7 @@ const someoneDayController = {
 
   getPopularPosts: async (req: AuthRequestGeneric<never, { days?: string }>, res: Response) => {
     try {
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
       if (!user_id) {
         return res.status(401).json({
           status: 'error',
@@ -319,16 +345,16 @@ const someoneDayController = {
 
       const days = parseInt(req.query.days || '7', 10);
       
-      const posts = await db.SomeoneDayPost.findAll({
+      const posts = await db.sequelize.models.someone_day_posts.findAll({
         include: [
           {
-            model: db.User,
+            model: db.sequelize.models.users,
             as: 'user',
             attributes: ['nickname', 'profile_image_url'],
             required: false
           },
           {
-            model: db.Tag,
+            model: db.sequelize.models.tags,
             as: 'tags',
             through: { attributes: [] },
             attributes: ['tag_id', 'name']
@@ -336,7 +362,7 @@ const someoneDayController = {
         ],
         where: {
           created_at: {
-            [Op.gte]: db.sequelize.literal(`DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+            [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0) - days * 24 * 60 * 60 * 1000)
           }
         },
         order: [
@@ -358,13 +384,21 @@ const someoneDayController = {
         ]
       });
 
+      const formattedPosts = posts.map((post: any) => {
+        const postData = post.get();
+        return {
+          ...postData,
+          user: postData.is_anonymous ? null : postData.user,
+          tags: Array.isArray(postData.tags) 
+            ? postData.tags.map((tag: any) => tag.get())
+            : []
+        };
+      });
+    
       return res.json({
         status: 'success',
         data: {
-          posts: posts.map(post => ({
-            ...post.get({ plain: true }),
-            user: post.is_anonymous ? null : post.get('user')
-          }))
+          posts: formattedPosts
         }
       });
     } catch (error) {
@@ -381,7 +415,7 @@ const someoneDayController = {
     try {
       const { id } = req.params;
       const { reason, details } = req.body;
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
 
       if (!user_id) {
         await transaction.rollback();
@@ -391,7 +425,7 @@ const someoneDayController = {
         });
       }
 
-      const post = await db.SomeoneDayPost.findByPk(id, { transaction });
+      const post = await db.sequelize.models.someone_day_posts.findByPk(id, { transaction });
       if (!post) {
         await transaction.rollback();
         return res.status(404).json({
@@ -400,7 +434,7 @@ const someoneDayController = {
         });
       }
 
-      const existingReport = await db.PostReport.findOne({
+      const existingReport = await db.sequelize.models.post_reports.findOne({
         where: {
           post_id: id,
           reporter_id: user_id
@@ -415,32 +449,14 @@ const someoneDayController = {
           message: '이미 신고한 게시물입니다.'
         });
       }
-   enum PostReportType {
-  SPAM = 'spam',
-  INAPPROPRIATE = 'inappropriate',
-  HARASSMENT = 'harassment',
-  OTHER = 'other',
-  CONTENT = 'content'
-}
-
-enum PostReportStatus {
-  PENDING = 'pending',
-  REVIEWED = 'reviewed',
-  RESOLVED = 'resolved',
-  DISMISSED = 'dismissed'
-}
-
-// reportPost 메서드 내의 PostReport.create 부분을 다음과 같이 수정
-const reportData: PostReportCreate = {
-  post_id: Number(id),
-  reporter_id: user_id,
-  report_type: 'content',
-  description: details || reason,
-  status: 'pending'
-};
-
-await db.PostReport.create(reportData, { transaction });
-
+      await db.sequelize.models.post_reports.create({
+        post_id: Number(id),
+        reporter_id: user_id,
+        report_type: 'content' as PostReportType,
+        description: details || reason,
+        status: 'pending' as PostReportStatus
+      }, { transaction });
+  
       await transaction.commit();
       return res.json({
         status: 'success',
@@ -464,7 +480,7 @@ await db.PostReport.create(reportData, { transaction });
     try {
       const { id } = req.params;
       const { message, is_anonymous } = req.body;
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
 
       if (!user_id) {
         await transaction.rollback();
@@ -474,7 +490,7 @@ await db.PostReport.create(reportData, { transaction });
         });
       }
 
-      const post = await db.SomeoneDayPost.findByPk(id, { transaction });
+      const post = await db.sequelize.models.someone_day_posts.findByPk(id, { transaction });
       if (!post) {
         await transaction.rollback();
         return res.status(404).json({
@@ -483,22 +499,26 @@ await db.PostReport.create(reportData, { transaction });
         });
       }
 
-      const encouragementMessage = await db.EncouragementMessage.create({
+      const encouragementMessage = await db.sequelize.models.encouragement_messages.create({
         sender_id: user_id,
-        receiver_id: post.user_id,
+        receiver_id: post.get('user_id'),
         post_id: Number(id),
         message: message.trim(),
         is_anonymous: is_anonymous ?? false
       }, { transaction });
 
-      await post.increment('comment_count', { by: 1, transaction });
+      await db.sequelize.models.someone_day_posts.increment('comment_count', {
+        where: { post_id: post.get('post_id') },
+        by: 1,
+        transaction
+      });
 
-      if (post.user_id !== user_id) {
-        await db.Notification.create({
-          user_id: post.user_id,
+      if (post.get('user_id') !== user_id) {
+        await db.sequelize.models.notifications.create({
+          user_id: post.get('user_id'),
           content: '회원님의 게시물에 새로운 격려 메시지가 도착했습니다.',
           notification_type: 'comment',
-          related_id: encouragementMessage.message_id,
+          related_id: encouragementMessage.get('message_id'),
           is_read: false
         }, { transaction });
       }
@@ -508,7 +528,7 @@ await db.PostReport.create(reportData, { transaction });
         status: 'success',
         message: '격려 메시지가 성공적으로 전송되었습니다.',
         data: {
-          message_id: encouragementMessage.message_id
+          message_id: encouragementMessage.get('message_id')
         }
       });
     } catch (error) {

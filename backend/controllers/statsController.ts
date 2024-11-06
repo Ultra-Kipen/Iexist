@@ -38,7 +38,7 @@ export const statsValidations = {
 const statsController = {
   getUserStats: async (req: AuthRequestGeneric<never, StatsQuery>, res: Response) => {
     try {
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
 
       if (!user_id) {
         return res.status(401).json({
@@ -57,13 +57,13 @@ const statsController = {
       }
 
       // 기본 통계 조회
-      const stats = await db.UserStats.findOne({
+      const stats = await db.sequelize.models.user_stats.findOne({ // UserStats -> user_stats로 수정
         where: { user_id },
         attributes: [
           'my_day_post_count',
           'someone_day_post_count',
           'my_day_like_received_count',
-          'someone_day_like_received_count',
+          'someone_day_like_received_count', 
           'my_day_comment_received_count',
           'someone_day_comment_received_count',
           'challenge_count',
@@ -127,7 +127,7 @@ const statsController = {
 
   getEmotionTrends: async (req: AuthRequestGeneric<never, StatsQuery>, res: Response) => {
     try {
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
 
       if (!user_id) {
         return res.status(401).json({

@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import db from '../models';
-import { AuthRequest } from '../types/express';
+import { AuthRequestGeneric } from '../types/express';
 
 interface NotificationQuery {
   page?: string;
@@ -14,9 +14,9 @@ interface NotificationUpdate {
 }
 
 const notificationController = {
-  getNotifications: async (req: AuthRequest, res: Response) => {
+  getNotifications: async (req: AuthRequestGeneric<never, NotificationQuery>, res: Response) => {
     try {
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
       
       if (!user_id) {
         return res.status(401).json({
@@ -44,9 +44,9 @@ const notificationController = {
         whereClause.is_read = is_read === 'true';
       }
 
-      const notifications = await db.Notification.findAndCountAll({
+      const notifications = await db.sequelize.models.notifications.findAndCountAll({
         where: whereClause,
-        order: [['created_at', 'DESC']],
+        order: [['created_at', 'DESC']] as [string, string][],
         limit: Number(limit),
         offset,
         attributes: [
@@ -59,10 +59,10 @@ const notificationController = {
         ]
       });
 
-      res.json({
+      return res.json({
         status: 'success',
         data: {
-          notifications: notifications.rows,
+          notifications: notifications.rows.map(notification => notification.get()),
           pagination: {
             current_page: Number(page),
             total_pages: Math.ceil(notifications.count / Number(limit)),
@@ -73,18 +73,18 @@ const notificationController = {
       });
     } catch (error) {
       console.error('알림 조회 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '알림 조회 중 오류가 발생했습니다.'
       });
     }
   },
 
-  markNotificationAsRead: async (req: AuthRequest, res: Response) => {
+  markNotificationAsRead: async (req: AuthRequestGeneric<never, never, { id: string }>, res: Response) => {
     const transaction = await db.sequelize.transaction();
     try {
       const { id } = req.params;
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
 
       if (!user_id) {
         await transaction.rollback();
@@ -94,9 +94,9 @@ const notificationController = {
         });
       }
 
-      const notification = await db.Notification.findOne({
+      const notification = await db.sequelize.models.notifications.findOne({
         where: { 
-          id: id,
+          notification_id: id,
           user_id 
         },
         transaction
@@ -110,29 +110,28 @@ const notificationController = {
         });
       }
 
-      notification.is_read = true;
-      await notification.save({ transaction });
+      await notification.update({ is_read: true }, { transaction });
 
       await transaction.commit();
-      res.json({
+      return res.json({
         status: 'success',
         message: '알림이 읽음 처리되었습니다.'
       });
     } catch (error) {
       await transaction.rollback();
       console.error('알림 읽음 처리 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '알림 읽음 처리 중 오류가 발생했습니다.'
       });
     }
   },
 
-  deleteNotification: async (req: AuthRequest, res: Response) => {
+  deleteNotification: async (req: AuthRequestGeneric<never, never, { id: string }>, res: Response) => {
     const transaction = await db.sequelize.transaction();
     try {
       const { id } = req.params;
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
 
       if (!user_id) {
         await transaction.rollback();
@@ -142,9 +141,9 @@ const notificationController = {
         });
       }
 
-      const result = await db.Notification.destroy({
+      const result = await db.sequelize.models.notifications.destroy({
         where: { 
-          id: id, 
+          notification_id: id, 
           user_id 
         },
         transaction
@@ -159,24 +158,24 @@ const notificationController = {
       }
 
       await transaction.commit();
-      res.json({
+      return res.json({
         status: 'success',
         message: '알림이 성공적으로 삭제되었습니다.'
       });
     } catch (error) {
       await transaction.rollback();
       console.error('알림 삭제 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '알림 삭제 중 오류가 발생했습니다.'
       });
     }
   },
 
-  markAllAsRead: async (req: AuthRequest, res: Response) => {
+  markAllAsRead: async (req: AuthRequestGeneric<never>, res: Response) => {
     const transaction = await db.sequelize.transaction();
     try {
-      const user_id = req.user?.id;
+      const user_id = req.user?.user_id;
 
       if (!user_id) {
         await transaction.rollback();
@@ -186,7 +185,7 @@ const notificationController = {
         });
       }
 
-      await db.Notification.update(
+      await db.sequelize.models.notifications.update(
         { is_read: true },
         { 
           where: { 
@@ -198,14 +197,14 @@ const notificationController = {
       );
 
       await transaction.commit();
-      res.json({
+      return res.json({
         status: 'success',
         message: '모든 알림이 읽음 처리되었습니다.'
       });
     } catch (error) {
       await transaction.rollback();
       console.error('전체 알림 읽음 처리 오류:', error);
-      res.status(500).json({
+      return res.status(500).json({
         status: 'error',
         message: '전체 알림 읽음 처리 중 오류가 발생했습니다.'
       });

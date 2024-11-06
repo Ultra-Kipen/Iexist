@@ -1,43 +1,40 @@
 // models/someoneDayPost.ts
-
 import {
-    Model,
-    DataTypes,
-    Sequelize,
-    InferAttributes,
-    InferCreationAttributes,
-    CreationOptional,
-    ForeignKey,
-    NonAttribute
-  } from 'sequelize';
-  import { User } from './User';
-  import { Tag } from './Tag';
-  import { EncouragementMessage } from './EncouragementMessage';
+  Model,
+  DataTypes,
+  Sequelize,
+  InferAttributes,
+  InferCreationAttributes,
+  CreationOptional,
+  ForeignKey,
+  NonAttribute
+} from 'sequelize';
+import db from '../models';
   
-  export class SomeoneDayPost extends Model<
-  InferAttributes<SomeoneDayPost>,
-  InferCreationAttributes<SomeoneDayPost>
+export class SomeoneDayPost extends Model<
+InferAttributes<SomeoneDayPost>,
+InferCreationAttributes<SomeoneDayPost>
 > {
-    declare post_id: CreationOptional<number>;
-    declare user_id: ForeignKey<number>;
-    declare title: string;
-    declare content: string;
-    declare summary: CreationOptional<string>;
-    declare image_url: CreationOptional<string>;
-    declare is_anonymous: CreationOptional<boolean>;
-    declare character_count: CreationOptional<number>;
-    declare like_count: CreationOptional<number>;
-    declare comment_count: CreationOptional<number>;
-    declare message_count: CreationOptional<number>;
-    declare created_at: CreationOptional<Date>;
-    declare updated_at: CreationOptional<Date>;
-  
-    // Associations
-  declare user?: NonAttribute<User>;
-  declare tags?: NonAttribute<Tag[]>;
-  declare encouragement_messages?: NonAttribute<EncouragementMessage[]>;
-  
-  static initialize(sequelize: Sequelize): typeof SomeoneDayPost {
+declare post_id: CreationOptional<number>;
+declare user_id: ForeignKey<number>;
+declare title: string;
+declare content: string;
+declare summary: CreationOptional<string>;
+declare image_url: CreationOptional<string>;
+declare is_anonymous: CreationOptional<boolean>;
+declare character_count: CreationOptional<number>;
+declare like_count: CreationOptional<number>;
+declare comment_count: CreationOptional<number>;
+declare message_count: CreationOptional<number>;
+declare created_at: CreationOptional<Date>;
+declare updated_at: CreationOptional<Date>;
+
+// Associations 타입 정의
+declare user?: NonAttribute<typeof db.sequelize.models.users>;
+declare tags?: NonAttribute<typeof db.sequelize.models.tags[]>;
+declare encouragement_messages?: NonAttribute<typeof db.sequelize.models.encouragement_messages[]>;
+
+static initialize(sequelize: Sequelize): typeof SomeoneDayPost {
     SomeoneDayPost.init(
       {
         post_id: {
@@ -131,22 +128,20 @@ import {
     return SomeoneDayPost;
   }
 
-  static associate(models: {
-    User: typeof User;
-    Tag: typeof Tag;
-    EncouragementMessage: typeof EncouragementMessage;
-  }): void {
-    this.belongsTo(models.User, {
+  static associate(models: typeof db.sequelize.models): void {
+    this.belongsTo(models.users, {
       foreignKey: 'user_id',
-      as: 'user'
+      as: 'user',
+      targetKey: 'user_id'
     });
 
-    this.hasMany(models.EncouragementMessage, {
+    this.hasMany(models.encouragement_messages, {
       foreignKey: 'post_id',
-      as: 'encouragement_messages'
+      as: 'encouragement_messages',
+      sourceKey: 'post_id'
     });
 
-    this.belongsToMany(models.Tag, {
+    this.belongsToMany(models.tags, {
       through: 'someone_day_tags',
       foreignKey: 'post_id',
       otherKey: 'tag_id',
@@ -154,5 +149,5 @@ import {
     });
   }
 }
-  
+
 export default SomeoneDayPost;
