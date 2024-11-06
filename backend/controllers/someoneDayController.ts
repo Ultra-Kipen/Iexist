@@ -7,7 +7,11 @@ import { validateRequest, body, query, param } from '../middleware/validationMid
 
 
 
-
+const normalizeDate = (date: Date): Date => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
 
 // SomeoneDayPost 모델 인터페이스
 interface TagData {
@@ -21,6 +25,10 @@ interface PostData {
   is_anonymous: boolean;
 }
 
+interface Tag {
+  tag_id: number;
+  name: string;
+}
 // SomeoneDayPost 모델 인터페이스
 interface SomeoneDayPostAttributes {
   post_id: number;
@@ -44,7 +52,17 @@ interface SomeoneDayPostAttributes {
     name: string;
   }>;
 }
-  
+  interface FormattedPostData {
+  post_id: number;
+  like_count: number;
+  comment_count: number;
+  user: any | null;
+  tags: Array<{
+    tag_id: number;
+    name: string;
+  }>;
+}
+
   interface PostReportCreate {
     post_id: number;
     reporter_id: number;
@@ -92,6 +110,14 @@ interface PostReport {
 interface PostParams {
   id: string;
 }
+
+type SomeoneDayControllerType = {
+  createPost: (req: AuthRequestGeneric<SomeoneDayPostCreate>, res: Response) => Promise<Response>;
+  getPosts: (req: AuthRequestGeneric<never, SomeoneDayQuery>, res: Response) => Promise<Response>;
+  getPopularPosts: (req: AuthRequestGeneric<never, { days?: string }>, res: Response) => Promise<Response>;
+  reportPost: (req: AuthRequestGeneric<PostReport, never, PostParams>, res: Response) => Promise<Response>;
+  sendEncouragement: (req: AuthRequestGeneric<{ message: string; is_anonymous?: boolean }, never, PostParams>, res: Response) => Promise<Response>;
+};
 
 // Validation rules
 export const someoneDayValidations = {
@@ -171,7 +197,7 @@ const getOrderClause = (sortBy: string = 'latest'): [string, string][] => {
   
   return orderClauses[sortBy] || orderClauses.latest;
 };
-const someoneDayController = {
+const someoneDayController: SomeoneDayControllerType = {
   createPost: async (req: AuthRequestGeneric<SomeoneDayPostCreate>, res: Response) => {
     const transaction = await db.sequelize.transaction();
     try {
@@ -264,15 +290,15 @@ const someoneDayController = {
       if (tag) {
         whereClause['$tags.name$'] = tag;
       }
-      if (start_date && end_date) {
-        whereClause.created_at = {
-          [Op.between]: [
-            new Date(start_date).setHours(0, 0, 0, 0),
-            new Date(end_date).setHours(23, 59, 59, 999)
-          ]
-        };
-      }
- 
+    // getPosts 메서드의 날짜 처리 부분 최적화
+if (start_date && end_date) {
+  whereClause.created_at = {
+    [Op.between]: [
+      normalizeDate(new Date(start_date)),
+      new Date(new Date(end_date).setHours(23, 59, 59, 999))
+    ]
+  };
+}
       const posts = await db.sequelize.models.someone_day_posts.findAndCountAll({
         where: whereClause,
         include: [
@@ -333,82 +359,94 @@ const someoneDayController = {
     }
   },
 
-  getPopularPosts: async (req: AuthRequestGeneric<never, { days?: string }>, res: Response) => {
-    try {
-      const user_id = req.user?.user_id;
-      if (!user_id) {
-        return res.status(401).json({
-          status: 'error',
-          message: '인증이 필요합니다.'
-        });
-      }
-
-      const days = parseInt(req.query.days || '7', 10);
-      
-      const posts = await db.sequelize.models.someone_day_posts.findAll({
-        include: [
-          {
-            model: db.sequelize.models.users,
-            as: 'user',
-            attributes: ['nickname', 'profile_image_url'],
-            required: false
-          },
-          {
-            model: db.sequelize.models.tags,
-            as: 'tags',
-            through: { attributes: [] },
-            attributes: ['tag_id', 'name']
-          }
-        ],
-        where: {
-          created_at: {
-            [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0) - days * 24 * 60 * 60 * 1000)
-          }
-        },
-        order: [
-          ['like_count', 'DESC'],
-          ['comment_count', 'DESC'],
-          ['created_at', 'DESC']
-        ],
-        limit: 10,
-        attributes: [
-          'post_id',
-          'title',
-          'content',
-          'summary',
-          'image_url',
-          'is_anonymous',
-          'like_count',
-          'comment_count',
-          'created_at'
-        ]
-      });
-
-      const formattedPosts = posts.map((post: any) => {
-        const postData = post.get();
-        return {
-          ...postData,
-          user: postData.is_anonymous ? null : postData.user,
-          tags: Array.isArray(postData.tags) 
-            ? postData.tags.map((tag: any) => tag.get())
-            : []
-        };
-      });
-    
-      return res.json({
-        status: 'success',
-        data: {
-          posts: formattedPosts
-        }
-      });
-    } catch (error) {
-      console.error('인기 게시물 조회 오류:', error);
-      return res.status(500).json({
+// getPopularPosts 메서드 최적화
+getPopularPosts: async (req: AuthRequestGeneric<never, { days?: string }>, res: Response) => {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const user_id = req.user?.user_id;
+    if (!user_id) {
+      await transaction.rollback();
+      return res.status(401).json({
         status: 'error',
-        message: '인기 게시물 조회 중 오류가 발생했습니다.'
+        message: '인증이 필요합니다.'
       });
     }
-  },
+
+    const days = Math.min(30, Math.max(1, parseInt(req.query.days || '7', 10)));
+    const startDate = normalizeDate(new Date());
+    startDate.setDate(startDate.getDate() - days);
+      
+    const posts = await db.sequelize.models.someone_day_posts.findAll({
+      include: [
+        {
+          model: db.sequelize.models.users,
+          as: 'user',
+          attributes: ['nickname', 'profile_image_url'],
+          required: false
+        },
+        {
+          model: db.sequelize.models.tags,
+          as: 'tags',
+          through: { attributes: [] },
+          attributes: ['tag_id', 'name']
+        }
+      ],
+      where: {
+        created_at: {
+          [Op.gte]: startDate
+        }
+      },
+      order: [
+        ['like_count', 'DESC'],
+        ['comment_count', 'DESC'],
+        ['created_at', 'DESC']
+      ],
+      limit: 10,
+      attributes: [
+        'post_id',
+        'title',
+        'content',
+        'summary',
+        'image_url',
+        'is_anonymous',
+        'like_count',
+        'comment_count',
+        'created_at'
+      ],
+      transaction
+    });
+
+    const formattedPosts = posts.map(post => {  // .rows 제거
+      const postData = post.get();
+      return {
+        ...postData,
+        post_id: Number(postData.post_id),
+        like_count: Number(postData.like_count),
+        comment_count: Number(postData.comment_count),
+        user: postData.is_anonymous ? null : post.get('user'),
+        tags: (postData.tags as Tag[])?.map((tag: Tag) => ({
+          tag_id: Number(tag.tag_id),
+          name: tag.name
+        })) || []
+      };
+    });
+  
+    await transaction.commit();
+    return res.json({
+      status: 'success',
+      data: {
+        posts: formattedPosts
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('인기 게시물 조회 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '인기 게시물 조회 중 오류가 발생했습니다.'
+    });
+  }
+},
 
   reportPost: async (req: AuthRequestGeneric<PostReport, never, PostParams>, res: Response) => {
     const transaction = await db.sequelize.transaction();
@@ -523,23 +561,32 @@ const someoneDayController = {
         }, { transaction });
       }
 
-      await transaction.commit();
-      return res.status(201).json({
-        status: 'success',
-        message: '격려 메시지가 성공적으로 전송되었습니다.',
-        data: {
-          message_id: encouragementMessage.get('message_id')
-        }
-      });
-    } catch (error) {
-      await transaction.rollback();
-      console.error('격려 메시지 전송 오류:', error);
-      return res.status(500).json({
-        status: 'error',
-        message: '격려 메시지 전송 중 오류가 발생했습니다.'
-      });
-    }
-  }
-};
+    // 여기서부터 응답 데이터 최적화 부분 수정
+    const encouragementData = {
+      message_id: Number(encouragementMessage.get('message_id')),
+      sender_id: Number(user_id),
+      receiver_id: Number(post.get('user_id')),
+      post_id: Number(id),
+      message: message.trim(),
+      is_anonymous: Boolean(is_anonymous),
+      created_at: encouragementMessage.get('created_at')
+    };
 
+    await transaction.commit();
+    return res.status(201).json({
+      status: 'success',
+      message: '격려 메시지가 성공적으로 전송되었습니다.',
+      data: encouragementData
+    });
+    
+  } catch (error) {
+    await transaction.rollback();
+    console.error('격려 메시지 전송 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '격려 메시지 전송 중 오류가 발생했습니다.'
+    });
+  }
+}
+};
 export default someoneDayController;

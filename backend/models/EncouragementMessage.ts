@@ -103,27 +103,23 @@ class EncouragementMessage extends Model<
     );
   }
 
-  static associate(models: {
+  public static associate(models: {
     User: typeof User;
     SomeoneDayPost: typeof SomeoneDayPost;
   }): void {
     this.belongsTo(models.User, {
       foreignKey: 'sender_id',
-      as: 'sender',
-      targetKey: 'user_id'
+      as: 'sender'
     });
-
+  
     this.belongsTo(models.User, {
       foreignKey: 'receiver_id',
-      as: 'receiver',
-      targetKey: 'user_id'
+      as: 'receiver'
     });
-
+  
     this.belongsTo(models.SomeoneDayPost, {
       foreignKey: 'post_id',
-      as: 'post',
-      targetKey: 'post_id',
-      onDelete: 'CASCADE'
+      as: 'post'
     });
   }
 

@@ -17,11 +17,11 @@ class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
  public challenge_id!: number;
  public user_id!: number;
  public emotion_id!: number;
- public note!: string | null;  // 수정: null 명시적 허용
+ public note!: string | null;
  public log_date!: Date;
 
  public static initialize(sequelize: Sequelize) {
-   const model = ChallengeEmotion.init(
+   return ChallengeEmotion.init(
      {
        challenge_emotion_id: {
          type: DataTypes.INTEGER,
@@ -45,7 +45,7 @@ class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
          }
        },
        emotion_id: {
-         type: DataTypes.TINYINT.UNSIGNED,  // 수정: TINYINT UNSIGNED로 변경
+         type: DataTypes.TINYINT.UNSIGNED,
          allowNull: false,
          references: {
            model: 'emotions',
@@ -53,7 +53,7 @@ class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
          }
        },
        note: {
-         type: DataTypes.STRING(200),  // 수정: VARCHAR(200)로 명시적 지정
+         type: DataTypes.STRING(200),
          allowNull: true,
          defaultValue: null
        },
@@ -80,7 +80,6 @@ class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
        ]
      }
    );
-   return model;
  }
 
  public static associate(models: {

@@ -4,6 +4,12 @@ import db from '../models';
 import { AuthRequestGeneric } from '../types/express';
 import { validateRequest, query } from '../middleware/validationMiddleware';
 
+// 유틸리티 함수 추가
+const normalizeDate = (date: Date): Date => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
 interface StatsQuery {
   start_date?: string;
   end_date?: string;
@@ -37,10 +43,12 @@ export const statsValidations = {
 
 const statsController = {
   getUserStats: async (req: AuthRequestGeneric<never, StatsQuery>, res: Response) => {
+    const transaction = await db.sequelize.transaction();
     try {
       const user_id = req.user?.user_id;
 
       if (!user_id) {
+        await transaction.rollback();
         return res.status(401).json({
           status: 'error',
           message: '인증이 필요합니다.'
@@ -52,12 +60,15 @@ const statsController = {
       const whereClause: any = { user_id };
       if (start_date && end_date) {
         whereClause.log_date = {
-          [Op.between]: [new Date(start_date), new Date(end_date)]
+          [Op.between]: [
+            normalizeDate(new Date(start_date)),
+            new Date(new Date(end_date).setHours(23, 59, 59, 999))
+          ]
         };
       }
 
       // 기본 통계 조회
-      const stats = await db.sequelize.models.user_stats.findOne({ // UserStats -> user_stats로 수정
+      const stats = await db.sequelize.models.user_stats.findOne({
         where: { user_id },
         attributes: [
           'my_day_post_count',
@@ -68,10 +79,12 @@ const statsController = {
           'someone_day_comment_received_count',
           'challenge_count',
           'last_updated'
-        ]
+        ],
+        transaction
       });
 
       if (!stats) {
+        await transaction.rollback();
         return res.status(404).json({
           status: 'error',
           message: '통계 정보를 찾을 수 없습니다.'
@@ -79,44 +92,51 @@ const statsController = {
       }
 
       // 감정 통계 조회
-      const emotionStats = await db.EmotionLog.findAll({
+      const emotionStats = await db.sequelize.models.emotion_logs.findAll({
         attributes: [
           'emotion_id',
           [db.sequelize.fn('COUNT', db.sequelize.col('emotion_id')), 'count']
         ],
         include: [{
-          model: db.Emotion,
+          model: db.sequelize.models.emotions,
           attributes: ['name'],
           required: true
         }],
         where: whereClause,
-        group: ['emotion_id', 'Emotion.name'],
-        order: [[db.sequelize.literal('count'), 'DESC']]
+        group: ['emotion_id', 'emotions.name'],
+        order: [[db.sequelize.literal('count'), 'DESC']],
+        transaction
       });
 
-      const totalEmotions = emotionStats.reduce((sum, stat: any) => 
-        sum + Number(stat.dataValues.count), 0);
-      
-      const formattedEmotionStats: EmotionStats[] = emotionStats.map((stat: any) => ({
-        emotion_id: stat.emotion_id,
-        emotion_name: stat.get('Emotion').name,
-        count: Number(stat.dataValues.count),
-        percentage: Number(((Number(stat.dataValues.count) / totalEmotions * 100)).toFixed(1))
-      }));
+ // 먼저 emotion stats를 계산하는 부분
+const emotionCounts = emotionStats.map(stat => Number(stat.get('count')));
+const totalEmotions = emotionCounts.reduce((sum, count) => sum + count, 0);
 
+// 그 다음 포맷팅
+const formattedEmotionStats: EmotionStats[] = emotionStats.map(stat => {
+  const count = Number(stat.dataValues.count);
+  return {
+    emotion_id: Number(stat.dataValues.emotion_id),
+    emotion_name: stat.dataValues.emotions?.name,
+    count: count,
+    percentage: Number(((count / (totalEmotions || 1)) * 100).toFixed(1))
+  };
+});
+      await transaction.commit();
       return res.json({
         status: 'success',
         data: {
-          basic_stats: stats,
+          basic_stats: stats.get(),
           emotion_stats: formattedEmotionStats,
           period: {
             type,
-            start_date,
-            end_date
+            start_date: start_date ? normalizeDate(new Date(start_date)).toISOString() : null,
+            end_date: end_date ? new Date(new Date(end_date).setHours(23, 59, 59, 999)).toISOString() : null
           }
         }
       });
     } catch (error) {
+      await transaction.rollback();
       console.error('사용자 통계 조회 오류:', error);
       return res.status(500).json({
         status: 'error',
@@ -126,10 +146,12 @@ const statsController = {
   },
 
   getEmotionTrends: async (req: AuthRequestGeneric<never, StatsQuery>, res: Response) => {
+    const transaction = await db.sequelize.transaction();
     try {
       const user_id = req.user?.user_id;
 
       if (!user_id) {
+        await transaction.rollback();
         return res.status(401).json({
           status: 'error',
           message: '인증이 필요합니다.'
@@ -141,7 +163,10 @@ const statsController = {
       const whereClause: any = { user_id };
       if (start_date && end_date) {
         whereClause.log_date = {
-          [Op.between]: [new Date(start_date), new Date(end_date)]
+          [Op.between]: [
+            normalizeDate(new Date(start_date)),
+            new Date(new Date(end_date).setHours(23, 59, 59, 999))
+          ]
         };
       }
 
@@ -151,7 +176,7 @@ const statsController = {
           ? 'YEARWEEK(log_date)' 
           : 'DATE_FORMAT(log_date, "%Y-%m")';
 
-      const trends = await db.EmotionLog.findAll({
+      const trends = await db.sequelize.models.emotion_logs.findAll({
         attributes: [
           [db.sequelize.fn(type === 'daily' ? 'DATE' : 'DATE_FORMAT', 
             db.sequelize.col('log_date'),
@@ -161,27 +186,30 @@ const statsController = {
           [db.sequelize.fn('COUNT', db.sequelize.col('emotion_id')), 'count']
         ],
         include: [{
-          model: db.Emotion,
+          model: db.sequelize.models.emotions,
           attributes: ['name', 'icon'],
           required: true
         }],
         where: whereClause,
-        group: [groupByClause, 'emotion_id', 'Emotion.name', 'Emotion.icon'],
-        order: [[db.sequelize.col('date'), 'ASC']]
+        group: [groupByClause, 'emotion_id', 'emotions.name', 'emotions.icon'],
+        order: [[db.sequelize.col('date'), 'ASC']],
+        transaction
       });
 
+      await transaction.commit();
       return res.json({
         status: 'success',
         data: {
-          trends,
+          trends: trends.map(trend => trend.get()),
           period: {
             type,
-            start_date,
-            end_date
+            start_date: start_date ? normalizeDate(new Date(start_date)).toISOString() : null,
+            end_date: end_date ? new Date(new Date(end_date).setHours(23, 59, 59, 999)).toISOString() : null
           }
         }
       });
     } catch (error) {
+      await transaction.rollback();
       console.error('감정 트렌드 조회 오류:', error);
       return res.status(500).json({
         status: 'error',
@@ -190,5 +218,3 @@ const statsController = {
     }
   }
 };
-
-export default statsController;
