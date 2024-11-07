@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { Op } from 'sequelize';
 import db from '../models';
-import { AuthRequestGeneric } from '../types/express';
+import { AuthRequest, AuthRequestGeneric } from '../types/express';
 
 // 인터페이스 정의
 interface PostCreate {

@@ -1,45 +1,11 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import postController from '../controllers/postController';
 import authMiddleware from '../middleware/authMiddleware';
-import { validateRequest, body, query, commonValidations } from '../middleware/validationMiddleware';
-import { AuthRequest, PaginationQuery } from '../types/express';
-
-// Request 타입 정의 유지
-interface CreatePostRequest {
-  content: string;
-  emotion_ids?: number[];
-  emotion_summary?: string;
-  image_url?: string;
-  is_anonymous?: boolean;
-}
-
-interface PostParams {
-  id: string;
-}
-
-interface PostQuery extends PaginationQuery {
-  sort_by?: 'latest' | 'popular';
-  emotion?: string;
-  start_date?: string;
-  end_date?: string;
-}
-
-interface PostComment {
-  content: string;
-  is_anonymous?: boolean;
-}
+import { validateRequest, body, query, param, commonValidations } from '../middleware/validationMiddleware';
+import { AuthRequestGeneric } from '../types/express';
 
 const router = Router();
 
-/**
- * @swagger
- * /posts:
- *   post:
- *     summary: 게시물 작성
- *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
- */
 router.post('/',
   authMiddleware,
   validateRequest([
@@ -71,15 +37,6 @@ router.post('/',
   postController.createPost
 );
 
-/**
- * @swagger
- * /posts:
- *   get:
- *     summary: 게시물 목록 조회
- *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
- */
 router.get('/',
   authMiddleware,
   validateRequest([
@@ -104,35 +61,16 @@ router.get('/',
   postController.getPosts
 );
 
-/**
- * @swagger
- * /posts/my:
- *   get:
- *     summary: 내 게시물 목록 조회
- *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
- */
 router.get('/my', 
   authMiddleware,
-  validateRequest([
-    ...commonValidations.pagination
-  ]),
+  validateRequest([...commonValidations.pagination]),
   postController.getMyPosts
 );
 
-/**
- * @swagger
- * /posts/{id}/comments:
- *   post:
- *     summary: 댓글 작성
- *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
- */
 router.post('/:id/comments',
   authMiddleware,
   validateRequest([
+    param('id').isInt().withMessage('올바른 게시물 ID가 아닙니다.'),
     body('content')
       .isLength({ min: 1, max: 300 })
       .withMessage('댓글 내용은 1자 이상 300자 이하여야 합니다.'),
@@ -141,26 +79,24 @@ router.post('/:id/comments',
       .isBoolean()
       .withMessage('익명 여부는 boolean 값이어야 합니다.')
   ]),
-  postController.createComment
+  (req: Request, res: Response) => {
+    const typedReq = req as AuthRequestGeneric<{
+      content: string;
+      is_anonymous?: boolean;
+    }, never, { id: string }>;
+    return postController.createComment(typedReq, res);
+  }
 );
 
-/**
- * @swagger
- * /posts/{id}/like:
- *   post:
- *     summary: 게시물 좋아요
- *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
- */
-router.post('/:id/like', 
+router.post('/:id/like',
   authMiddleware,
   validateRequest([
-    body('id')
-      .isInt()
-      .withMessage('올바른 게시물 ID가 아닙니다.')
+    param('id').isInt().withMessage('올바른 게시물 ID가 아닙니다.')
   ]),
-  postController.likePost
+  (req: Request, res: Response) => {
+    const typedReq = req as AuthRequestGeneric<never, never, { id: string }>;
+    return postController.likePost(typedReq, res);
+  }
 );
 
 export default router;
