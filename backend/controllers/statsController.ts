@@ -218,3 +218,4 @@ const formattedEmotionStats: EmotionStats[] = emotionStats.map(stat => {
     }
   }
 };
+export default statsController;

@@ -24,6 +24,6 @@ router.get('/', authMiddleware, statsController.getUserStats);
  *     security:
  *       - bearerAuth: []
  */
-router.post('/update', authMiddleware, statsController.updateUserStats);
+router.get('/trends', authMiddleware, statsController.getEmotionTrends);
 
 export default router;

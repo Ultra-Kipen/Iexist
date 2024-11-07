@@ -48,10 +48,14 @@ beforeEach(async () => {
 // 모든 테스트 완료 후 데이터베이스 연결 종료
 afterAll(async () => {
   try {
-    await db.sequelize.close();
-    console.log('테스트 데이터베이스 연결 종료');
+    if (db.sequelize) {
+      await db.sequelize.close();
+      console.log('테스트 데이터베이스 연결 종료');
+    }
   } catch (error) {
-    console.error('데이터베이스 연결 종료 실패:', error);
+    if (error instanceof Error) {
+      console.error('데이터베이스 연결 종료 실패:', error.message);
+    }
   }
 });
 
