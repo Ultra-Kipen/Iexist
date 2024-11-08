@@ -31,6 +31,12 @@ const config: { [key: string]: Options } = {
     dialect: 'sqlite',
     storage: ':memory:',
     logging: false,
+    define: {
+      timestamps: true,
+      underscored: true,
+      charset: 'utf8mb4',
+      collate: 'utf8mb4_unicode_ci'
+    },
     pool: {
       max: 5,
       min: 0,
