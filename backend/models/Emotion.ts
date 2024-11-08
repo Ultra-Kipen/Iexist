@@ -1,18 +1,21 @@
-// backend/models/Emotion.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
 export interface EmotionAttributes {
   emotion_id: number;
   name: string;
-  description: string | null;
-  icon: string | null;
+  icon: string;
+  color: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export class Emotion extends Model<EmotionAttributes> {
   public emotion_id!: number;
   public name!: string;
-  public description!: string | null;
-  public icon!: string | null;
+  public icon!: string;
+  public color!: string;
+  public created_at!: Date;
+  public updated_at!: Date;
 
   public static initialize(sequelize: Sequelize) {
     const model = Emotion.init(
@@ -27,13 +30,23 @@ export class Emotion extends Model<EmotionAttributes> {
           allowNull: false,
           unique: true
         },
-        description: {
-          type: DataTypes.STRING(200),
-          allowNull: true
-        },
         icon: {
           type: DataTypes.STRING(50),
-          allowNull: true
+          allowNull: false
+        },
+        color: {
+          type: DataTypes.STRING(50),
+          allowNull: false
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
+        },
+        updated_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
         }
       },
       {

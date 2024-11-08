@@ -10,7 +10,9 @@ import statsRoutes from './stats';
 import userRoutes from './users';
 
 const router = Router();
-
+router.use('/my-day', myDayRoutes);      // myday -> my-day
+router.use('/someone-day', someoneDayRoutes);  // someoneday -> someone-day
+router.use('/emotions', emotionRoutes);
 router.get('/', (req, res) => {
   res.json({
     status: 'ok',
@@ -27,5 +29,12 @@ router.use('/posts', postRoutes);
 router.use('/someoneday', someoneDayRoutes);
 router.use('/stats', statsRoutes);
 router.use('/users', userRoutes);
-
+// API 상태 체크 라우트
+router.get('/', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'API is running',
+    version: '1.0.0'
+  });
+});
 export default router;

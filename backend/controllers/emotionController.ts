@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { Op, QueryTypes } from 'sequelize';
 import db from '../models';
 import { AuthRequestGeneric } from '../types/express';
+import { Emotion } from '../models/Emotion';  // Emotion 모델 직접 임포트
 
 interface EmotionStat {
   date: string;
@@ -55,10 +56,36 @@ const normalizeDate = (date: Date): Date => {
 const emotionController = {
   getAllEmotions: async (req: AuthRequestGeneric<never>, res: Response) => {
     try {
-      const emotions = await db.sequelize.models.emotions.findAll({
-        attributes: ['emotion_id', 'name', 'icon'],
+      const emotions = await Emotion.findAll({
+        attributes: ['emotion_id', 'name', 'icon', 'color'],
         order: [['name', 'ASC']]
       });
+
+      if (emotions.length === 0) {
+        const defaultEmotions = [
+          { emotion_id: 1, name: '행복', icon: 'emoticon-happy-outline', color: '#FFD700' },
+          { emotion_id: 2, name: '감사', icon: 'hand-heart', color: '#FF69B4' },
+          { emotion_id: 3, name: '위로', icon: 'hand-peace', color: '#87CEEB' },
+          { emotion_id: 4, name: '감동', icon: 'heart-outline', color: '#FF6347' },
+          { emotion_id: 5, name: '슬픔', icon: 'emoticon-sad-outline', color: '#4682B4' },
+          { emotion_id: 6, name: '불안', icon: 'alert-outline', color: '#DDA0DD' },
+          { emotion_id: 7, name: '화남', icon: 'emoticon-angry-outline', color: '#FF4500' },
+          { emotion_id: 8, name: '지침', icon: 'emoticon-neutral-outline', color: '#A9A9A9' },
+          { emotion_id: 9, name: '우울', icon: 'weather-cloudy', color: '#708090' },
+          { emotion_id: 10, name: '고독', icon: 'account-outline', color: '#8B4513' },
+          { emotion_id: 11, name: '충격', icon: 'lightning-bolt', color: '#9932CC' },
+          { emotion_id: 12, name: '편함', icon: 'sofa-outline', color: '#32CD32' }
+        ];
+
+        await Emotion.bulkCreate(defaultEmotions, {
+          ignoreDuplicates: true // emotion_id가 이미 존재할 경우 무시
+        });
+        
+        return res.json({
+          status: 'success',
+          data: defaultEmotions
+        });
+      }
 
       return res.json({
         status: 'success',
@@ -72,7 +99,6 @@ const emotionController = {
       });
     }
   },
-
   getEmotions: async (req: AuthRequestGeneric<never, EmotionQuery>, res: Response) => {
     try {
       const user_id = req.user?.user_id;

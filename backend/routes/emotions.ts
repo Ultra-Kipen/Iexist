@@ -75,4 +75,16 @@ router.post('/log',
   }
 );
 
+
+// GET /api/emotions
+router.get('/', emotionController.getAllEmotions);
+
+// GET /api/emotions/stats
+router.get('/stats', authMiddleware, emotionController.getEmotionStats);
+
+// GET /api/emotions/trend
+router.get('/trend', authMiddleware, emotionController.getEmotionTrend);
+
+// POST /api/emotions/log
+router.post('/log', authMiddleware, emotionController.createEmotion);
 export default router;
