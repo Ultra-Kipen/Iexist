@@ -1,14 +1,20 @@
-import cors from 'cors';
+import { Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 
-const corsOptions: cors.CorsOptions = {
-  origin: process.env.FRONTEND_URL,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  maxAge: 3600
-};
-
-const corsMiddleware = cors(corsOptions);
-
-export default corsMiddleware;
+export const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15분
+  max: 100, // IP당 최대 요청 수
+  message: {
+    status: 'error',
+    message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false,
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      status: 'error',
+      message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.'
+    });
+  }
+});

@@ -1,4 +1,3 @@
-// setup.ts
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -56,9 +55,19 @@ export const baseURL = '/api';
 
 export const clearDatabase = async () => {
   try {
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-    await sequelize.truncate({ cascade: true, force: true });
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
+    if (sequelize.getDialect() === 'mysql') {
+      await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
+      await sequelize.truncate({ cascade: true, force: true });
+      await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
+    } else {
+      await Promise.all(
+        Object.values(sequelize.models).map(model => model.destroy({ 
+          truncate: true, 
+          cascade: true, 
+          force: true 
+        }))
+      );
+    }
   } catch (error) {
     console.error('데이터베이스 초기화 실패:', error);
     throw error;

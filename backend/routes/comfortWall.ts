@@ -2,7 +2,12 @@ import { Router } from 'express';
 import ComfortWallController from '../controllers/comfortWallController';
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware';
-import { body, param, query } from 'express-validator';
+const expressValidator = require('express-validator');
+
+const { check } = expressValidator;
+const body = check;
+const param = check;
+const query = check;
 
 const router = Router();
 

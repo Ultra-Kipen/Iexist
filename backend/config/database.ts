@@ -19,6 +19,11 @@ const config: { [key: string]: Options } = {
       charset: 'utf8mb4',
       collate: 'utf8mb4_unicode_ci'
     },
+    dialectOptions: {
+      supportBigNumbers: true,
+      bigNumberStrings: true,
+      multipleStatements: true
+    },
     pool: {
       max: 5,
       min: 0,
@@ -33,15 +38,10 @@ const config: { [key: string]: Options } = {
     logging: false,
     define: {
       timestamps: true,
-      underscored: true,
-      charset: 'utf8mb4',
-      collate: 'utf8mb4_unicode_ci'
+      underscored: true
     },
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
+    dialectOptions: {
+      foreignKeys: true
     }
   },
   production: {
@@ -55,13 +55,18 @@ const config: { [key: string]: Options } = {
       timestamps: true,
       underscored: true
     },
+    dialectOptions: {
+      supportBigNumbers: true,
+      bigNumberStrings: true,
+      multipleStatements: true
+    },
     pool: {
       max: 10,
       min: 0,
       acquire: 30000,
       idle: 10000
     },
-    logging: console.log,
+    logging: false
   }
 };
 

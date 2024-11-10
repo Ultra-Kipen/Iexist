@@ -1,7 +1,3 @@
-// backend/config/config.ts
-
-import 'dotenv/config';
-
 const config = {
   server: {
     port: Number(process.env.PORT) || 3000,
@@ -10,7 +6,7 @@ const config = {
   database: {
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT) || 3306,
-    username: process.env.DB_USER || 'Iexist',
+    username: process.env.DB_USER || 'Iexist', 
     password: process.env.DB_PASSWORD || 'sw309824!@',
     name: process.env.DB_NAME || 'iexist',
     dialect: 'mysql' as const
@@ -24,7 +20,7 @@ const config = {
     allowedOrigins: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',')
   },
   swagger: {
-    enabled: process.env.SWAGGER_ENABLED === 'true',
+    enabled: process.env.SWAGGER_ENABLED === 'true', 
     title: process.env.SWAGGER_TITLE || 'Iexist API',
     description: process.env.SWAGGER_DESCRIPTION || 'Iexist API Documentation',
     version: process.env.SWAGGER_VERSION || '1.0.0',
@@ -42,7 +38,7 @@ const config = {
     maxPageSize: Number(process.env.MAX_PAGE_SIZE) || 100
   },
   rateLimit: {
-    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
+    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15분
     max: Number(process.env.RATE_LIMIT_MAX) || 100
   },
   logging: {

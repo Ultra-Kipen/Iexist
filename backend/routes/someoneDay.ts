@@ -2,10 +2,11 @@ import { Router } from 'express';
 import someoneDayController from '../controllers/someoneDayController';
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware';
-import { body, query } from 'express-validator';
+const expressValidator = require('express-validator');
+const { body, query } = expressValidator;
 
 const router = Router();
-
+// 나머지 코드는 동일
 /**
  * @swagger
  * /someone-day:

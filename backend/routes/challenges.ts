@@ -1,11 +1,14 @@
-// backend/routes/challenges.ts
-
 import { Router } from 'express';
 import { Request, Response, RequestHandler } from 'express';
 import challengeController from '../controllers/challengeController';
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware';
-import { body, param, query } from 'express-validator';
+const expressValidator = require('express-validator');
+
+const { check } = expressValidator;
+const body = check;
+const param = check;
+const query = check;
 
 interface ChallengeParams {
   id: number;

@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import errorHandler from './middleware/errorMiddleware';
-import corsMiddleware from './middleware/corsMiddleware';
+import { corsMiddleware } from './middleware/corsMiddleware';
 import userRoutes from './routes/users';
 import emotionRoutes from './routes/emotions';
 import myDayRoutes from './routes/myDay';

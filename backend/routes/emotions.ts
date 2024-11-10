@@ -1,66 +1,52 @@
-import { Router } from 'express';
-import { Response } from 'express';
+import { Router, Request, Response } from 'express';
 import emotionController from '../controllers/emotionController';
 import authMiddleware from '../middleware/authMiddleware';
-import { validateRequest } from '../middleware/validationMiddleware';
-import { body, query } from 'express-validator';
-import { AuthRequest, EmotionTrendQuery, EmotionCreate } from '../types/express';
+import { validateRequest } from '../middleware/validationMiddleware'; 
+import { AuthRequest } from '../types/express';
+const expressValidator = require('express-validator');
 
 const router = Router();
 
-// getEmotionStats 함수 정의
-function getEmotionStats(req: Request, res: Response) {
-  // 함수 로직
-  res.send('Emotion stats');
-}
+// express-validator에서 필요한 함수들 추출
+const { check } = expressValidator;
+const body = check;
+const query = check;
 
-// getEmotionTrend 함수 정의
-function getEmotionTrend(req: Request, res: Response) {
-  // 함수 로직
-  res.send('Emotion trend');
-}
 // 감정 통계 라우트
 router.get('/stats',
   authMiddleware,
-  [
+  validateRequest([
     query('start_date')
-      .isDate()
+      .isISO8601()
       .withMessage('시작 날짜는 유효한 날짜 형식이어야 합니다.'),
     query('end_date')
-      .isDate()
+      .isISO8601()
       .withMessage('종료 날짜는 유효한 날짜 형식이어야 합니다.')
-  ],
-  validateRequest,
-  (req: AuthRequest, res: Response) => {
-    return emotionController.getEmotionStats(req as any, res);
-  }
+  ]),
+  (req: AuthRequest, res: Response) => emotionController.getEmotionStats(req as any, res)
 );
-
 // 감정 추세 라우트
 router.get('/trend',
   authMiddleware,
-  [
+  validateRequest([
     query('start_date')
-      .isDate()
+      .isISO8601()
       .withMessage('시작 날짜는 유효한 날짜 형식이어야 합니다.'),
     query('end_date')
-      .isDate()
+      .isISO8601()
       .withMessage('종료 날짜는 유효한 날짜 형식이어야 합니다.'),
     query('group_by')
       .optional()
       .isIn(['day', 'week', 'month'])
       .withMessage('group_by는 day, week, month 중 하나여야 합니다.')
-  ],
-  validateRequest,
-  (req: AuthRequest, res: Response) => {
-    return emotionController.getEmotionTrend(req as any, res);
-  }
+  ]),
+  (req: AuthRequest, res: Response) => emotionController.getEmotionTrend(req as any, res)
 );
 
 // 감정 생성 라우트
 router.post('/log',
   authMiddleware,
-  [
+  validateRequest([
     body('emotion_ids')
       .isArray()
       .withMessage('감정 ID 배열이 필요합니다.'),
@@ -68,23 +54,11 @@ router.post('/log',
       .optional()
       .isString()
       .withMessage('노트는 문자열이어야 합니다.')
-  ],
-  validateRequest,
-  (req: AuthRequest, res: Response) => {
-    return emotionController.createEmotion(req, res);
-  }
+  ]),
+  (req: AuthRequest, res: Response) => emotionController.createEmotion(req, res)
 );
-
 
 // GET /api/emotions
 router.get('/', emotionController.getAllEmotions);
 
-// GET /api/emotions/stats
-router.get('/stats', authMiddleware, emotionController.getEmotionStats);
-
-// GET /api/emotions/trend
-router.get('/trend', authMiddleware, emotionController.getEmotionTrend);
-
-// POST /api/emotions/log
-router.post('/log', authMiddleware, emotionController.createEmotion);
 export default router;

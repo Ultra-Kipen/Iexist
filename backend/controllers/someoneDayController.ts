@@ -123,11 +123,13 @@ type SomeoneDayControllerType = {
 export const someoneDayValidations = {
   createPost: [
     body('title')
-      .trim()
+      .notEmpty()
+      .isString()
       .isLength({ min: 5, max: 100 })
       .withMessage('제목은 5자 이상 100자 이하여야 합니다.'),
     body('content')
-      .trim()
+      .notEmpty()
+      .isString()
       .isLength({ min: 20, max: 2000 })
       .withMessage('게시물 내용은 20자 이상 2000자 이하여야 합니다.'),
     body('tag_ids')
@@ -148,12 +150,13 @@ export const someoneDayValidations = {
       .isInt()
       .withMessage('유효한 게시물 ID가 아닙니다.'),
     body('reason')
-      .trim()
+      .notEmpty()
+      .isString()
       .isLength({ min: 5, max: 200 })
       .withMessage('신고 이유는 5자 이상 200자 이하여야 합니다.'),
     body('details')
       .optional()
-      .trim()
+      .isString()
       .isLength({ max: 1000 })
       .withMessage('상세 내용은 1000자를 초과할 수 없습니다.')
   ],
@@ -163,16 +166,16 @@ export const someoneDayValidations = {
       .isInt()
       .withMessage('유효한 게시물 ID가 아닙니다.'),
     body('message')
-      .trim()
+      .notEmpty()
+      .isString()
       .isLength({ min: 1, max: 1000 })
       .withMessage('격려 메시지는 1자 이상 1000자 이하여야 합니다.'),
     body('is_anonymous')
       .optional()
-      .isBoolean()
+      .notEmpty()
       .withMessage('익명 여부는 boolean 값이어야 합니다.')
   ]
 };
-
 // 유틸리티 함수
 const getPaginationOptions = (page?: string, limit?: string) => {
   const parsedLimit = Math.max(1, Math.min(100, parseInt(limit || '10', 10)));

@@ -1,30 +1,74 @@
 import { Request, Response, NextFunction } from 'express';
-import { ValidationChain, validationResult, query, body, param } from 'express-validator';
+const expressValidator = require('express-validator');
 
-// Validation 결과를 처리하는 미들웨어
-export const validateRequest = (validations: ValidationChain[]) => {
+const { check, validationResult } = expressValidator;
+
+// ValidationRule 타입 정의
+type ValidationRule = {
+  run: (req: Request) => Promise<any>;
+  field?: string;
+  type?: string;
+};
+
+interface ValidationError {
+  type: string;
+  value: string;
+  msg: string;
+  path: string;
+  location: string;
+}
+
+type CustomValidator = ValidationRule & {
+  optional: () => CustomValidator;
+  isInt: (options?: { min?: number; max?: number }) => CustomValidator;
+  isIn: (values: any[]) => CustomValidator;
+  isISO8601: () => CustomValidator;
+  isArray: () => CustomValidator;
+  isString: () => CustomValidator;
+  isLength: (options: { min?: number; max?: number }) => CustomValidator;
+  withMessage: (message: string) => CustomValidator;
+  notEmpty: () => CustomValidator;
+  isEmail: () => CustomValidator;
+  normalizeEmail: () => CustomValidator;
+  isBoolean: () => CustomValidator;
+  toInt: () => CustomValidator;
+  trim: () => CustomValidator;
+  field: string;
+  type: string;
+};
+
+// validation 함수 타입 정의
+export const body = (field: string): CustomValidator => check(field) as CustomValidator;
+export const param = (field: string): CustomValidator => check(field) as CustomValidator;
+export const query = (field: string): CustomValidator => check(field) as CustomValidator;
+
+// validateRequest 함수 정의
+export const validateRequest = (validations: ValidationRule[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // 모든 validation 규칙 실행
-      await Promise.all(validations.map(validation => validation.run(req)));
+      await Promise.all(
+        validations.map(validation => validation.run(req))
+      );
 
       const errors = validationResult(req);
       if (errors.isEmpty()) {
         return next();
       }
 
-      // 에러 응답 형식 통일
+      const errorArray = errors.array() as ValidationError[];
+      
       return res.status(400).json({
         success: false,
-        errors: errors.array().map(error => ({
+        errors: errorArray.map((error: ValidationError) => ({
           field: error.type === 'field' ? error.path : 'general',
           message: error.msg
         }))
       });
+
     } catch (error) {
-      return res.status(500).json({
+      return res.status(500).json({    // 여기 오류 수정
         success: false,
-        errors: [{
+        errors: [{                      // isInt 제거
           field: 'server',
           message: '서버 오류가 발생했습니다.'
         }]
@@ -33,12 +77,8 @@ export const validateRequest = (validations: ValidationChain[]) => {
   };
 };
 
-// express-validator의 기본 함수들 export
-export { query, body, param };
-
-// 공통 validation 규칙
+// 공통 validation 규칙들
 export const commonValidations = {
-  // 페이지네이션 validation 규칙
   pagination: [
     query('page')
       .optional()
@@ -48,9 +88,8 @@ export const commonValidations = {
       .optional()
       .isInt({ min: 1, max: 50 })
       .withMessage('한 페이지당 1~50개의 항목을 조회할 수 있습니다.')
-  ],
+  ] as CustomValidator[],
 
-  // 날짜 범위 validation 규칙
   dateRange: [
     query('start_date')
       .isISO8601()
@@ -58,9 +97,8 @@ export const commonValidations = {
     query('end_date')
       .isISO8601()
       .withMessage('종료 날짜는 유효한 날짜 형식이어야 합니다.')
-  ],
+  ] as CustomValidator[],
 
-  // 감정 ID 배열 validation 규칙
   emotionIds: [
     body('emotion_ids')
       .isArray()
@@ -68,17 +106,15 @@ export const commonValidations = {
     body('emotion_ids.*')
       .isInt({ min: 1 })
       .withMessage('감정 ID는 1 이상의 정수여야 합니다.')
-  ],
+  ] as CustomValidator[],
 
-  // ID 파라미터 validation 규칙
   paramId: [
     param('id')
       .isInt({ min: 1 })
       .withMessage('유효한 ID가 아닙니다.')
-  ]
+  ] as CustomValidator[]
 };
 
-// 사용자 관련 validation 규칙
 export const userValidations = {
   register: [
     body('username')
@@ -93,7 +129,7 @@ export const userValidations = {
     body('password')
       .isLength({ min: 6 })
       .withMessage('비밀번호는 최소 6자 이상이어야 합니다.')
-  ],
+  ] as CustomValidator[],
 
   login: [
     body('email')
@@ -103,10 +139,9 @@ export const userValidations = {
     body('password')
       .notEmpty()
       .withMessage('비밀번호를 입력해주세요.')
-  ]
+  ] as CustomValidator[]
 };
 
-// 게시물 관련 validation 규칙
 export const postValidations = {
   create: [
     body('content')
@@ -121,7 +156,7 @@ export const postValidations = {
       .isString()
       .isLength({ max: 100 })
       .withMessage('감정 요약은 100자를 초과할 수 없습니다.')
-  ]
+  ] as CustomValidator[]
 };
 
 export default validateRequest;

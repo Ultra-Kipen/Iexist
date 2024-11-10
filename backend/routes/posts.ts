@@ -1,11 +1,13 @@
 import { Router, Request, Response } from 'express';
 import postController from '../controllers/postController';
 import authMiddleware from '../middleware/authMiddleware';
-import { validateRequest, body, query, param, commonValidations } from '../middleware/validationMiddleware';
+import { validateRequest, commonValidations } from '../middleware/validationMiddleware';
 import { AuthRequestGeneric } from '../types/express';
+const expressValidator = require('express-validator');
+const { body, query, param } = expressValidator;
 
 const router = Router();
-
+// 나머지 코드는 동일
 router.post('/',
   authMiddleware,
   validateRequest([
