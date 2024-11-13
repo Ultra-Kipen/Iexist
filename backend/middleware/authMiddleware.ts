@@ -26,13 +26,20 @@ const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunctio
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as { user_id: number };
       const user = await User.findByPk(decoded.user_id, {
-        attributes: ['user_id', 'username', 'email', 'nickname']
+        attributes: ['user_id', 'username', 'email', 'nickname', 'is_active']
       });
 
       if (!user) {
         return res.status(401).json({
           status: 'error',
           message: '사용자를 찾을 수 없습니다.'
+        });
+      }
+
+      if (!user.get('is_active')) {
+        return res.status(401).json({
+          status: 'error',
+          message: '비활성화된 계정입니다.'
         });
       }
 

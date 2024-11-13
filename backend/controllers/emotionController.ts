@@ -56,7 +56,7 @@ const normalizeDate = (date: Date): Date => {
 const emotionController = {
   getAllEmotions: async (req: AuthRequestGeneric<never>, res: Response) => {
     try {
-      const emotions = await Emotion.findAll({
+      const emotions = await db.sequelize.models.emotions.findAll({
         attributes: ['emotion_id', 'name', 'icon', 'color'],
         order: [['name', 'ASC']]
       });
@@ -77,7 +77,7 @@ const emotionController = {
           { emotion_id: 12, name: '편함', icon: 'sofa-outline', color: '#32CD32' }
         ];
 
-        await Emotion.bulkCreate(defaultEmotions, {
+        await db.sequelize.models.emotions.bulkCreate(defaultEmotions, {
           ignoreDuplicates: true // emotion_id가 이미 존재할 경우 무시
         });
         
@@ -170,7 +170,7 @@ const emotionController = {
       const today = normalizeDate(new Date());
       const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
-      const existingLog = await db.sequelize.models.emotion_logs.findOne({
+      const existingLog = await db.EmotionLog.findOne({
         where: {
           user_id,
           log_date: {
@@ -189,7 +189,7 @@ const emotionController = {
         });
       }
  // 감정 ID 유효성 검증
- const validEmotions = await db.sequelize.models.emotions.findAll({
+ const validEmotions = await db.Emotion.findAll({
   where: {
     emotion_id: {
       [Op.in]: emotion_ids
@@ -197,7 +197,6 @@ const emotionController = {
   },
   transaction
 });
-
 if (validEmotions.length !== emotion_ids.length) {
   await transaction.rollback();
   return res.status(400).json({
@@ -206,27 +205,39 @@ if (validEmotions.length !== emotion_ids.length) {
   });
 }
 
+// SQL 테이블과 일치하도록 create 쿼리 수정
 const emotionLogs = await Promise.all(
-  emotion_ids.map(emotion_id =>
-    db.sequelize.models.emotion_logs.create({
-      user_id,
-      emotion_id,
+  emotion_ids.map(async emotion_id => {
+    const [result] = await db.sequelize.query(
+      `INSERT INTO emotion_logs 
+       (user_id, emotion_id, log_date, note, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, NOW(), NOW())`,
+      {
+        replacements: [
+          user_id,
+          emotion_id,
+          today,
+          note?.trim() || null
+        ],
+        type: QueryTypes.INSERT,
+        transaction
+      }
+    );
+
+    return {
+      log_id: result,
+      emotion_id: emotion_id,
       log_date: today,
       note: note?.trim() || null
-    }, { transaction })
-  )
+    };
+  })
 );
 
 await transaction.commit();
 return res.status(201).json({
   status: 'success',
   message: "감정이 성공적으로 기록되었습니다.",
-  data: emotionLogs.map(log => ({
-    log_id: log.get('log_id'),
-    emotion_id: log.get('emotion_id'),
-    log_date: log.get('log_date'),
-    note: log.get('note')
-  }))
+  data: emotionLogs
 });
 } catch (error) {
 await transaction.rollback();
@@ -252,13 +263,32 @@ getEmotionStats: async (
         message: '인증이 필요합니다.'
       });
     }
+
     const { start_date, end_date } = req.query;
     
-    // 날짜 정규화
-    const startDate = start_date ? normalizeDate(new Date(start_date)) : normalizeDate(new Date());
-    const endDate = end_date 
-      ? new Date(new Date(end_date).setHours(23, 59, 59, 999))
-      : new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1);
+    if (!start_date || !end_date) {
+      await transaction.rollback();
+      return res.status(400).json({
+        status: 'error',
+        message: '시작 날짜와 종료 날짜를 모두 입력해주세요.'
+      });
+    }
+    
+ // 날짜 유효성 검사
+ const startDateObj = new Date(start_date);
+ const endDateObj = new Date(end_date);
+ 
+ if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+   await transaction.rollback();
+   return res.status(400).json({
+     status: 'error',
+     message: '유효한 날짜 형식이 아닙니다.'
+   });
+ }
+
+ // 날짜 정규화
+ const startDate = normalizeDate(startDateObj);
+ const endDate = new Date(endDateObj.setHours(23, 59, 59, 999));
 
     const query = `
       SELECT 

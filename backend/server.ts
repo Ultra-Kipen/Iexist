@@ -8,7 +8,10 @@ import emotionRoutes from './routes/emotions';
 import myDayRoutes from './routes/myDay';
 import someoneDayRoutes from './routes/someoneDay';
 import { sequelize } from './models';
+import dotenv from 'dotenv';
+import path from 'path';
 
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 const app = express();
 
 // 미들웨어 설정

@@ -5,134 +5,179 @@ import db from '../models';
 import { AuthRequest } from '../types/express';
 import { Op } from 'sequelize';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+
+interface IUserController {
+  register(req: Request, res: Response): Promise<Response>;
+  login(req: Request, res: Response): Promise<Response>;
+  updateProfile(req: AuthRequest, res: Response): Promise<Response>;
+  getProfile(req: AuthRequest, res: Response): Promise<Response>;
+  changePassword(req: AuthRequest, res: Response): Promise<Response>;
+  logout(req: AuthRequest, res: Response): Promise<Response>;
+  withdrawal(req: AuthRequest, res: Response): Promise<Response>;
+  checkEmail(req: Request, res: Response): Promise<Response>;
+  checkNickname(req: Request, res: Response): Promise<Response>;
+}
+// JWT_SECRET 설정
+const JWT_SECRET = process.env.JWT_SECRET || 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=';
 const JWT_EXPIRATION = '24h';
 
-class UserController {
+class UserController implements IUserController {
   async register(req: Request, res: Response) {
     const transaction = await db.sequelize.transaction();
     try {
       const { username, email, password } = req.body;
-
-      const existingUser = await db.sequelize.models.users.findOne({
+  
+      // 데이터베이스 접근 방식 수정
+      const existingUser = await db.User.findOne({
         where: { email },
         transaction
       });
-
+  
       if (existingUser) {
         await transaction.rollback();
-        return res.status(400).json({
+        return res.status(409).json({
           status: 'error',
-          message: '이미 사용 중인 이메일입니다.'
+          message: '이미 존재하는 이메일입니다.'
         });
       }
-
+  
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-
-      const user = await db.sequelize.models.users.create({
+      const passwordHash = await bcrypt.hash(password, salt);
+  
+      // 사용자 생성 부분 수정
+      const newUser = await db.User.create({
         username,
         email,
-        password: hashedPassword,
+        password_hash: passwordHash,
+        nickname: username,
         theme_preference: 'system',
         is_active: true
       }, { transaction });
-
-      await db.sequelize.models.user_stats.create({
-        user_id: user.dataValues.user_id
-      }, { transaction });
-
-      await transaction.commit();
-
-      const token = jwt.sign(
-        { user_id: user.dataValues.user_id },
-        JWT_SECRET,
-        { expiresIn: JWT_EXPIRATION }
+      
+      // user_stats 테이블 생성
+      await db.sequelize.query(
+        `INSERT INTO user_stats 
+         (user_id, my_day_post_count, someone_day_post_count, 
+          my_day_like_received_count, someone_day_like_received_count,
+          my_day_comment_received_count, someone_day_comment_received_count, 
+          challenge_count, last_updated) 
+         VALUES (?, 0, 0, 0, 0, 0, 0, 0, NOW())`,
+        {
+          replacements: [newUser.dataValues.user_id],
+          transaction
+        }
       );
-
+  
+      await transaction.commit();
+      
       return res.status(201).json({
         status: 'success',
         message: '회원가입이 완료되었습니다.',
         data: {
-          token,
-          user: {
-            user_id: user.dataValues.user_id,
-            username: user.dataValues.username,
-            email: user.dataValues.email
-          }
+          user_id: newUser.dataValues.user_id,
+          username: newUser.dataValues.username,
+          email: newUser.dataValues.email
         }
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('회원가입 오류 상세:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       await transaction.rollback();
-      console.error('회원가입 오류:', error);
       return res.status(500).json({
         status: 'error',
-        message: '회원가입 처리 중 오류가 발생했습니다.'
+        message: '회원가입 처리 중 오류가 발생했습니다.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
-  }
+}
 
-  async login(req: Request, res: Response) {
-    const transaction = await db.sequelize.transaction();
-    try {
-      const { email, password } = req.body;
 
-      const user = await db.sequelize.models.users.findOne({
-        where: { email },
-        transaction
+// 로그인 메서드 수정
+async login(req: Request, res: Response) {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { email, password } = req.body;
+
+    const user = await db.User.findOne({
+      where: { 
+        email,
+        is_active: true
+      },
+      attributes: [
+        'user_id',
+        'username', 
+        'email',
+        'password_hash',
+        'nickname',
+        'theme_preference',
+        'is_active'
+      ],
+      transaction
+    });
+
+    if (!user) {
+      await transaction.rollback();
+      return res.status(401).json({
+        status: 'error',
+        message: '이메일 또는 비밀번호가 일치하지 않습니다.'
       });
+    }
 
-      if (!user) {
-        await transaction.rollback();
-        return res.status(401).json({
-          status: 'error',
-          message: '이메일 또는 비밀번호가 일치하지 않습니다.'
-        });
+    const isPasswordValid = await bcrypt.compare(
+      password, 
+      user.dataValues.password_hash
+    );
+
+    if (!isPasswordValid) {
+      await transaction.rollback();
+      return res.status(401).json({
+        status: 'error',
+        message: '이메일 또는 비밀번호가 일치하지 않습니다.'
+      });
+    }
+
+    const token = jwt.sign(
+      { user_id: user.dataValues.user_id },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRATION }
+    );
+
+    await db.User.update(
+      { last_login_at: new Date() },
+      { 
+        where: { user_id: user.dataValues.user_id },
+        transaction 
       }
+    );
 
-      const isPasswordValid = await bcrypt.compare(password, user.dataValues.password);
-      if (!isPasswordValid) {
-        await transaction.rollback();
-        return res.status(401).json({
-          status: 'error', 
-          message: '이메일 또는 비밀번호가 일치하지 않습니다.'
-        });
-      }
-
-      await user.update({
-        last_login_at: new Date()
-      }, { transaction });
-
-      const token = jwt.sign(
-        { user_id: user.dataValues.user_id },
-        JWT_SECRET,
-        { expiresIn: JWT_EXPIRATION }
-      );
-
-      await transaction.commit();
-      return res.json({
-        status: 'success',
-        message: '로그인이 완료되었습니다.',
-        data: {
-          token,
-          user: {
-            user_id: user.dataValues.user_id,
-            username: user.dataValues.username,
-            email: user.dataValues.email,
-            nickname: user.dataValues.nickname,
-            theme_preference: user.dataValues.theme_preference
-          }
+    await transaction.commit();
+    return res.json({
+      status: 'success',
+      message: '로그인이 완료되었습니다.',
+      data: {
+        token,
+        user: {
+          user_id: user.dataValues.user_id,
+          username: user.dataValues.username,
+          email: user.dataValues.email,
+          nickname: user.dataValues.nickname,
+          theme_preference: user.dataValues.theme_preference
         }
-      });
-    } catch (error) {
-      await transaction.rollback();
-      console.error('로그인 오류:', error);
-      return res.status(500).json({
-        status: 'error',
-        message: '로그인 처리 중 오류가 발생했습니다.'
-      });
-    }
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('로그인 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '로그인 처리 중 오류가 발생했습니다.'
+    });
   }
+}
 
 
   
@@ -217,8 +262,8 @@ async getProfile(req: AuthRequest, res: Response) {
       });
     }
 
-    const user = await db.sequelize.models.users.findByPk(user_id, {
-      attributes: ['user_id', 'username', 'email', 'nickname', 'theme_preference']
+    const user = await db.User.findByPk(user_id, {
+      attributes: ['user_id', 'username', 'email', 'nickname', 'theme_preference', 'profile_image_url', 'is_active']
     });
 
     return res.json({
@@ -246,10 +291,10 @@ async getProfile(req: AuthRequest, res: Response) {
           message: '인증이 필요합니다.'
         });
       }
-
+  
       const { currentPassword, newPassword } = req.body;
       const user = await db.sequelize.models.users.findByPk(user_id, { transaction });
-
+  
       if (!user) {
         await transaction.rollback();
         return res.status(404).json({
@@ -257,8 +302,8 @@ async getProfile(req: AuthRequest, res: Response) {
           message: '사용자를 찾을 수 없습니다.'
         });
       }
-
-      const isPasswordValid = await bcrypt.compare(currentPassword, user.dataValues.password);
+  
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.dataValues.password_hash);
       if (!isPasswordValid) {
         await transaction.rollback();
         return res.status(400).json({
@@ -266,11 +311,11 @@ async getProfile(req: AuthRequest, res: Response) {
           message: '현재 비밀번호가 올바르지 않습니다.'
         });
       }
-
+  
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(newPassword, salt);
-      await user.update({ password: hashedPassword }, { transaction });
-
+      await user.update({ password_hash: hashedPassword }, { transaction });  // password -> password_hash
+  
       await transaction.commit();
       return res.json({
         status: 'success',
@@ -337,10 +382,10 @@ async getProfile(req: AuthRequest, res: Response) {
   async checkEmail(req: Request, res: Response) {
     try {
       const email = req.query.email as string;
-      const exists = await db.sequelize.models.users.findOne({
+      const exists = await db.User.findOne({
         where: { email }
       });
-
+  
       return res.json({
         status: 'success',
         data: { exists: !!exists }
@@ -358,7 +403,7 @@ async getProfile(req: AuthRequest, res: Response) {
   async checkNickname(req: Request, res: Response) {
     try {
       const nickname = req.query.nickname as string;
-      const exists = await db.sequelize.models.users.findOne({
+      const exists = await db.User.findOne({
         where: { nickname }
       });
 
@@ -373,7 +418,17 @@ async getProfile(req: AuthRequest, res: Response) {
         message: '서버 오류가 발생했습니다.'
       });
     }
-  }
-};
+}
+}
 
-export default new UserController();
+// 인스턴스 생성 및 export
+export const userController = new UserController();
+
+// 클래스 export
+export { UserController };
+
+// 인터페이스 type export
+export type { IUserController };
+
+// default export
+export default userController;

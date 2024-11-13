@@ -3,18 +3,14 @@ import cors from 'cors';
 import config from '../config/config';
 
 export const corsMiddleware = cors({
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    const allowedOrigins = config.cors.allowedOrigins;
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS 정책에 의해 차단되었습니다.'));
-    }
-  },
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 86400
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 });
 
 // CORS 에러 핸들러

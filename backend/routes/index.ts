@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import authRoutes from './auth';
 import challengeRoutes from './challenges';
 import comfortWallRoutes from './comfortWall';
 import emotionRoutes from './emotions';
@@ -10,25 +11,20 @@ import statsRoutes from './stats';
 import userRoutes from './users';
 
 const router = Router();
-router.use('/my-day', myDayRoutes);      // myday -> my-day
-router.use('/someone-day', someoneDayRoutes);  // someoneday -> someone-day
-router.use('/emotions', emotionRoutes);
-router.get('/', (req, res) => {
-  res.json({
-    status: 'ok',
-    message: 'API is running'
-  });
-});
 
+// Auth 라우트 추가
+router.use('/auth', authRoutes);
+
+router.use('/my-day', myDayRoutes);
+router.use('/someone-day', someoneDayRoutes);
+router.use('/emotions', emotionRoutes);
 router.use('/challenges', challengeRoutes);
 router.use('/comfort-wall', comfortWallRoutes);
-router.use('/emotions', emotionRoutes);
-router.use('/myday', myDayRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/posts', postRoutes);
-router.use('/someoneday', someoneDayRoutes);
 router.use('/stats', statsRoutes);
 router.use('/users', userRoutes);
+
 // API 상태 체크 라우트
 router.get('/', (req, res) => {
   res.json({
@@ -37,4 +33,5 @@ router.get('/', (req, res) => {
     version: '1.0.0'
   });
 });
+
 export default router;

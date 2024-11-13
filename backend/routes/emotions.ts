@@ -44,7 +44,7 @@ router.get('/trend',
 );
 
 // 감정 생성 라우트
-router.post('/log',
+router.post('/',
   authMiddleware,
   validateRequest([
     body('emotion_ids')
