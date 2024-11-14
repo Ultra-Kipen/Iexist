@@ -8,7 +8,13 @@ export interface EmotionAttributes {
   created_at?: Date;
   updated_at?: Date;
 }
-
+interface EmotionLogAttributes {
+  log_id?: number;  // optional로 변경
+  user_id: number;
+  emotion_id: number;
+  log_date: Date;
+  note?: string | null;
+}
 export class Emotion extends Model<EmotionAttributes> {
   public emotion_id!: number;
   public name!: string;

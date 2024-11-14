@@ -7,12 +7,14 @@ const expressValidator = require('express-validator');
 
 const router = Router();
 
-// express-validator에서 필요한 함수들 추출
 const { check } = expressValidator;
 const body = check;
 const query = check;
 
-// 감정 통계 라우트
+// 감정 목록 조회
+router.get('/', emotionController.getAllEmotions);
+
+// 감정 통계 조회
 router.get('/stats',
   authMiddleware,
   validateRequest([
@@ -23,9 +25,10 @@ router.get('/stats',
       .isISO8601()
       .withMessage('종료 날짜는 유효한 날짜 형식이어야 합니다.')
   ]),
-  (req: AuthRequest, res: Response) => emotionController.getEmotionStats(req as any, res)
+  emotionController.getEmotionStats as any
 );
-// 감정 추세 라우트
+
+// 감정 추세 조회
 router.get('/trend',
   authMiddleware,
   validateRequest([
@@ -40,10 +43,10 @@ router.get('/trend',
       .isIn(['day', 'week', 'month'])
       .withMessage('group_by는 day, week, month 중 하나여야 합니다.')
   ]),
-  (req: AuthRequest, res: Response) => emotionController.getEmotionTrend(req as any, res)
+  emotionController.getEmotionTrend
 );
 
-// 감정 생성 라우트
+// 감정 생성
 router.post('/',
   authMiddleware,
   validateRequest([
@@ -55,10 +58,7 @@ router.post('/',
       .isString()
       .withMessage('노트는 문자열이어야 합니다.')
   ]),
-  (req: AuthRequest, res: Response) => emotionController.createEmotion(req, res)
+  emotionController.createEmotion
 );
-
-// GET /api/emotions
-router.get('/', emotionController.getAllEmotions);
 
 export default router;
