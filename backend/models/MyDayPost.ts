@@ -9,9 +9,12 @@ interface MyDayPostAttributes {
   character_count?: number;
   like_count: number;
   comment_count: number;
-}
-class MyDayPost extends Model<MyDayPostAttributes> {
-  public post_id!: number;  // id -> post_id 변경
+  created_at: Date;
+  updated_at: Date;
+ }
+ 
+ class MyDayPost extends Model<MyDayPostAttributes, Omit<MyDayPostAttributes, 'post_id'>> {
+  public post_id!: number; 
   public user_id!: number;
   public content!: string;
   public emotion_summary?: string;
@@ -20,8 +23,10 @@ class MyDayPost extends Model<MyDayPostAttributes> {
   public character_count?: number;
   public like_count!: number;
   public comment_count!: number;
-  public static initialize(sequelize: Sequelize) {
-    const model = MyDayPost.init(
+  public created_at!: Date;
+  public updated_at!: Date;
+  public static initialize(sequelize: Sequelize): typeof MyDayPost {
+    MyDayPost.init(
       {
         post_id: {  // id -> post_id 변경
           type: DataTypes.INTEGER,
@@ -69,6 +74,16 @@ class MyDayPost extends Model<MyDayPostAttributes> {
           type: DataTypes.INTEGER,
           allowNull: false,
           defaultValue: 0
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
+        },
+        updated_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
         }
       },
       {
@@ -87,36 +102,32 @@ class MyDayPost extends Model<MyDayPostAttributes> {
         ]
       }
     );
-    return model;
+    return MyDayPost;
   }
-
-  public static associate(models: any): void {
-    const { User, MyDayComment, MyDayLike, Emotion } = models;
-
-    MyDayPost.belongsTo(User, {
-      foreignKey: 'user_id',
-      as: 'user'
-    });
-
-    MyDayPost.hasMany(MyDayComment, {
-      foreignKey: 'post_id',
-      as: 'comments',
-      onDelete: 'CASCADE'
-    });
-
-    MyDayPost.hasMany(MyDayLike, {
-      foreignKey: 'post_id',
-      as: 'likes',
-      onDelete: 'CASCADE'
-    });
-
-    MyDayPost.belongsToMany(Emotion, {
-      through: 'my_day_emotions',
-      foreignKey: 'post_id',
-      otherKey: 'emotion_id',
-      as: 'emotions'
-    });
-  }
-}
-
+// MyDayPost.ts의 associate 함수 수정
+// MyDayPost.ts - associate 함수 수정
+public static associate(models: any): void {
+  MyDayPost.belongsTo(models.User, {
+    foreignKey: 'user_id',
+    as: 'user'
+  });
+ 
+  MyDayPost.hasMany(models.MyDayComment, {
+    foreignKey: 'post_id',
+    as: 'my_day_comments'
+  });
+ 
+  MyDayPost.hasMany(models.MyDayLike, {
+    foreignKey: 'post_id',
+    as: 'my_day_likes'
+  });
+ 
+  MyDayPost.belongsToMany(models.Emotion, {
+    through: 'my_day_emotions',
+    foreignKey: 'post_id',
+    otherKey: 'emotion_id',
+    as: 'emotions'
+  });
+ }
+ }
 export default MyDayPost;
