@@ -52,7 +52,9 @@ class UserController implements IUserController {
         password_hash: passwordHash,
         nickname: username,
         theme_preference: 'system',
-        is_active: true
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date()
       }, { transaction });
       
       // user_stats 테이블 생성

@@ -1,8 +1,10 @@
 import request from 'supertest';
 import app from '../app';
 import db from '../models';
-import { JWT_SECRET } from '../config/config';
 import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=';
+export default JWT_SECRET;
 
 const generateToken = (userId: number): string => {
   return jwt.sign({ user_id: userId }, JWT_SECRET, { expiresIn: '1d' });
@@ -14,25 +16,31 @@ describe('MyDayPost API Tests', () => {
   let postId: number;
 
   beforeAll(async () => {
-    await db.sequelize.sync({ force: true });
+    // sequelize.sync 제거
     
-    // 테스트 사용자 생성
-    const user = await db.sequelize.models.users.create({
-      username: 'testuser',
-      email: 'test@example.com',
-      password_hash: 'password123d',
-      nickname: '테스터',
-      is_active: true
+    // 기존 사용자 조회
+    const user = await db.sequelize.models.users.findOne({
+      where: {
+        username: 'testuser',
+        email: 'test@example.com'
+      }
     });
+
+    if (!user) {
+      throw new Error('테스트 사용자를 찾을 수 없습니다');
+    }
     
-    userId = user.get('user_id');
+    userId = user.get('user_id') as number;
     token = generateToken(userId);
 
-    // 기본 감정 데이터 생성
-    await db.sequelize.models.emotions.bulkCreate([
-      { emotion_id: 1, name: '행복', icon: 'emoticon-happy-outline', color: '#FFD700' },
-      { emotion_id: 2, name: '슬픔', icon: 'emoticon-sad-outline', color: '#4682B4' }
-    ]);
+    // emotions 테이블 데이터가 없을 경우에만 생성
+    const emotions = await db.sequelize.models.emotions.findAll();
+    if (emotions.length === 0) {
+      await db.sequelize.models.emotions.bulkCreate([
+        { emotion_id: 1, name: '행복', icon: 'emoticon-happy-outline', color: '#FFD700' },
+        { emotion_id: 2, name: '슬픔', icon: 'emoticon-sad-outline', color: '#4682B4' }
+      ]);
+    }
   });
 
   afterAll(async () => {

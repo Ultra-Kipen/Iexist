@@ -1,8 +1,9 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { User } from '../models';
-import { JWT_SECRET } from '../config';
 import { AuthRequest } from '../types/express';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=';
 
 const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

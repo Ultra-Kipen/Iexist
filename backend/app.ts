@@ -5,21 +5,14 @@ import routes from './routes';
 import errorMiddleware from './middleware/errorMiddleware';
 import { apiLimiter } from './middleware/rateLimitMiddleware';
 import { configSecurity } from './config/security';
-
-const app = express();  // app 인스턴스를 먼저 생성
+import myDayRouter from './routes/myDay';
+import { corsMiddleware } from './middleware/corsMiddleware';
+import authMiddleware from './middleware/authMiddleware';
+import myDayController from './controllers/myDayController';  // 추가
+const app = express();
 
 // CORS 설정
-const corsOptions = {
-  origin: 'http://localhost:3000',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-};
-
-app.use(cors(corsOptions));
-
-// CORS Pre-flight 요청 처리
-app.options('*', cors(corsOptions));
+app.use(corsMiddleware);
 
 // 기본 미들웨어
 app.use(express.json());
@@ -37,8 +30,13 @@ app.get('/', (req, res) => {
   });
 });
 
-// API 라우트 설정
+// API 라우트 설정 
 app.use('/api', routes);
+
+// 테스트용 포스트 라우터 설정 - authMiddleware 추가
+const testPostRouter = express.Router();
+testPostRouter.post('/', authMiddleware, myDayController.createPost);
+app.use('/api/posts', testPostRouter);
 
 // 정적 파일 제공
 app.use(express.static('public'));
