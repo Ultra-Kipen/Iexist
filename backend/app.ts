@@ -9,7 +9,10 @@ import myDayRouter from './routes/myDay';
 import { corsMiddleware } from './middleware/corsMiddleware';
 import authMiddleware from './middleware/authMiddleware';
 import myDayController from './controllers/myDayController';  // 추가
+import jwt from 'jsonwebtoken';
+
 const app = express();
+const JWT_SECRET = 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=';
 
 // CORS 설정
 app.use(corsMiddleware);
@@ -37,6 +40,22 @@ app.use('/api', routes);
 const testPostRouter = express.Router();
 testPostRouter.post('/', authMiddleware, myDayController.createPost);
 app.use('/api/posts', testPostRouter);
+
+// 보호된 경로 추가
+app.get('/api/protected-route', (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ status: 'fail', message: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    jwt.verify(token, JWT_SECRET);
+    return res.status(200).json({ status: 'success', message: 'Token is valid' });
+  } catch (error) {
+    return res.status(401).json({ status: 'fail', message: 'Invalid token' });
+  }
+});
 
 // 정적 파일 제공
 app.use(express.static('public'));

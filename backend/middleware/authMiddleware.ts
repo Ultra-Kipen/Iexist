@@ -1,6 +1,8 @@
+// middleware/authMiddleware.ts
+
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User } from '../models';
+import { User } from '../models/User';
 import { AuthRequest } from '../types/express';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=';
@@ -16,45 +18,52 @@ const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunctio
       });
     }
 
-    const token = authHeader.split(' ')[1];
-    if (!token) {
+    const [bearer, token] = authHeader.split(' ');
+    
+    if (bearer !== 'Bearer' || !token) {
       return res.status(401).json({
         status: 'error',
         message: '유효하지 않은 인증 토큰입니다.'
       });
     }
 
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { user_id: number };
-      const user = await User.findByPk(decoded.user_id, {
-        attributes: ['user_id', 'username', 'email', 'nickname', 'is_active']
-      });
+    const decoded = jwt.verify(token, JWT_SECRET) as { user_id: number };
+    
+    const user = await User.findOne({
+      where: { user_id: decoded.user_id },
+      attributes: ['user_id', 'username', 'email', 'nickname', 'is_active']
+    });
 
-      if (!user) {
-        return res.status(401).json({
-          status: 'error',
-          message: '사용자를 찾을 수 없습니다.'
-        });
-      }
-
-      if (!user.get('is_active')) {
-        return res.status(401).json({
-          status: 'error',
-          message: '비활성화된 계정입니다.'
-        });
-      }
-
-      req.user = user.get();
-      next();
-      
-    } catch (error) {
+    if (!user) {
       return res.status(401).json({
         status: 'error',
-        message: '유효하지 않은 인증 토큰입니다.'
+        message: '사용자를 찾을 수 없습니다.'
       });
     }
+
+    if (!user.get('is_active')) {
+      return res.status(401).json({
+        status: 'error',
+        message: '비활성화된 계정입니다.'
+      });
+    }
+
+    req.user = {
+      user_id: user.get('user_id'),
+      email: user.get('email'),
+      nickname: user.get('nickname'),
+      is_active: user.get('is_active')
+     };
+
+    next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({
+        status: 'error',
+        message: '유효하지 않은 인증 토큰입니다.'
+      });
+    }
+
     return res.status(500).json({
       status: 'error',
       message: '서버 오류가 발생했습니다.'

@@ -59,8 +59,8 @@ export class Database {
  }
 
  private initializeModels() {
-   this.User = User.initialize(this.sequelize);
-   this.Emotion = Emotion.initialize(this.sequelize);
+  this.User = User.initialize(this.sequelize);
+  this.Emotion = Emotion.initialize(this.sequelize);
    this.EmotionLog = EmotionLog.initialize(this.sequelize);
    this.BestPost = BestPost.initialize(this.sequelize);
    this.Challenge = Challenge.initialize(this.sequelize);
@@ -83,7 +83,12 @@ export class Database {
    this.UserGoal = UserGoal.initialize(this.sequelize);
    this.UserStats = UserStats.initialize(this.sequelize);
  }
-
+// Database 클래스에 close 메서드 추가
+public async close(): Promise<void> {
+  if (this.sequelize) {
+    await this.sequelize.close();
+  }
+}
  private setupAssociations() {
    const models = {
      User: this.User,

@@ -5,6 +5,7 @@ export interface AuthUser {
   user_id: number;
   email: string;
   nickname?: string;
+  is_active: boolean;
 }
 
 // 기본 페이지네이션 쿼리 인터페이스

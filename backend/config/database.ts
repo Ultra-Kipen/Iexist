@@ -22,26 +22,37 @@ const config: { [key: string]: Options } = {
     dialectOptions: {
       supportBigNumbers: true,
       bigNumberStrings: true,
-      multipleStatements: true
+      multipleStatements: true,
+      connectTimeout: 60000
     },
     pool: {
       max: 5,
       min: 0,
-      acquire: 30000,
+      acquire: 60000,
       idle: 10000
+    },
+    retry: {
+      max: 3
     },
     logging: process.env.NODE_ENV === 'development' ? console.log : false
   },
   test: {
-    dialect: 'sqlite',
-    storage: ':memory:',
+    dialect: 'mysql', // sqlite에서 mysql로 변경
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '3306'),
+    username: process.env.DB_USER || 'Iexist',
+    password: process.env.DB_PASSWORD || 'sw309824!@',
+    database: process.env.DB_NAME || 'iexist_test',
     logging: false,
     define: {
       timestamps: true,
       underscored: true
     },
-    dialectOptions: {
-      foreignKeys: true
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 60000,
+      idle: 10000
     }
   },
   production: {
@@ -58,18 +69,32 @@ const config: { [key: string]: Options } = {
     dialectOptions: {
       supportBigNumbers: true,
       bigNumberStrings: true,
-      multipleStatements: true
+      multipleStatements: true,
+      connectTimeout: 60000
     },
     pool: {
       max: 10,
       min: 0,
-      acquire: 30000,
+      acquire: 60000,
       idle: 10000
     },
     logging: false
   }
 };
 
-export const sequelize = new Sequelize(config[env]);
+const sequelize = new Sequelize(config[env]);
 
+// 데이터베이스 연결 테스트 함수
+export const testDatabaseConnection = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('데이터베이스 연결 성공');
+    return true;
+  } catch (error) {
+    console.error('데이터베이스 연결 실패:', error);
+    return false;
+  }
+};
+
+export { sequelize };
 export default sequelize;

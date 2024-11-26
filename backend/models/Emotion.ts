@@ -13,7 +13,7 @@ interface EmotionLogAttributes {
   user_id: number;
   emotion_id: number;
   log_date: Date;
-  note?: string | null;
+  note: string | null;
 }
 export class Emotion extends Model<EmotionAttributes> {
   public emotion_id!: number;
@@ -27,7 +27,7 @@ export class Emotion extends Model<EmotionAttributes> {
     const model = Emotion.init(
       {
         emotion_id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.TINYINT.UNSIGNED,
           autoIncrement: true,
           primaryKey: true
         },

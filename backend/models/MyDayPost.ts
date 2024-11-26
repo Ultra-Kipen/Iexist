@@ -1,34 +1,41 @@
+// models/MyDayPost.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
+
 interface MyDayPostAttributes {
-  post_id: number;
+  post_id?: number; // optional로 변경
   user_id: number;
   content: string;
-  emotion_summary?: string;
-  image_url?: string;
+  emotion_summary: string | null;  // null 허용
+  image_url: string | null;        // null 허용
   is_anonymous: boolean;
   character_count?: number;
   like_count: number;
   comment_count: number;
-  created_at: Date;
-  updated_at: Date;
- }
- 
- class MyDayPost extends Model<MyDayPostAttributes, Omit<MyDayPostAttributes, 'post_id'>> {
-  public post_id!: number; 
-  public user_id!: number;
-  public content!: string;
-  public emotion_summary?: string;
-  public image_url?: string;
-  public is_anonymous!: boolean;
-  public character_count?: number;
-  public like_count!: number;
-  public comment_count!: number;
-  public created_at!: Date;
-  public updated_at!: Date;
-  public static initialize(sequelize: Sequelize): typeof MyDayPost {
-    MyDayPost.init(
+  created_at?: Date; 
+  updated_at?: Date;
+}
+
+interface MyDayPostCreationAttributes extends Omit<MyDayPostAttributes, 'post_id'> {
+  post_id?: number;
+}
+
+class MyDayPost extends Model<MyDayPostAttributes, MyDayPostCreationAttributes> {
+  declare post_id: number;
+  declare user_id: number;
+  declare content: string;
+  declare emotion_summary?: string;
+  declare image_url?: string;
+  declare is_anonymous: boolean;
+  declare character_count?: number;
+  declare like_count: number;
+  declare comment_count: number;
+  declare readonly created_at: Date;
+  declare readonly updated_at: Date;
+
+  static initialize(sequelize: Sequelize): typeof MyDayPost {
+    return MyDayPost.init(
       {
-        post_id: {  // id -> post_id 변경
+        post_id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true
@@ -43,18 +50,17 @@ interface MyDayPostAttributes {
         },
         content: {
           type: DataTypes.TEXT,
-          allowNull: false,
-          validate: {
-            notEmpty: true
-          }
+          allowNull: false
         },
         emotion_summary: {
           type: DataTypes.STRING(100),
-          allowNull: true
+          allowNull: true,
+          defaultValue: null
         },
         image_url: {
           type: DataTypes.STRING(255),
-          allowNull: true
+          allowNull: true,
+          defaultValue: null
         },
         is_anonymous: {
           type: DataTypes.BOOLEAN,
@@ -62,7 +68,7 @@ interface MyDayPostAttributes {
           defaultValue: false
         },
         character_count: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.SMALLINT.UNSIGNED,
           allowNull: true
         },
         like_count: {
@@ -74,16 +80,6 @@ interface MyDayPostAttributes {
           type: DataTypes.INTEGER,
           allowNull: false,
           defaultValue: 0
-        },
-        created_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
-        },
-        updated_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
         }
       },
       {
@@ -91,43 +87,10 @@ interface MyDayPostAttributes {
         modelName: 'MyDayPost',
         tableName: 'my_day_posts',
         timestamps: true,
-        underscored: true,
-        indexes: [
-          {
-            fields: ['user_id']
-          },
-          {
-            fields: ['created_at']
-          }
-        ]
+        underscored: true
       }
     );
-    return MyDayPost;
   }
-// MyDayPost.ts의 associate 함수 수정
-// MyDayPost.ts - associate 함수 수정
-public static associate(models: any): void {
-  MyDayPost.belongsTo(models.User, {
-    foreignKey: 'user_id',
-    as: 'user'
-  });
- 
-  MyDayPost.hasMany(models.MyDayComment, {
-    foreignKey: 'post_id',
-    as: 'my_day_comments'
-  });
- 
-  MyDayPost.hasMany(models.MyDayLike, {
-    foreignKey: 'post_id',
-    as: 'my_day_likes'
-  });
- 
-  MyDayPost.belongsToMany(models.Emotion, {
-    through: 'my_day_emotions',
-    foreignKey: 'post_id',
-    otherKey: 'emotion_id',
-    as: 'emotions'
-  });
- }
- }
+}
+
 export default MyDayPost;

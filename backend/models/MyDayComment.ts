@@ -8,6 +8,7 @@ interface MyDayCommentAttributes {
   user_id: number;
   content: string;
   is_anonymous: boolean;
+  created_at?: Date;
 }
 
 class MyDayComment extends Model<MyDayCommentAttributes> {
@@ -43,6 +44,11 @@ class MyDayComment extends Model<MyDayCommentAttributes> {
           type: DataTypes.BOOLEAN,
           allowNull: true,
           defaultValue: false
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
         }
       },
       {
@@ -78,6 +84,5 @@ class MyDayComment extends Model<MyDayCommentAttributes> {
     });
   }
 }
-
 
 export default MyDayComment;

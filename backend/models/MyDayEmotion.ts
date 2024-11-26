@@ -25,7 +25,7 @@ class MyDayEmotion extends Model<MyDayEmotionAttributes> {
           }
         },
         emotion_id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.TINYINT.UNSIGNED,
           primaryKey: true,
           allowNull: false,
           references: {

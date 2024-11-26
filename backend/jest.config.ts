@@ -1,3 +1,5 @@
+// jest.config.ts
+
 import type { Config } from '@jest/types';
 
 const config: Config.InitialOptions = {
@@ -32,7 +34,7 @@ const config: Config.InitialOptions = {
     '/tests/',
     '/dist/'
   ],
-  setupFilesAfterEnv: ['./tests/setup.ts'],
+  // setupFilesAfterEnv 제거
   verbose: true,
   forceExit: true,
   clearMocks: true,

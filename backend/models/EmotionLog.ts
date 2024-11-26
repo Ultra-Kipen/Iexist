@@ -7,7 +7,7 @@ interface EmotionLogAttributes {
   log_id: number;
   user_id: number;
   emotion_id: number;
-  note: string | null;
+  note: string | null;     // null 허용
   log_date: Date;
 }
 
@@ -35,7 +35,7 @@ export class EmotionLog extends Model<EmotionLogAttributes> {
           }
         },
         emotion_id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.TINYINT.UNSIGNED,
           allowNull: false,
           references: {
             model: 'emotions',
@@ -44,10 +44,11 @@ export class EmotionLog extends Model<EmotionLogAttributes> {
         },
         note: {
           type: DataTypes.STRING(200),
-          allowNull: true
+          allowNull: true,
+          defaultValue: null
         },
         log_date: {
-          type: DataTypes.DATE,
+          type: DataTypes.DATEONLY,
           allowNull: false,
           defaultValue: DataTypes.NOW
         }
