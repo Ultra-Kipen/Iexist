@@ -58,18 +58,16 @@ class UserController implements IUserController {
       }, { transaction });
       
       // user_stats 테이블 생성
-      await db.sequelize.query(
-        `INSERT INTO user_stats 
-         (user_id, my_day_post_count, someone_day_post_count, 
-          my_day_like_received_count, someone_day_like_received_count,
-          my_day_comment_received_count, someone_day_comment_received_count, 
-          challenge_count, last_updated) 
-         VALUES (?, 0, 0, 0, 0, 0, 0, 0, NOW())`,
-        {
-          replacements: [newUser.dataValues.user_id],
-          transaction
-        }
-      );
+      await db.sequelize.models.user_stats.create({
+        user_id: newUser.dataValues.user_id,
+        my_day_post_count: 0,
+        someone_day_post_count: 0,
+        my_day_like_received_count: 0,
+        someone_day_like_received_count: 0,
+        my_day_comment_received_count: 0,
+        someone_day_comment_received_count: 0,
+        challenge_count: 0
+      }, { transaction });
   
       await transaction.commit();
       

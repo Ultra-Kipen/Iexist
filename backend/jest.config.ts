@@ -35,6 +35,7 @@ const config: Config.InitialOptions = {
     '/dist/'
   ],
   // setupFilesAfterEnv 제거
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],  // 추가
   verbose: true,
   forceExit: true,
   clearMocks: true,

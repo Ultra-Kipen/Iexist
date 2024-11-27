@@ -154,13 +154,13 @@ await db.EmotionLog.bulkCreate(
 }
 
 // single field increment로 변경
-await db.UserStats.increment('my_day_like_received_count', {
-  by: 1, // Increment by 1 추가
-  where: {
-    user_id: user_id // user_id 조건 추가
+await db.sequelize.models.user_stats.update(
+  { my_day_post_count: db.sequelize.literal('my_day_post_count + 1') },
+  { 
+    where: { user_id },
+    transaction
   }
-});
-
+);
 
 await transaction.commit();
 return res.json({
@@ -177,7 +177,7 @@ return res.json({
   return res.status(500).json({
     status: 'error',
     message: '게시물 저장 중 오류가 발생했습니다.',
-    details: error instanceof Error ? error.message : '알 수 없는 오류가 발생했��니다'
+    details: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다'
   });
 }
 };
@@ -292,16 +292,13 @@ export const createComment = async (req: AuthRequestGeneric<MyDayComment, never,
       });
     }
 // 댓글 생성 
-const newComment = {
+const comment = await db.sequelize.models.my_day_comments.create({
   post_id: Number(id),
-  user_id,
-  content,
-  is_anonymous,
-  created_at: new Date() // 명시적으로 created_at 추가
-};
-
-const comment = await db.MyDayComment.create(newComment, { 
-  transaction
+  user_id: user_id,
+  content: content,
+  is_anonymous: is_anonymous || false
+}, { 
+  transaction 
 });
 
 // increment 부분도 수정
@@ -397,7 +394,7 @@ export const likePost = async (req: AuthRequestGeneric<never, never, PostParams>
     } else {
       await like.destroy({ transaction });
       await db.MyDayPost.decrement('like_count', {
-        where: { post_id: id },
+        where: { post_id: Number(id) },  // 명시적으로 숫자 타입으로 변환
         transaction
       });
       await transaction.commit();

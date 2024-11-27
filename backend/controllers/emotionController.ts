@@ -114,7 +114,7 @@ const normalizeDate = (date: Date): Date => {
 const emotionController = {
   getAllEmotions: async (req: AuthRequestGeneric<never>, res: Response) => {
     try {
-      const emotions = await db.sequelize.models.emotions.findAll({
+      const emotions = await db.Emotion.findAll({
         attributes: ['emotion_id', 'name', 'icon', 'color'],
         order: [['name', 'ASC']]
       });
@@ -147,12 +147,12 @@ const emotionController = {
 
       return res.json({
         status: 'success',
-        data: emotions.map(emotion => emotion.get())
+        data: emotions
       });
     } catch (error) {
       console.error('감정 목록 조회 오류:', error);
       return res.status(500).json({
-        status: 'error',
+        status: 'error', 
         message: '감정 목록 조회 중 오류가 발생했습니다.'
       });
     }
