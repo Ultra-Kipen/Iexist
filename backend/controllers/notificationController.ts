@@ -44,13 +44,13 @@ const notificationController = {
         whereClause.is_read = is_read === 'true';
       }
 
-      const notifications = await db.sequelize.models.notifications.findAndCountAll({
+      const notifications = await db.Notification.findAndCountAll({
         where: whereClause,
-        order: [['created_at', 'DESC']] as [string, string][],
+        order: [['created_at', 'DESC']],
         limit: Number(limit),
         offset,
         attributes: [
-          'notification_id',
+          'id',  // notification_id를 id로 변경
           'content',
           'notification_type',
           'is_read',

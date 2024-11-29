@@ -2,16 +2,26 @@ import { Model, DataTypes, Sequelize } from 'sequelize';
 import { User } from '../models/User';
 import Tag from '../models/Tag';
 interface SomeoneDayPostAttributes {
-post_id: number;
-user_id: number;
-title: string;
-content: string;
-summary?: string;
-image_url?: string;
-is_anonymous: boolean;
-character_count?: number;
-like_count: number;
-comment_count: number;
+  post_id?: number;  // optional로 변경
+  user_id: number;
+  title: string;
+  content: string;
+  summary?: string;
+  image_url?: string;
+  is_anonymous: boolean;
+  character_count?: number;
+  like_count: number;
+  comment_count: number;
+  created_at?: Date;
+  updated_at?: Date;
+  user?: {
+    nickname: string;
+    profile_image_url?: string;
+  };
+  tags?: Array<{
+    tag_id: number;
+    name: string;
+  }>;
 }
 class SomeoneDayPost extends Model<SomeoneDayPostAttributes> {
 public post_id!: number;

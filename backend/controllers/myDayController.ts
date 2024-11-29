@@ -153,15 +153,16 @@ await db.EmotionLog.bulkCreate(
 );
 }
 
-// single field increment로 변경
-await db.sequelize.models.user_stats.update(
-  { my_day_post_count: db.sequelize.literal('my_day_post_count + 1') },
-  { 
-    where: { user_id },
-    transaction
-  }
-);
-
+const post = await db.MyDayPost.create({  // 이 부분이 문제
+  user_id,
+  content,
+  emotion_summary: emotion_summary || null,
+  image_url: image_url || null,
+  is_anonymous: is_anonymous || false,
+  character_count: content.length,
+  like_count: 0,
+  comment_count: 0
+}, { transaction });
 await transaction.commit();
 return res.json({
   status: 'success',
@@ -185,7 +186,6 @@ return res.json({
 // myDayController.ts의 getPosts 함수만 수정
 
 export const getPosts = async (req: AuthRequestGeneric<never, MyDayQuery>, res: Response) => {
-  // getPosts 함수 내용
   try {
     const user_id = req.user?.user_id;
     if (!checkAuth(user_id)) {
@@ -200,7 +200,7 @@ export const getPosts = async (req: AuthRequestGeneric<never, MyDayQuery>, res: 
     const limitNum = Number(limit);
     const offset = (pageNum - 1) * limitNum;
 
-    const whereClause: any = {};
+    const whereClause: any = { user_id };
     if (emotion) {
       whereClause['$emotions.name$'] = emotion;
     }
@@ -214,23 +214,10 @@ export const getPosts = async (req: AuthRequestGeneric<never, MyDayQuery>, res: 
       where: whereClause,
       include: [
         {
-          model: db.User,
-          attributes: ['user_id', 'nickname', 'profile_image_url']
-        },
-        {
           model: db.Emotion,
-          through: { attributes: [] },
-          attributes: ['emotion_id', 'name', 'icon']
-        },
-        {
-          model: db.MyDayComment,
-          separate: true,
-          limit: 3,
-          order: [['created_at', 'DESC']],
-          include: [{
-            model: db.User,
-            attributes: ['nickname']
-          }]
+          as: 'emotions',
+          attributes: ['name', 'icon'],
+          through: { attributes: [] }
         }
       ],
       order: [['created_at', 'DESC']],
@@ -238,32 +225,24 @@ export const getPosts = async (req: AuthRequestGeneric<never, MyDayQuery>, res: 
       offset,
       distinct: true
     });
-    const formattedPosts = posts.rows.map(post => ({
-      ...post.get(),
-      User: post.get('is_anonymous') ? null : post.get('User'),
-      emotions: post.get('emotions') || [],
-      comments: post.get('my_day_comments') || []
-    }));
-
+  
     return res.json({
       status: 'success',
       data: {
-        posts: formattedPosts,
+        posts: posts.rows,
         pagination: {
           current_page: pageNum,
           total_pages: Math.ceil(posts.count / limitNum),
-          total_count: posts.count,
-          has_next: offset + limitNum < posts.count
+          total_count: posts.count
         }
       }
     });
-
-  }catch (error) {
+  
+  } catch (error) {
     console.error('게시물 조회 오류:', error);
     return res.status(500).json({
       status: 'error',
-      message: '게시물 조회 중 오류가 발생했습니다.',
-      details: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다'
+      message: '게시물 조회 중 오류가 발생했습니다.'
     });
   }
 };
@@ -292,7 +271,7 @@ export const createComment = async (req: AuthRequestGeneric<MyDayComment, never,
       });
     }
 // 댓글 생성 
-const comment = await db.sequelize.models.my_day_comments.create({
+const comment = await db.MyDayComment.create({
   post_id: Number(id),
   user_id: user_id,
   content: content,

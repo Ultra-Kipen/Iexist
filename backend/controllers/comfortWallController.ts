@@ -14,7 +14,7 @@ interface ComfortWallQuery {
   page?: string;
   limit?: string;
   emotion?: string;
-  sortBy?: 'latest' | 'popular';
+  sortBy?: 'latest' | 'popular';  // 기존대로 유지
 }
 
 interface ComfortMessageRequest {
@@ -34,35 +34,35 @@ const comfortWallController = {
     try {
       const { title, content, is_anonymous, emotion_ids } = req.body;
       const user_id = req.user?.user_id;
-
+ 
       if (!user_id) {
         await transaction.rollback();
         return res.status(401).json({ message: '인증이 필요합니다.' });
       }
-
+ 
       if (!title || title.length < 5 || title.length > 100) {
         await transaction.rollback();
         return res.status(400).json({ message: '제목은 5자 이상 100자 이하여야 합니다.' });
       }
-
+ 
       if (!content || content.length < 20 || content.length > 2000) {
         await transaction.rollback();
         return res.status(400).json({ message: '게시물 내용은 20자 이상 2000자 이하여야 합니다.' });
       }
-
-      const post = await db.sequelize.models.someone_day_posts.create({
+ 
+      const post = await db.SomeoneDayPost.create({
         user_id,
-        title,
-        content,
+        title: title.trim(),
+        content: content.trim(),
+        summary: content.substring(0, 200),
         is_anonymous: is_anonymous || false,
         character_count: content.length,
-        summary: content.slice(0, 200),
         like_count: 0,
         comment_count: 0
       }, { transaction });
       
       if (emotion_ids && emotion_ids.length > 0) {
-        await db.sequelize.models.someone_day_tags.bulkCreate(
+        await db.SomeoneDayTag.bulkCreate(
           emotion_ids.map((tag_id: number) => ({
             post_id: post.get('post_id'),
             tag_id
@@ -70,7 +70,7 @@ const comfortWallController = {
           { transaction }
         );
       }
-
+ 
       await transaction.commit();
       return res.status(201).json({
         message: "위로와 공감 게시물이 성공적으로 생성되었습니다.",
@@ -83,58 +83,43 @@ const comfortWallController = {
     }
   },
 
-  getComfortWallPosts: async (
-    req: AuthRequestGeneric<never, ComfortWallQuery>,
-    res: Response
-  ) => {
+  getComfortWallPosts: async (req: AuthRequestGeneric<never, ComfortWallQuery>, res: Response) => {
     try {
-      const { page = '1', limit = '10', emotion, sortBy = 'latest' } = req.query;
       const user_id = req.user?.user_id;
-      const offset = (Number(page) - 1) * Number(limit);
-  
-      const whereClause: any = {};
-      if (emotion) {
-        whereClause['$emotions.name$'] = emotion;
+      if (!user_id) {
+        return res.status(401).json({
+          status: 'error',
+          message: '인증이 필요합니다.'
+        });
       }
-
-      const orderClause = sortBy === 'popular' 
-      ? [['comment_count', 'DESC'], ['created_at', 'DESC']] as const
-      : [['created_at', 'DESC']] as const;
+  
+      const { page = '1', limit = '10', emotion, sortBy = 'latest' } = req.query;
+      const offset = (Number(page) - 1) * Number(limit);
       
-      const posts = await db.sequelize.models.someone_day_posts.findAndCountAll({
-        where: whereClause,
+      const order: [string, string][] = sortBy === 'popular'
+        ? [['comment_count', 'DESC'], ['created_at', 'DESC']]
+        : [['created_at', 'DESC']];
+  
+      const posts = await db.SomeoneDayPost.findAndCountAll({
         include: [
           {
-            model: db.sequelize.models.users,
-            attributes: ['nickname', 'profile_image_url'],
-            where: user_id ? { user_id: { [Op.ne]: user_id } } : undefined
+            model: db.User,
+            as: 'user',
+            attributes: ['nickname', 'profile_image_url']
           },
           {
-            model: db.sequelize.models.emotions,
+            model: db.Tag,
+            as: 'tags',
             through: { attributes: [] },
-            attributes: ['name', 'icon']
-          },
-          {
-            model: db.sequelize.models.encouragement_messages,
-            separate: true,
-            limit: 3,
-            order: [['createdAt', 'DESC']], // 수정된 부분
-            include: [{
-              model: db.sequelize.models.users,
-              attributes: ['nickname']
-            }]
+            attributes: ['tag_id', 'name']
           }
         ],
-        order: [
-          ...(sortBy === 'popular' 
-            ? [['comment_count', 'DESC'], ['created_at', 'DESC']]
-            : [['created_at', 'DESC']]
-          )
-        ] as [string, string][],
+        order,
         limit: Number(limit),
         offset,
         distinct: true
       });
+       
 
     const formattedPosts = posts.rows.map((post: any) => {
       const postData = post.get();

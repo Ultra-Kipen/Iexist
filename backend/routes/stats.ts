@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import statsController from '../controllers/statsController';
 import authMiddleware from '../middleware/authMiddleware';
 
@@ -13,7 +13,7 @@ const router = Router();
  *     security:
  *       - bearerAuth: []
  */
-router.get('/', authMiddleware, statsController.getUserStats);
+router.get('/', authMiddleware, statsController.getUserStats as unknown as RequestHandler);
 
 /**
  * @swagger
@@ -24,6 +24,6 @@ router.get('/', authMiddleware, statsController.getUserStats);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/trends', authMiddleware, statsController.getEmotionTrends);
+router.get('/trends', authMiddleware, statsController.getEmotionTrends as unknown as RequestHandler);
 
 export default router;

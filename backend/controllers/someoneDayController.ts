@@ -204,77 +204,71 @@ const someoneDayController: SomeoneDayControllerType = {
   createPost: async (req: AuthRequestGeneric<SomeoneDayPostCreate>, res: Response) => {
     const transaction = await db.sequelize.transaction();
     try {
-      const { title, content, image_url, is_anonymous, tag_ids } = req.body;
-      const user_id = req.user?.user_id;
+        const { title, content, image_url, is_anonymous, tag_ids } = req.body;
+        const user_id = req.user?.user_id;
 
-      if (!user_id) {
-        await transaction.rollback();
-        return res.status(401).json({
-          status: 'error',
-          message: '인증이 필요합니다.'
-        });
-      }
-
-      const post = await db.sequelize.models.someone_day_posts.create({
-        user_id,
-        title: title.trim(),
-        content: content.trim(),
-        image_url,
-        summary: content.substring(0, 200),
-        is_anonymous: is_anonymous || false,
-        character_count: content.length,
-        like_count: 0,
-        comment_count: 0
-      }, { transaction });
-
-      if (tag_ids?.length) {
-        const tags = await db.sequelize.models.tags.findAll({
-          where: {
-            tag_id: {
-              [Op.in]: tag_ids
-            }
-          },
-          transaction
-        });
-
-        if (tags.length !== tag_ids.length) {
-          await transaction.rollback();
-          return res.status(400).json({
-            status: 'error',
-            message: '유효하지 않은 태그가 포함되어 있습니다.'
-          });
+        if (!user_id) {
+            await transaction.rollback();
+            return res.status(401).json({
+                status: 'error',
+                message: '인증이 필요합니다.'
+            });
         }
 
-        await db.sequelize.models.someone_day_tags.bulkCreate(
-          tag_ids.map(tag_id => ({
-            post_id: post.get('post_id'),
-            tag_id
-          })),
-          { transaction }
-        );
-      }
+        const post = await db.SomeoneDayPost.create({
+            user_id,
+            title: title.trim(),
+            content: content.trim(),
+            image_url,
+            summary: content.substring(0, 200),
+            is_anonymous: is_anonymous || false,
+            character_count: content.length,
+            like_count: 0,
+            comment_count: 0
+        }, { transaction });
 
-      await db.sequelize.models.user_stats.increment('someone_day_post_count', {
-        where: { user_id },
-        transaction
-      });
+        if (tag_ids?.length) {
+            const tags = await db.Tag.findAll({
+                where: {
+                    tag_id: {
+                        [Op.in]: tag_ids
+                    }
+                },
+                transaction
+            });
 
-      await transaction.commit();
-      return res.status(201).json({
-        status: 'success',
-        message: "게시물이 성공적으로 생성되었습니다.",
-        data: { post_id: post.get('post_id') }
-      });
+            if (tags.length !== tag_ids.length) {
+                await transaction.rollback();
+                return res.status(400).json({
+                    status: 'error',
+                    message: '유효하지 않은 태그가 포함되어 있습니다.'
+                });
+            }
+
+            await db.SomeoneDayTag.bulkCreate(
+                tag_ids.map(tag_id => ({
+                    post_id: post.get('post_id'),
+                    tag_id
+                })),
+                { transaction }
+            );
+        }
+
+        await transaction.commit();
+        return res.status(201).json({
+            status: 'success',
+            message: "게시물이 성공적으로 생성되었습니다.",
+            data: { post_id: post.get('post_id') }
+        });
     } catch (error) {
-      await transaction.rollback();
-      console.error('게시물 생성 오류:', error);
-      return res.status(500).json({
-        status: 'error',
-        message: '게시물 생성 중 오류가 발생했습니다.'
-      });
+        await transaction.rollback();
+        console.error('게시물 생성 오류:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: '게시물 생성 중 오류가 발생했습니다.'
+        });
     }
-  },
-
+},
   getPosts: async (req: AuthRequestGeneric<never, SomeoneDayQuery>, res: Response) => {
     try {
       const user_id = req.user?.user_id;
@@ -302,40 +296,38 @@ if (start_date && end_date) {
     ]
   };
 }
-      const posts = await db.sequelize.models.someone_day_posts.findAndCountAll({
-        where: whereClause,
-        include: [
-          {
-            model: db.sequelize.models.users,
-            as: 'user',
-            attributes: ['nickname', 'profile_image_url'],
-            required: false
-          },
-          {
-            model: db.sequelize.models.tags,
-            as: 'tags',
-            through: { attributes: [] },
-            attributes: ['tag_id', 'name']
-          }
-        ],
-        order: getOrderClause(sort_by),
-        limit,
-        offset,
-        distinct: true,
-        attributes: {
-          include: [
-            'post_id',
-            'title',
-            'content',
-            'summary',
-            'image_url',
-            'is_anonymous',
-            'like_count',
-            'comment_count',
-            'created_at'
-          ]
-        }
-      });
+const posts = await db.SomeoneDayPost.findAndCountAll({
+  where: whereClause,
+  include: [
+    {
+      model: db.User,
+      as: 'user',
+      attributes: ['nickname', 'profile_image_url'],
+      required: false
+    },
+    {
+      model: db.Tag,
+      as: 'tags',
+      through: { attributes: [] },
+      attributes: ['tag_id', 'name']
+    }
+  ],
+  order: getOrderClause(sort_by),
+  limit,
+  offset,
+  distinct: true,
+  attributes: [
+    'post_id',
+    'title',
+    'content',
+    'summary',
+    'image_url',
+    'is_anonymous',
+    'like_count',
+    'comment_count',
+    'created_at'
+  ]
+});
  
       return res.json({
         status: 'success',

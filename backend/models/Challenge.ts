@@ -2,7 +2,7 @@ import { Model, DataTypes, Sequelize } from 'sequelize';
 import { User } from '../models/User';
 import { Emotion } from '../models/Emotion';
 interface ChallengeAttributes {
-  challenge_id: number;
+  challenge_id?: number;  
   creator_id: number;
   title: string;
   description: string | null;  // TEXT, nullable
@@ -81,26 +81,33 @@ underscored: true
 return model;
 }
 public static associate(models: {
-User: typeof User;
-Emotion: typeof Emotion;
+  User: typeof User;
+  Emotion: typeof Emotion;
+  ChallengeParticipant: any;
 }): void {
-Challenge.belongsTo(models.User, {
-foreignKey: 'creator_id',
-as: 'creator'
-});
-Challenge.belongsToMany(models.User, {
-  through: 'challenge_participants',
-  foreignKey: 'challenge_id',
-  otherKey: 'user_id',
-  as: 'participants'
-});
+  Challenge.belongsTo(models.User, {
+    foreignKey: 'creator_id',
+    as: 'creator'
+  });
 
-Challenge.belongsToMany(models.Emotion, {
-  through: 'challenge_emotions',
-  foreignKey: 'challenge_id',
-  otherKey: 'emotion_id',
-  as: 'emotions'
-});
+  Challenge.hasMany(models.ChallengeParticipant, {
+    foreignKey: 'challenge_id',
+    as: 'challenge_participants'
+  });
+
+  Challenge.belongsToMany(models.User, {
+    through: models.ChallengeParticipant,
+    foreignKey: 'challenge_id',
+    otherKey: 'user_id',
+    as: 'participants'
+  });
+
+  Challenge.belongsToMany(models.Emotion, {
+    through: 'challenge_emotions',
+    foreignKey: 'challenge_id',
+    otherKey: 'emotion_id',
+    as: 'emotions'
+  });
 }
 }
 export default Challenge;

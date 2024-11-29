@@ -53,7 +53,7 @@ const challengeController = {
                 });
             }
 
-            const challenge = await db.sequelize.models.challenges.create({
+            const challenge = await db.Challenge.create({
                 creator_id: user_id,
                 title,
                 description: description || null,
@@ -62,23 +62,18 @@ const challengeController = {
                 is_public: is_public ?? true,
                 max_participants: max_participants || null,
                 participant_count: 1
-            }, { transaction });
-
-            // ID를 직접 가져오기
-            const challengeId = challenge.get('challenge_id');
-
-            await db.sequelize.models.challenge_participants.create({
-                challenge_id: challengeId,
-                user_id,
-                joined_at: new Date()
-            }, { transaction });
-
+              }, { transaction });
+              
+              await db.ChallengeParticipant.create({
+                challenge_id: challenge.get('challenge_id'),
+                user_id
+              }, { transaction });
             await transaction.commit();
             return res.status(201).json({
                 status: 'success',
                 message: "챌린지가 성공적으로 생성되었습니다.",
                 data: {
-                    challenge_id: challengeId
+                    challenge_id: challenge.get('challenge_id'),
                 }
             });
         } catch (error) {
@@ -143,20 +138,20 @@ const challengeController = {
                 orderClause.push(['created_at', 'DESC']);
             }
 
-            const challenges = await db.sequelize.models.challenges.findAndCountAll({
+            const challenges = await db.Challenge.findAndCountAll({
                 where: whereClause,
                 include: [
-                    {
-                        model: db.sequelize.models.challenge_participants,
-                       
-                        attributes: ['user_id', 'joined_at']
-                    }
+                  {
+                    model: db.ChallengeParticipant,
+                    as: 'challenge_participants',
+                    attributes: ['user_id', 'created_at']  // joined_at을 created_at으로 변경
+                  }
                 ],
                 order: orderClause,
                 limit: Number(limit),
                 offset: offset,
                 distinct: true
-            });
+              });
 
             // 응답 데이터 포맷팅
             const formattedChallenges = challenges.rows.map(challenge => {

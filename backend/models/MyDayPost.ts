@@ -31,6 +31,19 @@ class MyDayPost extends Model<MyDayPostAttributes, MyDayPostCreationAttributes> 
   declare comment_count: number;
   declare readonly created_at: Date;
   declare readonly updated_at: Date;
+  public static associate(models: any): void {
+    MyDayPost.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'user'
+    });
+  
+    MyDayPost.belongsToMany(models.Emotion, {
+      through: models.MyDayEmotion,
+      foreignKey: 'post_id',
+      otherKey: 'emotion_id',
+      as: 'emotions'
+    });
+  }
 
   static initialize(sequelize: Sequelize): typeof MyDayPost {
     return MyDayPost.init(
@@ -82,6 +95,7 @@ class MyDayPost extends Model<MyDayPostAttributes, MyDayPostCreationAttributes> 
           defaultValue: 0
         }
       },
+      
       {
         sequelize,
         modelName: 'MyDayPost',
@@ -91,6 +105,7 @@ class MyDayPost extends Model<MyDayPostAttributes, MyDayPostCreationAttributes> 
       }
     );
   }
+  
 }
 
 export default MyDayPost;

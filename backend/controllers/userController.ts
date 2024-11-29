@@ -181,73 +181,75 @@ async login(req: Request, res: Response) {
 
 
   
-  async updateProfile(req: AuthRequest, res: Response) {
-    const transaction = await db.sequelize.transaction();
-    try {
-      const user_id = req.user?.user_id;
-      if (!user_id) {
-        await transaction.rollback();
-        return res.status(401).json({
-          status: 'error',
-          message: '인증이 필요합니다.'
-        });
-      }
+async updateProfile(req: AuthRequest, res: Response) {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const user_id = req.user?.user_id;
+    if (!user_id) {
+      await transaction.rollback();
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
 
-      const { nickname, theme_preference } = req.body;
+    const { nickname, theme_preference } = req.body;
 
-      if (nickname) {
-        const existingUser = await db.sequelize.models.users.findOne({
-          where: { 
-            nickname,
-            user_id: { [Op.ne]: user_id }
-          },
-          transaction
-        });
-
-        if (existingUser) {
-          await transaction.rollback();
-          return res.status(400).json({
-            status: 'error',
-            message: '이미 사용 중인 닉네임입니다.'
-          });
-        }
-      }
-
-      const user = await db.sequelize.models.users.findByPk(user_id, {
+    // 여기를 수정
+    if (nickname) {
+      const existingUser = await db.User.findOne({
+        where: { 
+          nickname,
+          user_id: { [Op.ne]: user_id }
+        },
         transaction
       });
 
-      if (!user) {
+      if (existingUser) {
         await transaction.rollback();
-        return res.status(404).json({
+        return res.status(400).json({
           status: 'error',
-          message: '사용자를 찾을 수 없습니다.'
+          message: '이미 사용 중인 닉네임입니다.'
         });
       }
+    }
 
-      await user.update({
-        nickname: nickname || user.dataValues.nickname,
-        theme_preference: theme_preference || user.dataValues.theme_preference
-      }, { transaction });
-
-      await transaction.commit();
-      return res.json({
-        status: 'success',
-        message: '프로필이 성공적으로 업데이트되었습니다.',
-        data: {
-          nickname: user.dataValues.nickname,
-          theme_preference: user.dataValues.theme_preference
-        }
-      });
-    } catch (error) {
+    const user = await db.User.findOne({
+      where: { user_id },
+      transaction
+    });
+    
+    if (!user) {
       await transaction.rollback();
-      console.error('프로필 업데이트 오류:', error);
-      return res.status(500).json({
+      return res.status(404).json({
         status: 'error',
-        message: '프로필 업데이트 중 오류가 발생했습니다.'
+        message: '사용자를 찾을 수 없습니다.'
       });
     }
+    
+    await user.update({
+      nickname: nickname || user.get('nickname'),
+      theme_preference: theme_preference || user.get('theme_preference')
+    }, { transaction });
+
+    await transaction.commit();
+    return res.json({
+      status: 'success',
+      message: '프로필이 성공적으로 업데이트되었습니다.',
+      data: {
+        nickname: user.get('nickname'),
+        theme_preference: user.get('theme_preference')
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('프로필 업데이트 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '프로필 업데이트 중 오류가 발생했습니다.'
+    });
   }
+}
 
  
 

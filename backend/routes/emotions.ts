@@ -2,15 +2,21 @@ import { Router, Request, Response } from 'express';
 import emotionController from '../controllers/emotionController';
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware'; 
-import { AuthRequest } from '../types/express';
+import { AuthRequest, AuthRequestGeneric } from '../types/express';
 const expressValidator = require('express-validator');
+
 
 const router = Router();
 
 const { check } = expressValidator;
 const body = check;
 const query = check;
-
+// EmotionTrendQuery 인터페이스를 직접 정의합니다.
+interface EmotionTrendQuery {
+  start_date?: string;
+  end_date?: string;
+  group_by?: 'day' | 'week' | 'month';
+}
 // 감정 목록 조회
 router.get('/', emotionController.getAllEmotions);
 
@@ -43,7 +49,10 @@ router.get('/trend',
       .isIn(['day', 'week', 'month'])
       .withMessage('group_by는 day, week, month 중 하나여야 합니다.')
   ]),
-  emotionController.getEmotionTrend
+  (req: Request, res: Response) => {
+    const typedReq = req as unknown as AuthRequestGeneric<{}, EmotionTrendQuery>;
+    return emotionController.getEmotionTrend(typedReq as AuthRequestGeneric<never, EmotionTrendQuery>, res);
+  }
 );
 
 // 감정 생성

@@ -3,7 +3,7 @@ import { User } from '../models/User';
 import MyDayPost from '../models/MyDayPost';
 
 interface MyDayCommentAttributes {
-  comment_id: number;
+  comment_id?: number;  // optional로 변경
   post_id: number;
   user_id: number;
   content: string;

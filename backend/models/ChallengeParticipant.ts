@@ -4,7 +4,7 @@ import Challenge from '../models/Challenge';
 interface ChallengeParticipantAttributes {
 challenge_id: number;
 user_id: number;
-joined_at: Date;
+created_at?: Date;
 }
 class ChallengeParticipant extends Model<ChallengeParticipantAttributes> {
 public challenge_id!: number;
@@ -31,7 +31,7 @@ model: 'users',
 key: 'user_id'
 }
 },
-joined_at: {
+created_at: {
 type: DataTypes.DATE,
 allowNull: false,
 defaultValue: DataTypes.NOW
@@ -52,11 +52,16 @@ fields: ['user_id']
 );
 return model;
 }
-public static associate(models: {
-User: typeof User;
-Challenge: typeof Challenge;
-}): void {
-// 관계는 User와 Challenge 모델에서 정의됨
-}
+public static associate(models: any): void {
+    ChallengeParticipant.belongsTo(models.Challenge, {
+      foreignKey: 'challenge_id',
+      targetKey: 'challenge_id'
+    });
+  
+    ChallengeParticipant.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      targetKey: 'user_id'
+    });
+  }
 }
 export default ChallengeParticipant;

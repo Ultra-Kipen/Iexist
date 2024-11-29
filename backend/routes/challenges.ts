@@ -27,7 +27,7 @@ interface AuthRequest<B = any, Q = any, P = any> extends Request<P, any, B, Q> {
 }
 
 const router = Router();
-
+router.use(authMiddleware);  // 모든 챌린지 라우트에 인증 미들웨어 적용
 router.post(
   '/',
   authMiddleware,

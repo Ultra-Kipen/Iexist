@@ -2,6 +2,15 @@
 import { Router } from 'express';
 import { ParamsDictionary } from 'express-serve-static-core';
 import { createPost, getPosts, createComment, likePost } from '../controllers/myDayController';
+import { AuthRequestGeneric } from '../types/express';
+
+interface MyDayQuery {
+  page?: string;
+  limit?: string;
+  sort_by?: 'latest' | 'popular';
+  start_date?: string;
+  end_date?: string;
+}
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware'; 
 const expressValidator = require('express-validator');
@@ -52,7 +61,10 @@ router.get('/posts',
    query('start_date').optional().isDate().withMessage('시작 날짜 형식이 올바르지 않습니다.'),
    query('end_date').optional().isDate().withMessage('종료 날짜 형식이 올바르지 않습니다.')
  ]),
- getPosts
+ (req, res, next) => {
+   const typedReq = req as unknown as AuthRequestGeneric<never, MyDayQuery>;
+   return getPosts(typedReq, res).catch(next);
+ }
 );
 
 /**

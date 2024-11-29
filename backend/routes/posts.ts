@@ -5,7 +5,14 @@ import { validateRequest, commonValidations } from '../middleware/validationMidd
 import { AuthRequestGeneric } from '../types/express';
 const expressValidator = require('express-validator');
 const { body, query, param } = expressValidator;
-
+export interface PostQuery {
+  page?: string;
+  limit?: string;
+  sort_by?: 'latest' | 'popular';
+  emotion?: string;
+  start_date?: string;
+  end_date?: string;
+}
 const router = Router();
 // 나머지 코드는 동일
 router.post('/',
@@ -60,13 +67,19 @@ router.get('/',
       .isISO8601()
       .withMessage('종료 날짜 형식이 올바르지 않습니다.')
   ]),
-  postController.getPosts
+  (req: Request, res: Response) => {
+    const typedReq = req as unknown as AuthRequestGeneric<never, PostQuery>;
+    return postController.getPosts(typedReq, res);
+  }
 );
 
 router.get('/my', 
   authMiddleware,
   validateRequest([...commonValidations.pagination]),
-  postController.getMyPosts
+  (req: Request, res: Response) => {
+    const typedReq = req as unknown as AuthRequestGeneric<never, PostQuery>;
+    return postController.getMyPosts(typedReq, res);
+  }
 );
 
 router.post('/:id/comments',

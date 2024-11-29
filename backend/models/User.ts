@@ -38,6 +38,12 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
   public last_login_at?: Date;
   public created_at!: Date;
   public updated_at!: Date;
+  public static associate(models: any): void {
+    User.hasMany(models.MyDayPost, {
+      foreignKey: 'user_id',
+      as: 'my_day_posts'
+    });
+  }
   public static initialize(sequelize: Sequelize): typeof User {
     return User.init(
       {

@@ -15,18 +15,14 @@ class UserStats extends Model<
   public static initialize(sequelize: Sequelize) {  // initModel -> initialize
     const model = UserStats.init(
       {
-        id: {
-          type: DataTypes.INTEGER,
-          autoIncrement: true,
-          primaryKey: true,
-        },
         user_id: {
           type: DataTypes.INTEGER,
+          primaryKey: true,
           allowNull: false,
           unique: true,
           references: {
             model: 'users',
-            key: 'user_id'  // id -> user_id로 수정
+            key: 'user_id' // id -> user_id로 수정
           }
         },
         my_day_post_count: {
