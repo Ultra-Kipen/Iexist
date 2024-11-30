@@ -3,6 +3,7 @@ import ComfortWallController from '../controllers/comfortWallController';
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware';
 import { AuthRequestGeneric } from '../types/express';
+
 const expressValidator = require('express-validator');
 
 const { check } = expressValidator;
@@ -65,6 +66,27 @@ router.get('/',
  (req: Request, res: Response, next) => {
    const typedReq = req as unknown as AuthRequestGeneric<{}, ComfortWallQuery>;
    return ComfortWallController.getComfortWallPosts(typedReq as AuthRequestGeneric<never, ComfortWallQuery>, res).catch(next);
+ }
+);
+
+router.post('/:id/message',
+ authMiddleware,
+ validateRequest([
+   param('id')
+     .isInt()
+     .withMessage('ID는 정수여야 합니다.'),
+   body('message')
+     .trim()
+     .isLength({ min: 1, max: 500 })
+     .withMessage('메시지는 1자 이상 500자 이하여야 합니다.'),
+   body('is_anonymous')
+     .optional()
+     .isBoolean()
+     .withMessage('익명 여부는 boolean 값이어야 합니다.')
+ ]),
+ (req, res, next) => {
+   const typedReq = req as unknown as AuthRequestGeneric<{ message: string; is_anonymous?: boolean }, never, { id: string }>;
+   return ComfortWallController.createComfortMessage(typedReq, res).catch(next);
  }
 );
 

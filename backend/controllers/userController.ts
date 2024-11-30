@@ -1,10 +1,13 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import db from '../models';
 import { AuthRequest } from '../types/express';
 import { Op } from 'sequelize';
-
+import { Model, DataTypes, Optional, Sequelize } from 'sequelize';
+import UserModel from '../models/User';
+import UserStatsModel from '../models/UserStats';
+import db from '../models';
+import { QueryTypes } from 'sequelize';
 
 
 interface IUserController {
@@ -23,17 +26,18 @@ const JWT_SECRET = process.env.JWT_SECRET || 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEOR
 const JWT_EXPIRATION = '24h';
 
 class UserController implements IUserController {
+  
   async register(req: Request, res: Response) {
     const transaction = await db.sequelize.transaction();
     try {
       const { username, email, password } = req.body;
-  
-      // 데이터베이스 접근 방식 수정
+      
       const existingUser = await db.User.findOne({
         where: { email },
         transaction
       });
-  
+      
+
       if (existingUser) {
         await transaction.rollback();
         return res.status(409).json({
@@ -41,59 +45,85 @@ class UserController implements IUserController {
           message: '이미 존재하는 이메일입니다.'
         });
       }
-  
+
       const salt = await bcrypt.genSalt(10);
       const passwordHash = await bcrypt.hash(password, salt);
-  
-      // 사용자 생성 부분 수정
-      const newUser = await db.User.create({
+      
+      const user = await db.User.create({
         username,
         email,
-        password_hash: passwordHash,
+        password_hash: passwordHash, 
         nickname: username,
         theme_preference: 'system',
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      }, { transaction });
+        is_active: true
+      }, { 
+        transaction
+      }); 
       
-      // user_stats 테이블 생성
-      await db.sequelize.models.user_stats.create({
-        user_id: newUser.dataValues.user_id,
-        my_day_post_count: 0,
-        someone_day_post_count: 0,
-        my_day_like_received_count: 0,
-        someone_day_like_received_count: 0,
-        my_day_comment_received_count: 0,
-        someone_day_comment_received_count: 0,
-        challenge_count: 0
-      }, { transaction });
-  
+      await db.sequelize.query(
+        `INSERT INTO user_stats (
+          user_id,
+          my_day_post_count,  
+          someone_day_post_count,
+          my_day_like_received_count,
+          someone_day_like_received_count,
+          my_day_comment_received_count,
+          someone_day_comment_received_count,
+          challenge_count
+        ) VALUES (?, 0, 0, 0, 0, 0, 0, 0)`,
+        {
+          replacements: [user.getDataValue('user_id')],
+          type: QueryTypes.INSERT,
+          transaction
+        }
+      );
+
+      const token = jwt.sign(
+        { user_id: user.dataValues.user_id },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRATION }
+      );
+      
       await transaction.commit();
       
       return res.status(201).json({
         status: 'success',
         message: '회원가입이 완료되었습니다.',
         data: {
-          user_id: newUser.dataValues.user_id,
-          username: newUser.dataValues.username,
-          email: newUser.dataValues.email
+          token,
+          user: {
+            user_id: user.dataValues.user_id,
+            username: user.dataValues.username,
+            email: user.dataValues.email
+          }
         }
       });
-    } catch (error: any) {
-      console.error('회원가입 오류 상세:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
+   
+      await transaction.commit();
+   
+      return res.status(201).json({
+        status: 'success',
+        message: '회원가입이 완료되었습니다.',
+        data: {
+          token,
+          user: {
+            user_id: user.dataValues.user_id,
+            username: user.dataValues.username,  
+            email: user.dataValues.email
+          }
+        }
       });
+   
+    } catch (error: any) {
       await transaction.rollback();
+      console.error('회원가입 오류 상세:', error);
       return res.status(500).json({
-        status: 'error',
+        status: 'error', 
         message: '회원가입 처리 중 오류가 발생했습니다.',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
-}
+   }
 
 
 // 로그인 메서드 수정

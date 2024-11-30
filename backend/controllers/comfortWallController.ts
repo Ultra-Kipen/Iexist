@@ -162,7 +162,7 @@ const comfortWallController = {
         return res.status(401).json({ message: '인증이 필요합니다.' });
       }
 
-      const post = await db.sequelize.models.someone_day_posts.findByPk(postId, { transaction });
+      const post = await db.SomeoneDayPost.findByPk(postId, { transaction });
       if (!post) {
         await transaction.rollback();
         return res.status(404).json({ message: '게시물을 찾을 수 없습니다.' });
@@ -178,7 +178,7 @@ const comfortWallController = {
         return res.status(400).json({ message: '위로의 메시지는 5자 이상 500자 이하여야 합니다.' });
       }
 
-      const encouragementMessage = await db.sequelize.models.encouragement_messages.create({
+      const encouragementMessage = await db.EncouragementMessage.create({
         sender_id,
         receiver_id: post.get('user_id'),
         post_id: postId,
@@ -190,7 +190,7 @@ const comfortWallController = {
 
       // 알림 생성
       if (post.get('user_id') !== sender_id) {
-        await db.sequelize.models.notifications.create({
+        await db.Notification.create({
           user_id: post.get('user_id'),
           content: '회원님의 게시물에 새로운 위로의 메시지가 도착했습니다.',
           notification_type: 'comment' as const,  // 타입 명시
