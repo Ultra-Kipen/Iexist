@@ -3,6 +3,7 @@ import { Op, Model } from 'sequelize';
 import db from '../models';
 import { AuthRequestGeneric } from '../types/express';
 import { validateRequest, body, query, param } from '../middleware/validationMiddleware';
+import { ReportType, ReportStatus } from '../models/PostReport';  // 상단에 추가
 
 
 
@@ -110,11 +111,21 @@ interface PostReport {
 interface PostParams {
   id: string;
 }
+interface EncouragementMessage {
+  get: () => any;
+  is_anonymous: boolean;
+  sender: {
+    get: () => any;
+  };
+}
 
+// controllers/someoneDayController.ts에서 인터페이스 수정
 type SomeoneDayControllerType = {
   createPost: (req: AuthRequestGeneric<SomeoneDayPostCreate>, res: Response) => Promise<Response>;
+  getPostDetails: (req: AuthRequestGeneric<never, never, { id: string }>, res: Response) => Promise<Response>;
   getPosts: (req: AuthRequestGeneric<never, SomeoneDayQuery>, res: Response) => Promise<Response>;
   getPopularPosts: (req: AuthRequestGeneric<never, { days?: string }>, res: Response) => Promise<Response>;
+  getPostById: (req: AuthRequestGeneric<never, never, { id: string }>, res: Response) => Promise<Response>; // 추가
   reportPost: (req: AuthRequestGeneric<PostReport, never, PostParams>, res: Response) => Promise<Response>;
   sendEncouragement: (req: AuthRequestGeneric<{ message: string; is_anonymous?: boolean }, never, PostParams>, res: Response) => Promise<Response>;
 };
@@ -269,6 +280,56 @@ const someoneDayController: SomeoneDayControllerType = {
         });
     }
 },
+getPostById: async (req: AuthRequestGeneric<never, never, { id: string }>, res: Response) => {
+  try {
+    const user_id = req.user?.user_id;
+    const { id } = req.params;
+
+    if (!user_id) {
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
+
+    const post = await db.SomeoneDayPost.findByPk(id, {
+      include: [
+        {
+          model: db.User,
+          as: 'user',
+          attributes: ['nickname', 'profile_image_url']
+        },
+        {
+          model: db.Tag,
+          as: 'tags',
+          through: { attributes: [] }
+        }
+      ]
+    });
+
+    if (!post) {
+      return res.status(404).json({
+        status: 'error',
+        message: '게시물을 찾을 수 없습니다.'
+      });
+    }
+
+    return res.json({
+      status: 'success',
+      data: {
+        ...post.get(),
+        user: post.get('is_anonymous') ? null : post.get('user')
+      }
+    });
+
+  } catch (error) {
+    console.error('게시물 조회 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '게시물 조회 중 오류가 발생했습니다.'
+    });
+  }
+},
   getPosts: async (req: AuthRequestGeneric<never, SomeoneDayQuery>, res: Response) => {
     try {
       const user_id = req.user?.user_id;
@@ -353,7 +414,73 @@ const posts = await db.SomeoneDayPost.findAndCountAll({
       });
     }
   },
-
+  getPostDetails: async (req: AuthRequestGeneric<never, never, { id: string }>, res: Response) => {
+    try {
+      const { id } = req.params;
+      const user_id = req.user?.user_id;
+  
+      if (!user_id) {
+        return res.status(401).json({
+          status: 'error',
+          message: '인증이 필요합니다.'
+        });
+      }
+  
+      const post = await db.SomeoneDayPost.findOne({
+        where: { post_id: id },
+        include: [
+          {
+            model: db.User,
+            as: 'user',
+            attributes: ['nickname', 'profile_image_url']
+          },
+          {
+            model: db.Tag,
+            as: 'tags',
+            through: { attributes: [] }
+          },
+          {
+            model: db.EncouragementMessage,
+            as: 'encouragement_messages',
+            include: [{
+              model: db.User,
+              as: 'sender',
+              attributes: ['nickname']
+            }]
+          }
+        ]
+      });
+  
+      if (!post) {
+        return res.status(404).json({
+          status: 'error',
+          message: '게시물을 찾을 수 없습니다.'
+        });
+      }
+  
+      return res.json({
+        status: 'success',
+        data: {
+          ...post.get(),
+          user: post.get('is_anonymous') ? null : post.get('user'),
+          encouragement_messages: post.get('encouragement_messages') && 
+            Array.isArray(post.get('encouragement_messages')) 
+              ? (post.get('encouragement_messages') as EncouragementMessage[]).map(msg => ({
+                  ...msg.get(),
+                  sender: msg.is_anonymous ? null : msg.sender.get()
+                }))
+              : []
+        }
+      });
+  
+    } catch (error) {
+      console.error('게시물 상세 조회 오류:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: '게시물 상세 조회 중 오류가 발생했습니다.'
+      });
+    }
+  },
 // getPopularPosts 메서드 최적화
 getPopularPosts: async (req: AuthRequestGeneric<never, { days?: string }>, res: Response) => {
   const transaction = await db.sequelize.transaction();
@@ -371,16 +498,16 @@ getPopularPosts: async (req: AuthRequestGeneric<never, { days?: string }>, res: 
     const startDate = normalizeDate(new Date());
     startDate.setDate(startDate.getDate() - days);
       
-    const posts = await db.sequelize.models.someone_day_posts.findAll({
+    const posts = await db.SomeoneDayPost.findAll({
       include: [
         {
-          model: db.sequelize.models.users,
+          model: db.User,
           as: 'user',
           attributes: ['nickname', 'profile_image_url'],
           required: false
         },
         {
-          model: db.sequelize.models.tags,
+          model: db.Tag,
           as: 'tags',
           through: { attributes: [] },
           attributes: ['tag_id', 'name']
@@ -397,17 +524,6 @@ getPopularPosts: async (req: AuthRequestGeneric<never, { days?: string }>, res: 
         ['created_at', 'DESC']
       ],
       limit: 10,
-      attributes: [
-        'post_id',
-        'title',
-        'content',
-        'summary',
-        'image_url',
-        'is_anonymous',
-        'like_count',
-        'comment_count',
-        'created_at'
-      ],
       transaction
     });
 
@@ -443,67 +559,68 @@ getPopularPosts: async (req: AuthRequestGeneric<never, { days?: string }>, res: 
   }
 },
 
-  reportPost: async (req: AuthRequestGeneric<PostReport, never, PostParams>, res: Response) => {
-    const transaction = await db.sequelize.transaction();
-    try {
-      const { id } = req.params;
-      const { reason, details } = req.body;
-      const user_id = req.user?.user_id;
+reportPost: async (req: AuthRequestGeneric<PostReport, never, PostParams>, res: Response) => {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { reason, details } = req.body;
+    const user_id = req.user?.user_id;
 
-      if (!user_id) {
-        await transaction.rollback();
-        return res.status(401).json({
-          status: 'error',
-          message: '인증이 필요합니다.'
-        });
-      }
-
-      const post = await db.sequelize.models.someone_day_posts.findByPk(id, { transaction });
-      if (!post) {
-        await transaction.rollback();
-        return res.status(404).json({
-          status: 'error',
-          message: '게시물을 찾을 수 없습니다.'
-        });
-      }
-
-      const existingReport = await db.sequelize.models.post_reports.findOne({
-        where: {
-          post_id: id,
-          reporter_id: user_id
-        },
-        transaction
-      });
-
-      if (existingReport) {
-        await transaction.rollback();
-        return res.status(400).json({
-          status: 'error',
-          message: '이미 신고한 게시물입니다.'
-        });
-      }
-      await db.sequelize.models.post_reports.create({
-        post_id: Number(id),
-        reporter_id: user_id,
-        report_type: 'content' as PostReportType,
-        description: details || reason,
-        status: 'pending' as PostReportStatus
-      }, { transaction });
-  
-      await transaction.commit();
-      return res.json({
-        status: 'success',
-        message: '게시물이 성공적으로 신고되었습니다. 관리자가 검토 후 조치하겠습니다.'
-      });
-    } catch (error) {
+    if (!user_id) {
       await transaction.rollback();
-      console.error('게시물 신고 오류:', error);
-      return res.status(500).json({
+      return res.status(401).json({
         status: 'error',
-        message: '게시물 신고 중 오류가 발생했습니다.'
+        message: '인증이 필요합니다.'
       });
     }
-  },
+
+    const post = await db.SomeoneDayPost.findByPk(id, { transaction });
+    if (!post) {
+      await transaction.rollback();
+      return res.status(404).json({
+        status: 'error',
+        message: '게시물을 찾을 수 없습니다.'
+      });
+    }
+
+    const existingReport = await db.PostReport.findOne({
+      where: {
+        post_id: id,
+        reporter_id: user_id
+      },
+      transaction
+    });
+
+    if (existingReport) {
+      await transaction.rollback();
+      return res.status(400).json({
+        status: 'error',
+        message: '이미 신고한 게시물입니다.'
+      });
+    }
+
+    await db.PostReport.create({
+      post_id: Number(id),
+      reporter_id: user_id,
+      report_type: ReportType.INAPPROPRIATE,
+      description: details || reason,
+      status: ReportStatus.PENDING
+    }, { transaction });
+
+    await transaction.commit();
+    return res.json({
+      status: 'success',
+      message: '게시물이 성공적으로 신고되었습니다. 관리자가 검토 후 조치하겠습니다.'
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('게시물 신고 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '게시물 신고 중 오류가 발생했습니다.'
+    });
+  }
+},
 
   sendEncouragement: async (
     req: AuthRequestGeneric<{ message: string; is_anonymous?: boolean }, never, PostParams>,

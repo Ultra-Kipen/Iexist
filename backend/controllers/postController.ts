@@ -272,7 +272,10 @@ const postController = {
       const whereClause: any = { user_id };
       if (start_date && end_date) {
         whereClause.created_at = {
-          [Op.between]: [new Date(start_date), new Date(end_date)]
+          [Op.between]: [
+            new Date(start_date).setHours(0, 0, 0, 0),
+            new Date(end_date).setHours(23, 59, 59, 999)
+          ]
         };
       }
 

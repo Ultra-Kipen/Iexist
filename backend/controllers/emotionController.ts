@@ -10,7 +10,7 @@ import {
 } from 'sequelize';
 import db from '../models';
 import { AuthRequest, AuthRequestGeneric } from '../types/express';
-import { Emotion, EmotionAttributes } from '../models/Emotion';  // Emotion 모델 직접 임포트
+import { Emotion, EmotionAttributes } from '../models/Emotion';
 
 // 인터페이스 정의
 interface MyDayPostAttributes {
@@ -111,7 +111,7 @@ const normalizeDate = (date: Date): Date => {
   return normalized;
 };
 
-const emotionController = {
+export const emotionController = {
   getAllEmotions: async (req: AuthRequestGeneric<never>, res: Response) => {
     try {
       const emotions = await db.Emotion.findAll({
@@ -172,24 +172,19 @@ const emotionController = {
   
       const { start_date, end_date } = req.query;
       
-      if (!start_date || !end_date) {
-        return res.status(400).json({
-          status: 'error',
-          message: '시작 날짜와 종료 날짜를 모두 입력해주세요.'
-        });
+      // 날짜가 없으면 최근 7일간의 데이터 조회
+      const endDate = end_date ? new Date(end_date) : new Date();
+      const startDate = start_date ? new Date(start_date) : new Date(endDate);
+      
+      if (!start_date) {
+        startDate.setDate(startDate.getDate() - 7);
       }
   
-      const startDateObj = new Date(start_date);
-      const endDateObj = new Date(end_date);
-      const startDate = normalizeDate(startDateObj);
-      const endDate = new Date(endDateObj.setHours(23, 59, 59, 999));
-  
-      // SQL 쿼리로 직접 통계 데이터 조회
       const stats = await db.sequelize.query(`
         SELECT 
           DATE(el.log_date) as date,
           e.name,
-          e.icon,
+          e.icon, 
           COUNT(*) as count
         FROM emotion_logs el
         INNER JOIN emotions e ON el.emotion_id = e.emotion_id
@@ -198,9 +193,9 @@ const emotionController = {
         GROUP BY DATE(el.log_date), e.name, e.icon
         ORDER BY date ASC, count DESC
       `, {
-        replacements: { 
-          user_id, 
-          start_date: startDate,
+        replacements: {
+          user_id,
+          start_date: startDate, 
           end_date: endDate
         },
         type: QueryTypes.SELECT
@@ -212,6 +207,7 @@ const emotionController = {
         status: 'success',
         data: Object.values(formattedStats)
       });
+  
     } catch (error) {
       console.error('감정 통계 조회 오류:', error);
       return res.status(500).json({
@@ -224,7 +220,7 @@ const emotionController = {
   createEmotion: async (
     req: AuthRequestGeneric<{ emotion_ids: number[]; note?: string }>,
     res: Response
-) => {
+  ) => {
     const transaction = await db.sequelize.transaction();
     try {
         const { emotion_ids, note } = req.body;
@@ -318,110 +314,118 @@ return res.status(500).json({
 });
 }
 },
-  getEmotionTrend: async (
-    req: AuthRequestGeneric<never, EmotionTrendQuery>, 
-    res: Response
-  ) => {
-    try {
-      const user_id = req.user?.user_id;
-      if (!user_id) {
-        return res.status(401).json({
-          status: 'error',
-          message: '인증이 필요합니다.'
-        });
-      }
-  
-      const { start_date, end_date, group_by = 'day' } = req.query;
-  
-      const dateFormat = group_by === 'week' 
-        ? 'DATE_FORMAT(el.log_date, "%Y-%u")'
-        : group_by === 'month'
-          ? 'DATE_FORMAT(el.log_date, "%Y-%m")'
-          : 'DATE(el.log_date)';
-  
-      const query = `
-        SELECT 
-          ${dateFormat} as date,
-          e.name,
-          e.icon,
-          COUNT(*) as count
-        FROM emotion_logs el
-        INNER JOIN emotions e ON el.emotion_id = e.emotion_id
-        WHERE el.user_id = :user_id
-          ${start_date && end_date ? 'AND el.log_date BETWEEN :start_date AND :end_date' : ''}
-        GROUP BY ${dateFormat}, e.name, e.icon
-        ORDER BY date ASC, count DESC
-      `;
-  
-      const trend = await db.sequelize.query<EmotionStatRecord>(query, {
-        replacements: { 
-          user_id, 
-          start_date: start_date ? new Date(start_date) : undefined,
-          end_date: end_date ? new Date(end_date) : undefined
-        },
-        type: QueryTypes.SELECT
-      });
-  
-      const formattedTrend = formatEmotionStats(trend);
-  
-      return res.json({
-        status: 'success',
-        data: Object.values(formattedTrend)
-      });
-    } catch (error) {
-      console.error('감정 추세 조회 오류:', error);
-      return res.status(500).json({
+getEmotionTrend: async (
+  req: AuthRequestGeneric<never, EmotionTrendQuery>, 
+  res: Response
+) => {
+  try {
+    const user_id = req.user?.user_id;
+    if (!user_id) {
+      return res.status(401).json({
         status: 'error',
-        message: '감정 추세 조회 중 오류가 발생했습니다.'
+        message: '인증이 필요합니다.'
       });
     }
-  },
-  getDailyEmotionCheck: async (req: AuthRequestGeneric<never>, res: Response) => {
-    try {
-      const user_id = req.user?.user_id;
-      if (!user_id) {
-        return res.status(401).json({
-          status: 'error',
-          message: '인증이 필요합니다.'
-        });
-      }
 
-      const today = normalizeDate(new Date());
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+    const { start_date, end_date, group_by = 'day' } = req.query;
+    
+    // 날짜가 없으면 최근 7일간의 데이터 조회
+    const endDate = end_date ? new Date(end_date) : new Date();
+    const startDate = start_date ? new Date(start_date) : new Date(endDate);
+    
+    if (!start_date) {
+      startDate.setDate(startDate.getDate() - 7);
+    }
 
-      const check = await db.sequelize.models.emotion_logs.findOne({
-        where: {
-          user_id,
-          log_date: {
-            [Op.gte]: today,
-            [Op.lt]: tomorrow
-          }
-        },
-        include: [{
-          model: db.sequelize.models.emotions,
-          attributes: ['name', 'icon'],
-          required: true
-        }],
-        attributes: ['log_id', 'log_date', 'note']
-      });
+    const dateFormat = group_by === 'week' 
+      ? 'DATE_FORMAT(el.log_date, "%Y-%u")'
+      : group_by === 'month'
+        ? 'DATE_FORMAT(el.log_date, "%Y-%m")'
+        : 'DATE(el.log_date)';
 
-      return res.json({
-        status: 'success',
-        data: {
-          hasDailyCheck: !!check,
-          lastCheck: check ? check.get() : null
+    const query = `
+      SELECT 
+        ${dateFormat} as date,
+        e.name,
+        e.icon,
+        COUNT(*) as count
+      FROM emotion_logs el
+      INNER JOIN emotions e ON el.emotion_id = e.emotion_id
+      WHERE el.user_id = :user_id
+        AND el.log_date BETWEEN :start_date AND :end_date
+      GROUP BY ${dateFormat}, e.name, e.icon
+      ORDER BY date ASC, count DESC
+    `;
+
+    const trend = await db.sequelize.query<EmotionStatRecord>(query, {
+      replacements: { 
+        user_id,
+        start_date: startDate,
+        end_date: endDate
+      },
+      type: QueryTypes.SELECT
+    });
+
+    const formattedTrend = formatEmotionStats(trend);
+
+    return res.json({
+      status: 'success',
+      data: Object.values(formattedTrend)
+    });
+  } catch (error) {
+    console.error('감정 추세 조회 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '감정 추세 조회 중 오류가 발생했습니다.'
+    });
+  }
+},
+getDailyEmotionCheck: async (req: AuthRequestGeneric<never>, res: Response) => {
+  const user_id = req.user?.user_id;
+  if (!user_id) {
+    return res.status(401).json({
+      status: 'error',
+      message: '인증이 필요합니다.'
+    });
+  }
+
+  const today = normalizeDate(new Date());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  try {
+    const check = await db.EmotionLog.findOne({
+      where: {
+        user_id,
+        log_date: {
+          [Op.gte]: today,
+          [Op.lt]: tomorrow
         }
-      });
-    } catch (error) {
-      console.error('일일 감정 체크 확인 오류:', error);
-      return res.status(500).json({
-        status: 'error',
-        message: '일일 감정 체크 확인 중 오류가 발생했습니다.'
-      });
-    }
-  },
+      },
+      include: [{
+        model: db.Emotion,
+        as: 'emotion',
+        attributes: ['name', 'icon'],
+        required: true
+      }],
+      attributes: ['log_id', 'log_date', 'note']
+    });
 
+    return res.json({
+      status: 'success',
+      data: {
+        hasDailyCheck: !!check,
+        lastCheck: check?.get() 
+      }
+    });
+  } catch (error) {
+    console.error('일일 감정 체크 확인 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '일일 감정 체크 확인 중 오류가 발생했습니다.'
+    });
+  }
+},
    
 
 // createPost 함수 수정

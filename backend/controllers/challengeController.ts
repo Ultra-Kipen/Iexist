@@ -65,10 +65,12 @@ const challengeController = {
               }, { transaction });
               
               await db.ChallengeParticipant.create({
-                challenge_id: challenge.get('challenge_id'),
-                user_id
+                challenge_id: challenge.challenge_id, // 변경된 부분
+                user_id: user_id,
+                created_at: new Date()
               }, { transaction });
-            await transaction.commit();
+              
+              await transaction.commit(); // commit 위치 수정
             return res.status(201).json({
                 status: 'success',
                 message: "챌린지가 성공적으로 생성되었습니다.",
@@ -209,10 +211,10 @@ const challengeController = {
                 });
             }
 
-            const challenge = await db.sequelize.models.challenges.findOne({
-                where: { challenge_id: challengeId },
+            const challenge = await db.Challenge.findOne({
+                where: { challenge_id: challengeId },  // challengeId로 변경
                 transaction
-            });
+              });
 
             if (!challenge) {
                 await transaction.rollback();
@@ -233,7 +235,7 @@ const challengeController = {
                 });
             }
 
-            const existingParticipant = await db.sequelize.models.challenge_participants.findOne({
+            const existingParticipant = await db.ChallengeParticipant.findOne({
                 where: {
                     challenge_id: challengeId,
                     user_id
@@ -249,20 +251,20 @@ const challengeController = {
                 });
             }
 
-            await db.sequelize.models.challenge_participants.create({
-                challenge_id: challengeId,
-                user_id,
-                joined_at: new Date()
-            }, { transaction });
+         // 참가자 생성 부분도 수정
+await db.ChallengeParticipant.create({
+    challenge_id: challengeId,
+    user_id,
+    created_at: new Date()
+  }, { transaction });
+  await challenge.increment('participant_count', { transaction });
 
-            await challenge.increment('participant_count', { transaction });
-
-            await transaction.commit();
-            return res.json({
-                status: 'success',
-                message: '챌린지에 성공적으로 참가했습니다.'
-            });
-        } catch (error) {
+  await transaction.commit();
+  return res.json({
+    status: 'success',
+    message: '챌린지에 성공적으로 참가했습니다.'
+  });
+} catch (error) {
             await transaction.rollback();
             console.error('챌린지 참가 오류:', error);
             return res.status(500).json({

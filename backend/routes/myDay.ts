@@ -52,20 +52,20 @@ router.post('/posts',
 *     security:
 *       - bearerAuth: []
 */
-router.get('/posts', 
- authMiddleware,
- validateRequest([
-   query('page').optional().isInt({ min: 1 }).withMessage('page는 1 이상의 정수여야 합니다.'),
-   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit는 1에서 100 사이의 정수여야 합니다.'),
-   query('sort_by').optional().isIn(['latest', 'popular']).withMessage('정렬 기준이 올바르지 않습니다.'), 
-   query('start_date').optional().isDate().withMessage('시작 날짜 형식이 올바르지 않습니다.'),
-   query('end_date').optional().isDate().withMessage('종료 날짜 형식이 올바르지 않습니다.')
- ]),
- (req, res, next) => {
-   const typedReq = req as unknown as AuthRequestGeneric<never, MyDayQuery>;
-   return getPosts(typedReq, res).catch(next);
- }
-);
+router.get('/posts/me', 
+  authMiddleware,
+  validateRequest([
+    query('page').optional().isInt({ min: 1 }).withMessage('page는 1 이상의 정수여야 합니다.'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit는 1에서 100 사이의 정수여야 합니다.'),
+    query('sort_by').optional().isIn(['latest', 'popular']).withMessage('정렬 기준이 올바르지 않습니다.'), 
+    query('start_date').optional().isDate().withMessage('시작 날짜 형식이 올바르지 않습니다.'),
+    query('end_date').optional().isDate().withMessage('종료 날짜 형식이 올바르지 않습니다.')
+  ]),
+  (req, res, next) => {
+    const typedReq = req as unknown as AuthRequestGeneric<never, MyDayQuery>;
+    return getPosts(typedReq, res).catch(next);
+  }
+ );
 
 /**
 * @swagger

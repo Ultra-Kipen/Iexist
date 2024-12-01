@@ -2,20 +2,17 @@ import { Router } from 'express';
 import someoneDayController from '../controllers/someoneDayController';
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware';
+import { ParamsDictionary } from 'express-serve-static-core';
+
 const expressValidator = require('express-validator');
-const { body, query } = expressValidator;
+const { body, query, param } = expressValidator;
+
+interface PostDetailsParams extends ParamsDictionary {
+  id: string;
+}
 
 const router = Router();
-// 나머지 코드는 동일
-/**
- * @swagger
- * /someone-day:
- *   post:
- *     summary: 누군가의 하루 게시물 생성
- *     tags: [SomeoneDay]
- *     security:
- *       - bearerAuth: []
- */
+
 router.post('/',
   authMiddleware,
   validateRequest([
@@ -31,15 +28,6 @@ router.post('/',
   (req, res) => someoneDayController.createPost(req as any, res)
 );
 
-/**
- * @swagger
- * /someone-day:
- *   get:
- *     summary: 누군가의 하루 게시물 목록 조회
- *     tags: [SomeoneDay]
- *     security:
- *       - bearerAuth: []
- */
 router.get('/', 
   authMiddleware,
   validateRequest([
@@ -59,32 +47,29 @@ router.get('/',
   (req, res) => someoneDayController.getPosts(req as any, res)
 );
 
-/**
- * @swagger
- * /someone-day/popular:
- *   get:
- *     summary: 인기 게시물 조회
- *     tags: [SomeoneDay]
- *     security:
- *       - bearerAuth: []
- */
 router.get('/popular',
   authMiddleware,
   (req, res) => someoneDayController.getPopularPosts(req as any, res)
 );
 
-/**
- * @swagger
- * /someone-day/{id}/report:
- *   post:
- *     summary: 게시물 신고
- *     tags: [SomeoneDay]
- *     security:
- *       - bearerAuth: []
- */
+router.get('/:id', 
+  authMiddleware,
+  validateRequest([
+    param('id').isInt().withMessage('올바른 게시물 ID가 아닙니다.')
+  ]),
+  (req, res) => someoneDayController.getPostById(req as any, res)
+);
+router.get('/:id/details', 
+  authMiddleware,
+  validateRequest([
+    param('id').isInt().withMessage('올바른 게시물 ID가 아닙니다.')
+  ]),
+  (req, res) => someoneDayController.getPostDetails(req as any, res)
+);
 router.post('/:id/report',
   authMiddleware,
   validateRequest([
+    param('id').isInt().withMessage('올바른 게시물 ID가 아닙니다.'),
     body('reason').isLength({ min: 5, max: 200 })
       .withMessage('신고 사유는 5자 이상 200자 이하여야 합니다.'),
     body('details').optional().isString()

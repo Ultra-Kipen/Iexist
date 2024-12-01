@@ -73,7 +73,7 @@ router.get('/',
   }
 );
 
-router.get('/my', 
+router.get('/me', 
   authMiddleware,
   validateRequest([...commonValidations.pagination]),
   (req: Request, res: Response) => {

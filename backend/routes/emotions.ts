@@ -1,47 +1,54 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
+import { AuthRequestGeneric } from '../types/express';
 import emotionController from '../controllers/emotionController';
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware'; 
-import { AuthRequest, AuthRequestGeneric } from '../types/express';
 const expressValidator = require('express-validator');
 
-
 const router = Router();
-
 const { check } = expressValidator;
 const body = check;
 const query = check;
-// EmotionTrendQuery 인터페이스를 직접 정의합니다.
+
 interface EmotionTrendQuery {
   start_date?: string;
   end_date?: string;
   group_by?: 'day' | 'week' | 'month';
 }
-// 감정 목록 조회
+
 router.get('/', emotionController.getAllEmotions);
 
-// 감정 통계 조회
+router.get('/daily-check',
+  authMiddleware,
+  emotionController.getDailyEmotionCheck
+);
+
 router.get('/stats',
   authMiddleware,
   validateRequest([
     query('start_date')
+      .optional()
       .isISO8601()
       .withMessage('시작 날짜는 유효한 날짜 형식이어야 합니다.'),
     query('end_date')
+      .optional()
       .isISO8601()
       .withMessage('종료 날짜는 유효한 날짜 형식이어야 합니다.')
   ]),
-  emotionController.getEmotionStats as any
+  emotionController.getEmotionStats
 );
 
-// 감정 추세 조회
+// routes/emotions.ts의 trend 엔드포인트 부분만 수정
+
 router.get('/trend',
   authMiddleware,
   validateRequest([
     query('start_date')
+      .optional()
       .isISO8601()
       .withMessage('시작 날짜는 유효한 날짜 형식이어야 합니다.'),
     query('end_date')
+      .optional()
       .isISO8601()
       .withMessage('종료 날짜는 유효한 날짜 형식이어야 합니다.'),
     query('group_by')
@@ -49,13 +56,18 @@ router.get('/trend',
       .isIn(['day', 'week', 'month'])
       .withMessage('group_by는 day, week, month 중 하나여야 합니다.')
   ]),
-  (req: Request, res: Response) => {
-    const typedReq = req as unknown as AuthRequestGeneric<{}, EmotionTrendQuery>;
-    return emotionController.getEmotionTrend(typedReq as AuthRequestGeneric<never, EmotionTrendQuery>, res);
+  async (req, res, next) => {
+    try {
+      await emotionController.getEmotionTrend(
+        req as any,
+        res
+      );
+    } catch (error) {
+      next(error);
+    }
   }
 );
 
-// 감정 생성
 router.post('/',
   authMiddleware,
   validateRequest([

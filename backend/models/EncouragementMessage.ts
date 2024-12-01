@@ -107,10 +107,10 @@ public static initialize(sequelize: Sequelize) {
   return model; // Return the initialized model
  }
 
-  public static associate(models: {
-    User: typeof User;
-    SomeoneDayPost: typeof SomeoneDayPost;
-  }): void {
+ public static associate(models: {
+  User: typeof User;
+  SomeoneDayPost: typeof SomeoneDayPost; // 추가
+}): void {
     this.belongsTo(models.User, {
       foreignKey: 'sender_id',
       as: 'sender'
@@ -125,6 +125,7 @@ public static initialize(sequelize: Sequelize) {
       foreignKey: 'post_id',
       as: 'post'
     });
+    
   }
 
   toJSON() {

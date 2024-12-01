@@ -82,7 +82,69 @@ const comfortWallController = {
       return res.status(500).json({ message: '게시물 생성 중 오류가 발생했습니다.' });
     }
   },
-
+  getBestPosts: async (req: AuthRequestGeneric<never, {period?: string}>, res: Response) => {
+    try {
+      const user_id = req.user?.user_id;
+      if (!user_id) {
+        return res.status(401).json({
+          status: 'error',
+          message: '인증이 필요합니다.'
+        });
+      }
+  
+      const { period = 'weekly' } = req.query;
+      const date = new Date();
+      
+      let startDate: Date;
+      switch(period) {
+        case 'daily':
+          startDate = new Date(date.setDate(date.getDate() - 1));
+          break;
+        case 'monthly':
+          startDate = new Date(date.setMonth(date.getMonth() - 1));
+          break;
+        case 'weekly':
+        default:
+          startDate = new Date(date.setDate(date.getDate() - 7));
+          break;
+      }
+  
+      const posts = await db.SomeoneDayPost.findAll({
+        where: {
+          created_at: {
+            [Op.gte]: startDate
+          }
+        },
+        include: [{
+          model: db.User,
+          as: 'user',
+          attributes: ['nickname', 'profile_image_url']
+        }],
+        order: [
+          ['like_count', 'DESC'],
+          ['comment_count', 'DESC']
+        ],
+        limit: 10
+      });
+  
+      return res.json({
+        status: 'success',
+        data: {
+          posts: posts.map(post => ({
+            ...post.get(),
+            user: post.get('is_anonymous') ? null : post.get('user')
+          }))
+        }
+      });
+  
+    } catch (error) {
+      console.error('인기 게시물 조회 오류:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: '인기 게시물 조회 중 오류가 발생했습니다.'
+      });
+    }
+  },
   getComfortWallPosts: async (req: AuthRequestGeneric<never, ComfortWallQuery>, res: Response) => {
     try {
       const user_id = req.user?.user_id;

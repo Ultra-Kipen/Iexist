@@ -94,9 +94,9 @@ const notificationController = {
         });
       }
 
-      const notification = await db.sequelize.models.notifications.findOne({
+      const notification = await db.Notification.findOne({
         where: { 
-          notification_id: id,
+          id: id,  // notification_id를 id로 변경
           user_id 
         },
         transaction
@@ -141,9 +141,9 @@ const notificationController = {
         });
       }
 
-      const result = await db.sequelize.models.notifications.destroy({
+      const result = await db.Notification.destroy({
         where: { 
-          notification_id: id, 
+          id: id,  // notification_id를 id로 변경
           user_id 
         },
         transaction
@@ -185,7 +185,7 @@ const notificationController = {
         });
       }
 
-      await db.sequelize.models.notifications.update(
+      await db.Notification.update(
         { is_read: true },
         { 
           where: { 

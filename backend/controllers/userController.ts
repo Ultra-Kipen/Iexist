@@ -325,7 +325,7 @@ async getProfile(req: AuthRequest, res: Response) {
       }
   
       const { currentPassword, newPassword } = req.body;
-      const user = await db.sequelize.models.users.findByPk(user_id, { transaction });
+      const user = await db.User.findByPk(user_id, { transaction });
   
       if (!user) {
         await transaction.rollback();
@@ -346,7 +346,7 @@ async getProfile(req: AuthRequest, res: Response) {
   
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(newPassword, salt);
-      await user.update({ password_hash: hashedPassword }, { transaction });  // password -> password_hash
+      await user.update({ password_hash: hashedPassword }, { transaction });
   
       await transaction.commit();
       return res.json({
@@ -383,8 +383,8 @@ async getProfile(req: AuthRequest, res: Response) {
           message: '인증이 필요합니다.'
         });
       }
-
-      const user = await db.sequelize.models.users.findByPk(user_id, { transaction });
+  
+      const user = await db.User.findByPk(user_id, { transaction });
       if (!user) {
         await transaction.rollback();
         return res.status(404).json({
@@ -392,10 +392,57 @@ async getProfile(req: AuthRequest, res: Response) {
           message: '사용자를 찾을 수 없습니다.'
         });
       }
+  
+      // 연관 데이터 삭제
+     // 먼저 댓글 삭제
+await db.MyDayComment.destroy({ where: { user_id: user_id }, transaction });
 
+// 게시물과 관련된 상호작용 삭제
+await db.MyDayLike.destroy({ where: { user_id: user_id }, transaction });
+await db.MyDayEmotion.destroy({ 
+  where: { 
+    post_id: { 
+      [Op.in]: db.sequelize.literal(`(SELECT post_id FROM my_day_posts WHERE user_id = ${user_id})`) 
+    } 
+  }, 
+  transaction 
+});
+
+// 그 다음 게시물 삭제
+await db.MyDayPost.destroy({ where: { user_id: user_id }, transaction });
+
+// 나머지 연관 데이터 삭제
+await Promise.all([
+  db.Challenge.destroy({ where: { creator_id: user_id }, transaction }),
+  db.ChallengeParticipant.destroy({ where: { user_id: user_id }, transaction }),
+  db.EmotionLog.destroy({ where: { user_id: user_id }, transaction }),
+  db.SomeoneDayPost.destroy({ where: { user_id: user_id }, transaction }),
+  db.SomeoneDayComment.destroy({ where: { user_id: user_id }, transaction }), 
+  db.SomeoneDayLike.destroy({ where: { user_id: user_id }, transaction }),
+  db.EncouragementMessage.destroy({ where: { sender_id: user_id }, transaction }),
+  db.EncouragementMessage.destroy({ where: { receiver_id: user_id }, transaction }),
+  db.Notification.destroy({ where: { user_id: user_id }, transaction }),
+  db.sequelize.query(
+    'DELETE FROM user_stats WHERE user_id = ?',
+    {
+      replacements: [user_id],
+      type: QueryTypes.DELETE,
+      transaction
+    }
+  ),
+  db.sequelize.query(
+    'DELETE FROM user_goal WHERE user_id = ?',
+    {
+      replacements: [user_id],
+      type: QueryTypes.DELETE,
+      transaction
+    }
+  )
+]);
+      // 사용자 삭제
       await user.destroy({ transaction });
       await transaction.commit();
-
+  
       return res.json({
         status: 'success',
         message: '회원 탈퇴가 완료되었습니다.'

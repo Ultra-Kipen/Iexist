@@ -25,26 +25,36 @@ interface ComfortWallQuery {
 
 const router = Router();
 
+router.get('/best',
+  authMiddleware,
+  validateRequest([
+    query('period')
+      .optional()
+      .isIn(['daily', 'weekly', 'monthly'])
+      .withMessage('조회 기간은 daily, weekly, monthly 중 하나여야 합니다.')
+  ]),
+  (req, res) => ComfortWallController.getBestPosts(req as any, res)
+);
+
 router.post('/',
- authMiddleware,
- validateRequest([
-   body('title')
-     .trim()
-     .isLength({ min: 5, max: 100 })
-     .withMessage('제목은 5자 이상 100자 이하여야 합니다.'),
-   body('content')
-     .trim()
-     .isLength({ min: 20, max: 2000 })
-     .withMessage('내용은 20자 이상 2000자 이하여야 합니다.'),
-   body('is_anonymous')
-     .optional()
-     .isBoolean()
-     .withMessage('익명 여부는 boolean 값이어야 합니다.')
- ]),
- (req, res, next) => {
-   const typedReq = req as unknown as AuthRequestGeneric<ComfortWallPost, any>;
-   return ComfortWallController.createComfortWallPost(typedReq, res).catch(next);
- }
+  authMiddleware,
+  validateRequest([
+    body('title')
+      .trim()
+      .isLength({ min: 5, max: 100 })
+      .withMessage('제목은 5자 이상 100자 이하여야 합니다.'),
+    body('content')
+      .trim()
+      .isLength({ min: 20, max: 2000 })
+      .withMessage('내용은 20자 이상 2000자 이하여야 합니다.'),
+    body('is_anonymous')
+      .optional()
+      .isBoolean()
+      .withMessage('익명 여부는 boolean 값이어야 합니다.')
+  ]),
+  (req, res, next) => {
+    return ComfortWallController.createComfortWallPost(req as any, res).catch(next);
+  }
 );
 
 router.get('/',
