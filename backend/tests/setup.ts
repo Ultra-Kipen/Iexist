@@ -2,19 +2,17 @@ import { Sequelize, Transaction } from 'sequelize';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// .env 파일 로드
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-// 전역 transaction 변수
 let transaction: Transaction;
 
 const sequelize = new Sequelize({
   dialect: 'mysql',
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT),
-  username: process.env.DB_USER,          // 'iexist'
-  password: process.env.DB_PASSWORD,      // 'sw309824!@'
-  database: process.env.DB_NAME,          // 'iexist'
+  username: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   logging: false,
   pool: {
     max: 5,
@@ -48,7 +46,13 @@ beforeEach(async () => {
 
 afterEach(async () => {
   if (transaction) {
-    await transaction.rollback();
+    try {
+      await transaction.rollback();
+    } catch (error) {
+      if (error.message !== 'Transaction cannot be rolled back because it has been finished with state: rollback') {
+        console.error('Error rolling back transaction:', error);
+      }
+    }
   }
 });
 

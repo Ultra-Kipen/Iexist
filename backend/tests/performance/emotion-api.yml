@@ -1,0 +1,15 @@
+# backend/tests/performance/emotion-api.yml
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 10
+  environments:
+    production:
+      target: 'https://your-production-url'
+scenarios:
+  - flow:
+      - get:
+          url: "/api/emotions/stats"
+          headers:
+            Authorization: "Bearer YOUR_TOKEN"
