@@ -79,4 +79,4 @@ export class EmotionLog extends Model<EmotionLogAttributes> {
   }
 }
 
-export default EmotionLog;
+export default EmotionLogAttributes;

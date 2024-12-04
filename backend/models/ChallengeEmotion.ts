@@ -1,24 +1,33 @@
-// backend/models/ChallengeEmotion.ts
 import { Model, DataTypes, Sequelize, Op } from 'sequelize';
 import Challenge from './Challenge';
 import { Emotion } from './Emotion';
-
 interface ChallengeEmotionAttributes {
+  challenge_emotion_id: number;
   emotion_id: number;
   challenge_id: number;
+  user_id: number;
+  log_date: Date;
   created_at: Date;
   updated_at: Date;
 }
 
 class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
+  public challenge_emotion_id!: number;
   public emotion_id!: number;
   public challenge_id!: number;
+  public user_id!: number;
+  public log_date!: Date;
   public created_at!: Date;
   public updated_at!: Date;
 
   public static initialize(sequelize: Sequelize) {
     const model = ChallengeEmotion.init(
       {
+        challenge_emotion_id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true
+        },
         emotion_id: {
           type: DataTypes.INTEGER,
           allowNull: false,
@@ -34,6 +43,18 @@ class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
             model: 'challenges',
             key: 'challenge_id'
           }
+        },
+        user_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'users',
+            key: 'user_id'
+          }
+        },
+        log_date: {
+          type: DataTypes.DATE,
+          allowNull: false
         },
         created_at: {
           type: DataTypes.DATE,
@@ -55,14 +76,13 @@ class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
         indexes: [
           {
             name: 'challenge_emotions_index',
-            fields: ['challenge_id', 'emotion_id']
+            fields: ['challenge_id', 'emotion_id', 'user_id']
           }
         ]
       }
     );
     return model;
   }
-
   public static associate(models: {
     Challenge: typeof Challenge;
     Emotion: typeof Emotion;
@@ -78,7 +98,6 @@ class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
     });
   }
 
-  // 감정 로그 조회 메서드
   public static async findByChallenge(
     challengeId: number,
     startDate?: Date,
@@ -89,7 +108,7 @@ class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
     };
 
     if (startDate && endDate) {
-      where.created_at = {
+      where.log_date = {
         [Op.between]: [startDate, endDate]
       };
     }
@@ -97,7 +116,7 @@ class ChallengeEmotion extends Model<ChallengeEmotionAttributes> {
     return this.findAll({
       where,
       include: ['emotion'],
-      order: [['created_at', 'DESC']]
+      order: [['log_date', 'DESC']]
     });
   }
 }

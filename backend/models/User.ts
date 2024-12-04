@@ -1,28 +1,30 @@
 import { Model, DataTypes, Optional, Sequelize } from 'sequelize';
 import sequelize from '../config/database';
-
 export type ThemePreference = 'light' | 'dark' | 'system';
-
 interface UserAttributes {
-
-  user_id: number;
-  username: string;
-  email: string;
-  password_hash: string;
-  nickname?: string;
-  profile_image_url?: string;
-  background_image_url?: string;
-  favorite_quote?: string;
-  theme_preference?: ThemePreference;
-  privacy_settings?: JSON;
-  is_active: boolean;
-  last_login_at?: Date;
-  created_at: Date;
-  updated_at: Date;
+user_id: number;
+username: string;
+email: string;
+password_hash: string;
+nickname?: string;
+profile_image_url?: string;
+background_image_url?: string;
+favorite_quote?: string;
+theme_preference?: ThemePreference;
+privacy_settings?: JSON;
+is_active: boolean;
+last_login_at?: Date;
+created_at: Date;
+updated_at: Date;
+notification_settings: {
+  like_notifications: boolean;
+  comment_notifications: boolean;
+  challenge_notifications: boolean;
+  encouragement_notifications: boolean;
+};
 }
 
 interface UserCreationAttributes extends Optional<UserAttributes, 'user_id'> {}
-
 export class User extends Model<UserAttributes, UserCreationAttributes> {
   public user_id!: number;
   public username!: string;
@@ -38,98 +40,114 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
   public last_login_at?: Date;
   public created_at!: Date;
   public updated_at!: Date;
+  public notification_settings!: {
+    like_notifications: boolean;
+    comment_notifications: boolean;
+    challenge_notifications: boolean;
+    encouragement_notifications: boolean;
+  };
+
   public static associate(models: any): void {
     User.hasMany(models.MyDayPost, {
-      foreignKey: 'user_id',
-      as: 'my_day_posts'
+    foreignKey: 'user_id',
+    as: 'my_day_posts'
     });
-  }
-  public static initialize(sequelize: Sequelize): typeof User {
-    return User.init(
+    }
+    public static initialize(sequelize: Sequelize): typeof User {
+      return User.init(
       {
-        user_id: {
-          type: DataTypes.INTEGER,
-          autoIncrement: true,
-          primaryKey: true,
-          field: 'user_id'
-        },
-        username: {
-          type: DataTypes.STRING(50),
-          allowNull: false,
-          unique: true,
-          validate: {
-            notEmpty: true,
-            len: [2, 50]
-          }
-        },
-        email: {
-          type: DataTypes.STRING(100), 
-          allowNull: false,
-          unique: true,
-          validate: {
-            isEmail: true
-          }
+    user_id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+    field: 'user_id'
+    },
+    username: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+      validate: {
+      notEmpty: true,
+      len: [2, 50]
+      }
+      },
+      email: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        unique: true,
+        validate: {
+        isEmail: true
+        }
         },
         password_hash: {
-          type: DataTypes.STRING(255),
-          allowNull: false
+        type: DataTypes.STRING(255),
+        allowNull: false
         },
         nickname: {
-          type: DataTypes.STRING(50),
-          allowNull: true
+        type: DataTypes.STRING(50),
+        allowNull: true
         },
         profile_image_url: {
-          type: DataTypes.STRING(255),
-          allowNull: true
+        type: DataTypes.STRING(255),
+        allowNull: true
         },
         background_image_url: {
-          type: DataTypes.STRING(255), 
-          allowNull: true
+        type: DataTypes.STRING(255),
+        allowNull: true
         },
         favorite_quote: {
           type: DataTypes.STRING(255),
           allowNull: true
-        },
-        theme_preference: {
+          },
+          theme_preference: {
           type: DataTypes.ENUM('light', 'dark', 'system'),
           allowNull: true,
           defaultValue: 'system'
-        },
-        privacy_settings: {
+          },
+          privacy_settings: {
           type: DataTypes.JSON,
           allowNull: true
-        },
-        is_active: {
+          },
+          is_active: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
           defaultValue: true
-        },
-        last_login_at: {
+          },
+          last_login_at: {
           type: DataTypes.DATE,
           allowNull: true,
           defaultValue: null
-        },
-        created_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
-        },
-        updated_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
-        }
-      },
-      {
-        sequelize,
-        modelName: 'User',
-        tableName: 'users',
-        timestamps: true,
-        underscored: true
-      }
-    );
-  }
-}
-
-export type { UserAttributes, UserCreationAttributes };
-export default User;
+          },
+          created_at: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW
+            },
+            updated_at: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW
+            },
+            notification_settings: {
+              type: DataTypes.JSON,
+              allowNull: false,
+              defaultValue: {
+                like_notifications: true,
+                comment_notifications: true,
+                challenge_notifications: true,
+                encouragement_notifications: true
+              }
+              }
+              },
+            {
+              sequelize,
+              modelName: 'User',
+              tableName: 'users',
+              timestamps: true,
+              underscored: true
+              }
+              );
+              }
+              }
+              export type { UserAttributes, UserCreationAttributes };
+              export default User;

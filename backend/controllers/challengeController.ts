@@ -28,65 +28,56 @@ interface ChallengeParams {
 }
 
 const challengeController = {
-    createChallenge: async (
-        req: AuthRequestGeneric<CreateChallengeBody>,
-        res: Response
-    ) => {
-        const transaction = await db.sequelize.transaction();
-        try {
-            const { title, description, start_date, end_date, is_public, max_participants } = req.body;
-            const user_id = req.user?.user_id;  // id -> user_id로 수정
+// challengeController.ts 수정
+createChallenge: async (req: AuthRequestGeneric<CreateChallengeBody>, res: Response) => {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { title, description, start_date, end_date, is_public = true } = req.body;
+    const user_id = req.user?.user_id;
 
-            if (!user_id) {
-                await transaction.rollback();
-                return res.status(401).json({
-                    status: 'error',
-                    message: '인증이 필요합니다.'
-                });
-            }
+    if (!user_id) {
+      await transaction.rollback();
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
 
-            if (!title || title.length < 5 || title.length > 100) {
-                await transaction.rollback();
-                return res.status(400).json({
-                    status: 'error',
-                    message: '챌린지 제목은 5자 이상 100자 이하여야 합니다.'
-                });
-            }
+    const challenge = await db.Challenge.create({
+      creator_id: user_id,
+      title: title.trim(),
+      description: description?.trim() || null,
+      start_date: new Date(start_date),
+      end_date: new Date(end_date),
+      is_public,
+      participant_count: 1
+    }, { transaction });
 
-            const challenge = await db.Challenge.create({
-                creator_id: user_id,
-                title,
-                description: description || null,
-                start_date: new Date(start_date),
-                end_date: new Date(end_date),
-                is_public: is_public ?? true,
-                max_participants: max_participants || null,
-                participant_count: 1
-              }, { transaction });
-              
-              await db.ChallengeParticipant.create({
-                challenge_id: challenge.challenge_id, // 변경된 부분
-                user_id: user_id,
-                created_at: new Date()
-              }, { transaction });
-              
-              await transaction.commit(); // commit 위치 수정
-            return res.status(201).json({
-                status: 'success',
-                message: "챌린지가 성공적으로 생성되었습니다.",
-                data: {
-                    challenge_id: challenge.get('challenge_id'),
-                }
-            });
-        } catch (error) {
-            await transaction.rollback();
-            console.error('챌린지 생성 오류:', error);
-            return res.status(500).json({
-                status: 'error',
-                message: '챌린지 생성 중 오류가 발생했습니다.'
-            });
-        }
-    },
+    await db.ChallengeParticipant.create({
+      challenge_id: challenge.get('challenge_id'),
+      user_id,
+      created_at: new Date()
+    }, { transaction });
+
+    await transaction.commit();
+    
+    return res.status(201).json({
+      status: 'success',
+      message: "챌린지가 성공적으로 생성되었습니다.",
+      data: {
+        challenge_id: challenge.get('challenge_id')
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('챌린지 생성 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '챌린지 생성 중 오류가 발생했습니다.'
+    });
+  }
+}
+    ,
     getChallenges: async (
         req: AuthRequestGeneric<never, ChallengeQuery>,
         res: Response
@@ -193,7 +184,69 @@ const challengeController = {
             });
         }
     },
-
+    leaveChallenge: async (
+        req: AuthRequestGeneric<never, never, ChallengeParams>,
+        res: Response
+      ) => {
+        const transaction = await db.sequelize.transaction();
+        try {
+          const challengeId = parseInt(req.params.id, 10);
+          const user_id = req.user?.user_id;
+      
+          if (!user_id) {
+            await transaction.rollback();
+            return res.status(401).json({
+              status: 'error',
+              message: '인증이 필요합니다.'
+            });
+          }
+      
+          const challenge = await db.Challenge.findOne({
+            where: { challenge_id: challengeId },
+            transaction
+          });
+      
+          if (!challenge) {
+            await transaction.rollback();
+            return res.status(404).json({
+              status: 'error',
+              message: '챌린지를 찾을 수 없습니다.'
+            });
+          }
+      
+          const participant = await db.ChallengeParticipant.findOne({
+            where: {
+              challenge_id: challengeId,
+              user_id
+            },
+            transaction
+          });
+      
+          if (!participant) {
+            await transaction.rollback();
+            return res.status(400).json({
+              status: 'error',
+              message: '참가하지 않은 챌린지입니다.'
+            });
+          }
+      
+          await participant.destroy({ transaction });
+          await challenge.decrement('participant_count', { transaction });
+      
+          await transaction.commit();
+          return res.json({
+            status: 'success',
+            message: '챌린지에서 성공적으로 탈퇴했습니다.'
+          });
+        } catch (error) {
+          await transaction.rollback();
+          console.error('챌린지 탈퇴 오류:', error);
+          return res.status(500).json({
+            status: 'error',
+            message: '챌린지 탈퇴 중 오류가 발생했습니다.'
+          });
+        }
+      },
     participateInChallenge: async (
         req: AuthRequestGeneric<never, never, ChallengeParams>,
         res: Response
@@ -273,72 +326,72 @@ await db.ChallengeParticipant.create({
             });
         }
     },
-     updateChallengeProgress: async (
+    updateChallengeProgress: async (
         req: AuthRequestGeneric<ChallengeProgressBody, any, ChallengeParams>,
         res: Response
-    ) => {
+      ) => {
         const transaction = await db.sequelize.transaction();
         try {
-            const { note, emotion_id } = req.body;
-            const challengeId = Number(req.params.id);
-            const user_id = req.user?.user_id;  // id -> user_id로 수정
-
-            if (!user_id) {
-                await transaction.rollback();
-                return res.status(401).json({
-                    status: 'error',
-                    message: '인증이 필요합니다.'
-                });
-            }
-
-            const existingLog = await db.sequelize.models.challenge_emotions.findOne({
-                where: {
-                    challenge_id: challengeId,
-                    user_id,
-                    log_date: {
-                        [Op.gte]: new Date().setHours(0,0,0,0),
-                        [Op.lt]: new Date().setHours(23,59,59,999)
-                    }
-                },
-                transaction
-            });
-
-            if (existingLog) {
-                await transaction.rollback();
-                return res.status(400).json({
-                    status: 'error',
-                    message: '오늘은 이미 진행 상황을 기록했습니다.'
-                });
-            }
-
-            const emotionLog = await db.sequelize.models.challenge_emotions.create({
-                challenge_id: challengeId,
-                user_id,
-                emotion_id,
-                log_date: new Date(),
-                note: note || null
-            }, { transaction });
-
-            // ID를 직접 가져오기
-            const emotionLogId = emotionLog.get('challenge_emotion_id');
-
-            await transaction.commit();
-            return res.json({
-                status: 'success',
-                message: '진행 상황이 기록되었습니다.',
-                data: {
-                    challenge_emotion_id: emotionLogId
-                }
-            });
-        } catch (error) {
+          const { note, emotion_id } = req.body;
+          const challengeId = Number(req.params.id);
+          const user_id = req.user?.user_id;
+      
+          if (!user_id) {
             await transaction.rollback();
-            console.error('진행 상황 기록 오류:', error);
-            return res.status(500).json({
-                status: 'error',
-                message: '진행 상황 기록 중 오류가 발생했습니다.'
+            return res.status(401).json({
+              status: 'error',
+              message: '인증이 필요합니다.'
             });
+          }
+      
+          const existingLog = await db.ChallengeEmotion.findOne({
+            where: {
+              challenge_id: challengeId, 
+              user_id,
+              created_at: {  // log_date를 created_at으로 변경
+                [Op.gte]: new Date().setHours(0,0,0,0),
+                [Op.lt]: new Date().setHours(23,59,59,999)  
+              }
+            },
+            transaction
+          });
+      
+          if (existingLog) {
+            await transaction.rollback();
+            return res.status(400).json({
+              status: 'error',
+              message: '오늘은 이미 진행 상황을 기록했습니다.'
+            });
+          }
+      
+          const emotionLog = await db.ChallengeEmotion.create({
+            challenge_id: challengeId,
+            user_id: user_id,
+            emotion_id: emotion_id,
+            log_date: new Date(),
+            created_at: new Date(),
+            updated_at: new Date()
+          }, { 
+            transaction
+          });
+      
+          await transaction.commit();
+          return res.json({
+            status: 'success',
+            message: '진행 상황이 기록되었습니다.',
+            data: {
+              challenge_emotion_id: emotionLog.get('challenge_emotion_id')
+            }
+          });
+        } catch (error) {
+          await transaction.rollback();
+          console.error('진행 상황 기록 오류:', error);
+          return res.status(500).json({
+            status: 'error',
+            message: '진행 상황 기록 중 오류가 발생했습니다.'
+          });
         }
-    }
+      }
 };
 
 export default challengeController;

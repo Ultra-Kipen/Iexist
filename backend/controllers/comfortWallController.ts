@@ -24,7 +24,9 @@ interface ComfortMessageRequest {
 interface ComfortParams {
   id: string;
 }
-
+interface ChallengeParams {
+  id: string;
+}
 const comfortWallController = {
   createComfortWallPost: async (
     req: AuthRequestGeneric<ComfortWallPost>,
@@ -206,6 +208,67 @@ const comfortWallController = {
   } catch (error) {
     console.error('위로와 공감 게시물 조회 오류:', error);
     return res.status(500).json({ message: '게시물 조회 중 오류가 발생했습니다.' });
+  }
+},
+// 추가
+getChallengeDetails: async (req: AuthRequestGeneric<never, never, ChallengeParams>, res: Response) => {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const challengeId = parseInt(req.params.id, 10);  // string을 number로 변환
+    const user_id = req.user?.user_id;
+
+    if (!user_id) {
+      await transaction.rollback();
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
+
+    const challenge = await db.Challenge.findOne({
+      where: { challenge_id: challengeId },
+      include: [
+        {
+          model: db.User,
+          as: 'creator',
+          attributes: ['user_id', 'nickname']
+        },
+        {
+          model: db.ChallengeParticipant,
+          as: 'participants',
+          attributes: ['user_id', 'created_at'],
+          include: [
+            {
+              model: db.User,
+              attributes: ['user_id', 'nickname']
+            }
+          ]
+        }
+      ],
+      transaction
+    });
+
+    if (!challenge) {
+      await transaction.rollback();
+      return res.status(404).json({
+        status: 'error',
+        message: '챌린지를 찾을 수 없습니다.'
+      });
+    }
+
+    await transaction.commit();
+    return res.json({
+      status: 'success',
+      data: challenge
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('챌린지 상세 조회 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '챌린지 상세 조회 중 오류가 발생했습니다.'
+    });
   }
 },
 

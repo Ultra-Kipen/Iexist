@@ -1,8 +1,7 @@
 // middleware/authMiddleware.ts
-
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User } from '../models/User';
+import db from '../models';  // db import 추가
 import { AuthRequest } from '../types/express';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=';
@@ -29,7 +28,8 @@ const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunctio
 
     const decoded = jwt.verify(token, JWT_SECRET) as { user_id: number };
     
-    const user = await User.findOne({
+    // db.User로 변경
+    const user = await db.User.findOne({
       where: { user_id: decoded.user_id },
       attributes: ['user_id', 'username', 'email', 'nickname', 'is_active']
     });
@@ -50,10 +50,10 @@ const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunctio
 
     req.user = {
       user_id: user.get('user_id'),
-      email: user.get('email'),
+      email: user.get('email'), 
       nickname: user.get('nickname'),
       is_active: user.get('is_active')
-     };
+    };
 
     next();
   } catch (error) {

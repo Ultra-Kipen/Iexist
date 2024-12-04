@@ -1,4 +1,3 @@
-// index.ts
 import { Sequelize } from 'sequelize';
 import { User } from './User';
 import { Emotion } from './Emotion';
@@ -23,11 +22,12 @@ import SomeoneDayTag from './SomeoneDayTag';
 import Tag from './Tag';
 import UserGoal from './UserGoal';
 import UserStats from './UserStats';
+import UserBlock from './UserBlock';
 import sequelize from '../config/database';
 
 export class Database {
- public sequelize: Sequelize;
- 
+  public sequelize: Sequelize;
+ public UserBlock!: typeof UserBlock; // 추가
  public User!: typeof User;
  public Emotion!: typeof Emotion;
  public EmotionLog!: typeof EmotionLog;
@@ -50,6 +50,7 @@ export class Database {
  public SomeoneDayTag!: typeof SomeoneDayTag;
  public Tag!: typeof Tag;
  public UserGoal!: typeof UserGoal; 
+ 
  public UserStats!: typeof UserStats;
 
  constructor(sequelizeInstance: Sequelize) {
@@ -59,6 +60,7 @@ export class Database {
  }
 
  private initializeModels() {
+  this.UserBlock = UserBlock.initialize(this.sequelize); // 추가
   this.User = User.initialize(this.sequelize);
   this.Emotion = Emotion.initialize(this.sequelize);
    this.EmotionLog = EmotionLog.initialize(this.sequelize);
@@ -90,9 +92,10 @@ public async close(): Promise<void> {
   }
 }
  private setupAssociations() {
-   const models = {
-     User: this.User,
-     Emotion: this.Emotion, 
+  const models = {
+    UserBlock: this.UserBlock,
+    User: this.User,
+    Emotion: this.Emotion,
      EmotionLog: this.EmotionLog,
      BestPost: this.BestPost,
      Challenge: this.Challenge,
@@ -117,8 +120,8 @@ public async close(): Promise<void> {
    };
 
    Object.values(models).forEach((model: any) => {
-     if (model.associate) {
-       model.associate(models);
+    if (model.associate) {
+      model.associate(models);
      }
    });
  }
@@ -147,7 +150,7 @@ export {
  EncouragementMessage, MyDayComment, MyDayEmotion, MyDayLike,
  MyDayPost, Notification, PostRecommendation, PostReport,
  PostTag, SomeoneDayComment, SomeoneDayLike, SomeoneDayPost,
- Tag, UserGoal, UserStats, SomeoneDayTag,
+ Tag, UserGoal, UserBlock,UserStats, SomeoneDayTag,
  sequelize
 };
 

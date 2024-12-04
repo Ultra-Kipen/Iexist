@@ -8,18 +8,18 @@ import UserModel from '../models/User';
 import UserStatsModel from '../models/UserStats';
 import db from '../models';
 import { QueryTypes } from 'sequelize';
-
-
+import { User, UserAttributes } from '../models/User';
 interface IUserController {
-  register(req: Request, res: Response): Promise<Response>;
-  login(req: Request, res: Response): Promise<Response>;
-  updateProfile(req: AuthRequest, res: Response): Promise<Response>;
-  getProfile(req: AuthRequest, res: Response): Promise<Response>;
-  changePassword(req: AuthRequest, res: Response): Promise<Response>;
-  logout(req: AuthRequest, res: Response): Promise<Response>;
-  withdrawal(req: AuthRequest, res: Response): Promise<Response>;
-  checkEmail(req: Request, res: Response): Promise<Response>;
-  checkNickname(req: Request, res: Response): Promise<Response>;
+register(req: Request, res: Response): Promise<Response>;
+login(req: Request, res: Response): Promise<Response>;
+updateProfile(req: AuthRequest, res: Response): Promise<Response>;
+getProfile(req: AuthRequest, res: Response): Promise<Response>;
+changePassword(req: AuthRequest, res: Response): Promise<Response>;
+logout(req: AuthRequest, res: Response): Promise<Response>;
+withdrawal(req: AuthRequest, res: Response): Promise<Response>;
+checkEmail(req: Request, res: Response): Promise<Response>;
+checkNickname(req: Request, res: Response): Promise<Response>;
+updateNotificationSettings(req: AuthRequest, res: Response): Promise<Response>;
 }
 // JWT_SECRET 설정
 const JWT_SECRET = process.env.JWT_SECRET || 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=';
@@ -32,12 +32,20 @@ class UserController implements IUserController {
     try {
       const { username, email, password } = req.body;
       
+      // 비밀번호 유효성 검사 추가
+      if (!password || password.length < 6 || !/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/.test(password)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          status: 'error',
+          message: '비밀번호는 영문과 숫자를 포함하여 6자 이상이어야 합니다.'
+        });
+      }
+      
       const existingUser = await db.User.findOne({
         where: { email },
         transaction
       });
-      
-
+  
       if (existingUser) {
         await transaction.rollback();
         return res.status(409).json({
@@ -45,7 +53,7 @@ class UserController implements IUserController {
           message: '이미 존재하는 이메일입니다.'
         });
       }
-
+  
       const salt = await bcrypt.genSalt(10);
       const passwordHash = await bcrypt.hash(password, salt);
       
@@ -498,16 +506,166 @@ await Promise.all([
       });
     }
 }
+
+async blockUser(req: AuthRequest, res: Response) {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const user = req.user;
+    if (!user?.user_id) {
+      await transaction.rollback();
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
+
+    const { blocked_user_id } = req.body;
+
+    // 차단할 사용자가 존재하는지 확인
+    const blockedUser = await db.User.findOne({
+      where: { user_id: blocked_user_id },
+      transaction
+    });
+
+    if (!blockedUser) {
+      await transaction.rollback();
+      return res.status(404).json({
+        status: 'error',
+        message: '차단할 사용자를 찾을 수 없습니다.'
+      });
+    }
+
+    // 이미 차단한 사용자인지 확인
+    const existingBlock = await db.UserBlock.findOne({
+      where: {
+        user_id: user.user_id,
+        blocked_user_id
+      },
+      transaction
+    });
+
+    if (existingBlock) {
+      await transaction.rollback();
+      return res.status(400).json({
+        status: 'error',
+        message: '이미 차단한 사용자입니다.'
+      });
+    }
+
+    // 차단 생성
+    await db.UserBlock.create({
+      user_id: user.user_id,
+      blocked_user_id
+    }, { transaction });
+
+    await transaction.commit();
+    return res.json({
+      status: 'success',
+      message: '사용자를 차단했습니다.'
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('사용자 차단 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '사용자 차단 중 오류가 발생했습니다.'
+    });
+  }
 }
+
+async unblockUser(req: AuthRequest, res: Response) {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const user = req.user;
+    if (!user?.user_id) {
+      await transaction.rollback();
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
+
+    const { blocked_user_id } = req.body;
+
+    const result = await db.UserBlock.destroy({
+      where: {
+        user_id: user.user_id,
+        blocked_user_id
+      },
+      transaction
+    });
+
+    if (result === 0) {
+      await transaction.rollback();
+      return res.status(404).json({
+        status: 'error',
+        message: '차단하지 않은 사용자입니다.'
+      });
+    }
+
+    await transaction.commit();
+    return res.json({
+      status: 'success',
+      message: '사용자 차단을 해제했습니다.'
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('사용자 차단 해제 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '사용자 차단 해제 중 오류가 발생했습니다.'
+    });
+  }
+}
+
+async updateNotificationSettings(req: AuthRequest, res: Response) {
+  const transaction = await db.sequelize.transaction();
+  try {
+  const user_id = req.user?.user_id;
+  if (!user_id) {
+  await transaction.rollback();
+  return res.status(401).json({
+  status: 'error',
+  message: '인증이 필요합니다.'
+  });
+  }
+
+  const notificationSettings = {
+    like_notifications: true,
+    comment_notifications: false,
+    challenge_notifications: true,
+    encouragement_notifications: false
+  };
+  
+  await db.User.update(
+    { notification_settings: notificationSettings },
+    { 
+      where: { user_id },
+      transaction
+    }
+  );
+  await transaction.commit();
+  return res.json({
+    status: 'success',
+    message: '알림 설정이 성공적으로 업데이트되었습니다.'
+  });
+} catch (error) {
+  await transaction.rollback();
+  console.error('알림 설정 업데이트 오류:', error);
+  return res.status(500).json({
+  status: 'error',
+  message: '알림 설정 업데이트 중 오류가 발생했습니다.'
+  });
+  }
+  }
+}
+
 
 // 인스턴스 생성 및 export
 export const userController = new UserController();
-
 // 클래스 export
 export { UserController };
-
 // 인터페이스 type export
 export type { IUserController };
-
 // default export
 export default userController;

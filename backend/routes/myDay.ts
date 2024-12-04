@@ -1,7 +1,7 @@
 // myDay.ts 수정 
 import { Router } from 'express';
 import { ParamsDictionary } from 'express-serve-static-core';
-import { createPost, getPosts, createComment, likePost } from '../controllers/myDayController';
+import { createPost, getPosts, getMyPosts, createComment, likePost, deletePost } from '../controllers/myDayController';
 import { AuthRequestGeneric } from '../types/express';
 
 interface MyDayQuery {
@@ -14,7 +14,7 @@ interface MyDayQuery {
 import authMiddleware from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validationMiddleware'; 
 const expressValidator = require('express-validator');
-const { body, query } = expressValidator;
+const { body, query, param } = expressValidator;  // param 추가
 
 const router = Router();
 interface PostParams extends ParamsDictionary {
@@ -52,7 +52,8 @@ router.post('/posts',
 *     security:
 *       - bearerAuth: []
 */
-router.get('/posts/me', 
+// 올바른 경로 수정
+router.get('/posts', 
   authMiddleware,
   validateRequest([
     query('page').optional().isInt({ min: 1 }).withMessage('page는 1 이상의 정수여야 합니다.'),
@@ -65,8 +66,19 @@ router.get('/posts/me',
     const typedReq = req as unknown as AuthRequestGeneric<never, MyDayQuery>;
     return getPosts(typedReq, res).catch(next);
   }
- );
-
+);
+// 내 게시물 목록 조회는 별도 엔드포인트로 분리
+router.get('/posts/me',
+  authMiddleware,
+  validateRequest([
+    query('page').optional().isInt({ min: 1 }).withMessage('page는 1 이상의 정수여야 합니다.'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit는 1에서 100 사이의 정수여야 합니다.')
+  ]),
+  (req, res, next) => {
+    const typedReq = req as unknown as AuthRequestGeneric<never, MyDayQuery>;
+    return getMyPosts(typedReq, res).catch(next);
+  }
+);
 /**
 * @swagger
 * /my-day/{id}/comments:
@@ -101,4 +113,20 @@ router.post('/:id/like',
   (req, res) => likePost(req as any, res)
 );
 
+/**
+* @swagger
+* /my-day/posts/{id}:
+*   delete:
+*     summary: 게시물 삭제
+*     tags: [MyDay]
+*     security:
+*       - bearerAuth: []
+*/
+router.delete('/posts/:id',  // 경로 수정
+  authMiddleware,
+  validateRequest([
+    param('id').isInt({ min: 1 }).withMessage('유효한 게시물 ID가 아닙니다.')
+  ]),
+  (req, res) => deletePost(req as any, res)
+);
 export default router;

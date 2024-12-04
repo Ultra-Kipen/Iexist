@@ -54,5 +54,15 @@ router.post('/:id/read', authMiddleware, notificationController.markNotification
  *       - bearerAuth: []
  */
 router.delete('/:id', authMiddleware, notificationController.deleteNotification);
+/**
+ * @swagger
+ * /notifications/mark-all-read:
+ *   post:
+ *     summary: 모든 알림 읽음 처리
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post('/mark-all-read', authMiddleware, notificationController.markAllAsRead);
 
 export default router;

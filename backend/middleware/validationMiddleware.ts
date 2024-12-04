@@ -33,10 +33,10 @@ type CustomValidator = ValidationRule & {
   isBoolean: () => CustomValidator;
   toInt: () => CustomValidator;
   trim: () => CustomValidator;
+  matches: (pattern: RegExp) => CustomValidator;  // 추가된 부분
   field: string;
   type: string;
 };
-
 // validation 함수 타입 정의
 export const body = (field: string): CustomValidator => check(field) as CustomValidator;
 export const param = (field: string): CustomValidator => check(field) as CustomValidator;
@@ -118,17 +118,19 @@ export const commonValidations = {
 export const userValidations = {
   register: [
     body('username')
-      .notEmpty()
-      .withMessage('사용자 이름은 필수입니다.')
-      .isLength({ min: 2, max: 30 })
-      .withMessage('사용자 이름은 2자 이상 30자 이하여야 합니다.'),
-    body('email')
-      .isEmail()
-      .withMessage('유효한 이메일을 입력해주세요.')
-      .normalizeEmail(),
-    body('password')
-      .isLength({ min: 6 })
-      .withMessage('비밀번호는 최소 6자 이상이어야 합니다.')
+    .notEmpty()
+    .withMessage('사용자 이름은 필수입니다.')
+    .isLength({ min: 2, max: 30 })
+    .withMessage('사용자 이름은 2자 이상 30자 이하여야 합니다.'),
+  body('email')
+    .isEmail()
+    .withMessage('유효한 이메일을 입력해주세요.')
+    .normalizeEmail(),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('비밀번호는 최소 6자 이상이어야 합니다.')
+    .matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/)
+    .withMessage('비밀번호는 영문과 숫자를 포함하여 6자 이상이어야 합니다.')
   ] as CustomValidator[],
 
   login: [

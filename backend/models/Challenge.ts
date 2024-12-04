@@ -5,12 +5,14 @@ interface ChallengeAttributes {
   challenge_id?: number;  
   creator_id: number;
   title: string;
-  description: string | null;  // TEXT, nullable
+  description: string | null;
   start_date: Date;
   end_date: Date;
   is_public: boolean;
-  max_participants: number | null;  // UNSIGNED, nullable
+  max_participants: number | null;
   participant_count: number;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 class Challenge extends Model<ChallengeAttributes> {
@@ -24,61 +26,70 @@ public is_public!: boolean;
 public max_participants?: number;
 public participant_count!: number;
 public static initialize(sequelize: Sequelize) {
-const model = Challenge.init(
-{
-challenge_id: {
-type: DataTypes.INTEGER,
-autoIncrement: true,
-primaryKey: true
-},
-creator_id: {
-type: DataTypes.INTEGER,
-allowNull: false,
-references: {
-model: 'users',
-key: 'user_id'
-}
-},
-title: {
-type: DataTypes.STRING(100),
-allowNull: false
-},
-description: {
-type: DataTypes.TEXT,
-allowNull: true
-},
-start_date: {
-type: DataTypes.DATEONLY,
-allowNull: false
-},
-end_date: {
-type: DataTypes.DATEONLY,
-allowNull: false
-},
-is_public: {
-type: DataTypes.BOOLEAN,
-allowNull: false,
-defaultValue: true
-},
-max_participants: {
-type: DataTypes.INTEGER,
-allowNull: true
-},
-participant_count: {
-type: DataTypes.INTEGER,
-allowNull: false,
-defaultValue: 0
-}
-},
-{
-sequelize,
-modelName: 'Challenge',
-tableName: 'challenges',
-timestamps: true,
-underscored: true
-}
-);
-return model;
+  return Challenge.init(
+    {
+      challenge_id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true
+      },
+      creator_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'users',
+          key: 'user_id'
+        }
+      },
+      title: {
+        type: DataTypes.STRING(100),
+        allowNull: false
+      },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
+      start_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: false
+      },
+      end_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: false
+      },
+      is_public: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+      },
+      max_participants: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+      },
+      participant_count: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+      },
+      created_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+      },
+      updated_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+      }
+    },
+    {
+      sequelize,
+      modelName: 'Challenge',
+      tableName: 'challenges',
+      timestamps: true,
+      underscored: true
+    }
+  );
 }
 public static associate(models: {
   User: typeof User;

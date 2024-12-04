@@ -11,7 +11,7 @@ const param = check;
 const query = check;
 
 interface ChallengeParams {
-  id: number;
+  id: string;
 }
 
 interface ChallengeProgressBody {
@@ -28,17 +28,35 @@ interface AuthRequest<B = any, Q = any, P = any> extends Request<P, any, B, Q> {
 
 const router = Router();
 router.use(authMiddleware);  // 모든 챌린지 라우트에 인증 미들웨어 적용
+router.get(
+  '/:id',
+  authMiddleware,
+  validateRequest([
+    param('id').isInt({ min: 1 }).toInt().withMessage('유효한 챌린지 ID가 필요합니다.')
+  ]),
+  challengeController.getChallenges as unknown as RequestHandler
+);
 router.post(
   '/',
   authMiddleware,
   validateRequest([
-    body('title').trim().isLength({ min: 5, max: 100 }).withMessage('제목은 5자 이상 100자 이하여야 합니다.'),
+    body('title')
+    .notEmpty()
+    .trim()
+    .isLength({ min: 5, max: 100 })
+    .withMessage('제목은 5자 이상 100자 이하여야 합니다.'),
     body('description').optional().trim().isLength({ min: 20, max: 500 }).withMessage('설명은 20자 이상 500자 이하여야 합니다.'),
-    body('start_date').isISO8601().withMessage('올바른 시작일 형식이 필요합니다.'),
-    body('end_date').isISO8601().withMessage('올바른 종료일 형식이 필요합니다.'),
+    body('start_date')
+      .notEmpty()
+      .isISO8601()
+      .withMessage('시작일은 필수입니다.'),
+      body('end_date')
+      .notEmpty() 
+      .isISO8601()
+      .withMessage('종료일은 필수입니다.'),
     body('max_participants').optional().isInt({ min: 2 }).withMessage('최대 참가자 수는 2명 이상이어야 합니다.')
   ]),
-  challengeController.createChallenge as unknown as RequestHandler
+  challengeController.createChallenge as RequestHandler
 );
 
 router.get(
@@ -71,6 +89,14 @@ router.post(
     body('emotion_id').isInt({ min: 1 }).toInt().withMessage('유효한 감정 ID가 필요합니다.')
   ]),
   challengeController.updateChallengeProgress as unknown as RequestHandler
+);
+router.delete(
+  '/:id/participate',
+  authMiddleware,
+  validateRequest([
+    param('id').isInt({ min: 1 }).toInt().withMessage('유효한 챌린지 ID가 필요합니다.')
+  ]),
+  challengeController.leaveChallenge as unknown as RequestHandler
 );
 
 export default router;

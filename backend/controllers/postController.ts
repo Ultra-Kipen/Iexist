@@ -12,7 +12,7 @@ interface PostCreate {
   emotion_ids?: number[];
 }
 
-interface PostQuery {
+export interface PostQuery {
   page?: string;
   limit?: string;
   emotion?: string;
@@ -20,7 +20,6 @@ interface PostQuery {
   end_date?: string;
   sort_by?: 'latest' | 'popular';
 }
-
 interface PostComment {
   content: string;
   is_anonymous?: boolean;
@@ -151,7 +150,76 @@ const postController = {
       });
     }
   },
+  // postController.ts의 deletePost 부분 수정
 
+async deletePost(req: AuthRequestGeneric<never, never, PostParams>, res: Response) {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const user_id = req.user?.user_id;
+
+    if (!user_id) {
+      await transaction.rollback();
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
+
+    // sequelize.models 대신 db 사용
+    const post = await db.MyDayPost.findByPk(id, { 
+      transaction
+    });
+    
+    if (!post) {
+      await transaction.rollback();
+      return res.status(404).json({
+        status: 'error',
+        message: '게시물을 찾을 수 없습니다.'
+      });
+    }
+    
+    // User 모델 include 제거하고 직접 user_id 비교
+    if (post.user_id !== user_id) {
+      await transaction.rollback();
+      return res.status(403).json({
+        status: 'error', 
+        message: '이 게시물을 삭제할 권한이 없습니다.'
+      });
+    }
+    // 연관 데이터 삭제
+    await db.MyDayEmotion.destroy({
+      where: { post_id: id },
+      transaction
+    });
+
+    await db.MyDayLike.destroy({
+      where: { post_id: id },
+      transaction
+    });
+
+    await db.MyDayComment.destroy({
+      where: { post_id: id },  
+      transaction
+    });
+
+    await post.destroy({ transaction });
+
+    await transaction.commit();
+    return res.json({
+      status: 'success',
+      message: '게시물이 삭제되었습니다.'
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('게시물 삭제 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '게시물 삭제 중 오류가 발생했습니다.'
+    }); 
+  }
+},
   getPosts: async (req: AuthRequestGeneric<never, PostQuery>, res: Response) => {
     try {
       const user_id = req.user?.user_id;

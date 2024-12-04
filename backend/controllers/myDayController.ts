@@ -1,18 +1,41 @@
-import { Response } from 'express';  // Response import 추가
-import { Optional } from 'sequelize';  // Optional import 추가
+import { Response } from 'express';
+import { Op, Optional } from 'sequelize';
 import db from '../models';
-import { Op } from 'sequelize';
 import { AuthRequestGeneric } from '../types/express';
 import EmotionLogAttributes from '../models/EmotionLog';
-
+import { PostQuery } from './postController';
+import { getPaginationOptions, getOrderClause } from '../utils/utils';
 // 인터페이스 정의
+
+// myDayController.ts 상단의 인터페이스 수정
+interface MyDayPostAttributes {
+  post_id: number;
+  user_id: number;
+  content: string;
+  emotion_summary: string | null;
+  image_url: string | null;
+  is_anonymous: boolean;
+  character_count: number;
+  like_count: number;
+  comment_count: number;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+interface MyDayPostWithEmotions extends MyDayPostAttributes {
+  emotions?: Array<{
+    emotion_id: number;
+    name: string;
+    icon: string;
+  }>;
+}
+
 interface MyDayPost {
   content: string;
-  emotion_summary?: string;  
+  emotion_summary?: string;
   image_url?: string;
   is_anonymous?: boolean;
   emotion_ids?: number[];
-  
 }
 interface MyDayCommentAttributes {
   comment_id?: number;
@@ -141,28 +164,19 @@ await db.MyDayEmotion.bulkCreate(
 
 await db.EmotionLog.bulkCreate(
   emotion_ids.map(id => ({
-    user_id: user_id as number,  // 명시적으로 숫자 타입으로 변환
+    user_id: user_id as number,
     emotion_id: id,
     log_date: new Date(),
     note: null
-  })) as Array<Optional<EmotionLogAttributes, "note">>,  // 타입 명시적 지정
+  })) as Array<Optional<EmotionLogAttributes, "note">>,
   { 
     transaction,
-    validate: true  // 유효성 검사 추가
+    validate: true
   }
 );
 }
 
-const post = await db.MyDayPost.create({  // 이 부분이 문제
-  user_id,
-  content,
-  emotion_summary: emotion_summary || null,
-  image_url: image_url || null,
-  is_anonymous: is_anonymous || false,
-  character_count: content.length,
-  like_count: 0,
-  comment_count: 0
-}, { transaction });
+
 await transaction.commit();
 return res.json({
   status: 'success',
@@ -185,22 +199,20 @@ return res.json({
 
 // myDayController.ts의 getPosts 함수만 수정
 
-export const getPosts = async (req: AuthRequestGeneric<never, MyDayQuery>, res: Response) => {
+export const getPosts = async (req: AuthRequestGeneric<never, PostQuery>, res: Response) => {
   try {
     const user_id = req.user?.user_id;
-    if (!checkAuth(user_id)) {
+    if (!user_id) {
       return res.status(401).json({
         status: 'error',
         message: '인증이 필요합니다.'
       });
     }
 
-    const { page = '1', limit = '10', emotion, start_date, end_date, sort_by = 'latest' } = req.query;
-    const pageNum = Number(page);
-    const limitNum = Number(limit);
-    const offset = (pageNum - 1) * limitNum;
+    const { emotion, start_date, end_date, sort_by = 'latest' } = req.query;
+    const { limit, offset, page } = getPaginationOptions(req.query.page, req.query.limit);
 
-    const whereClause: any = { user_id };
+    const whereClause: any = {};
     if (emotion) {
       whereClause['$emotions.name$'] = emotion;
     }
@@ -214,30 +226,50 @@ export const getPosts = async (req: AuthRequestGeneric<never, MyDayQuery>, res: 
       where: whereClause,
       include: [
         {
+          model: db.User,
+          as: 'user', // 'as' 속성 추가
+          attributes: ['nickname', 'profile_image_url'],
+          required: false
+        },
+        {
           model: db.Emotion,
           as: 'emotions',
-          attributes: ['name', 'icon'],
+          attributes: ['emotion_id', 'name', 'icon'],
           through: { attributes: [] }
         }
       ],
-      order: [['created_at', 'DESC']],
-      limit: limitNum,
+      order: getOrderClause(sort_by),
+      limit,
       offset,
       distinct: true
     });
-  
+
+    const formattedPosts = posts.rows.map((post) => {
+      const postData: any = post.get();
+      return {
+        ...postData,
+        User: postData.is_anonymous ? null : postData.User,
+        emotions: Array.isArray(postData.emotions)
+          ? postData.emotions.map((emotion: any) => emotion.get())
+          : [],
+        total_comments: postData.comment_count,
+        total_likes: postData.like_count
+      };
+    });
+
     return res.json({
       status: 'success',
       data: {
-        posts: posts.rows,
+        posts: formattedPosts,
         pagination: {
-          current_page: pageNum,
-          total_pages: Math.ceil(posts.count / limitNum),
-          total_count: posts.count
+          current_page: page,
+          items_per_page: limit,
+          total_pages: Math.ceil(posts.count / limit),
+          total_count: posts.count,
+          has_next: offset + limit < posts.count
         }
       }
     });
-  
   } catch (error) {
     console.error('게시물 조회 오류:', error);
     return res.status(500).json({
@@ -247,6 +279,7 @@ export const getPosts = async (req: AuthRequestGeneric<never, MyDayQuery>, res: 
   }
 };
 
+// myDayController.ts 수정
 export const createComment = async (req: AuthRequestGeneric<MyDayComment, never, PostParams>, res: Response) => {
   const transaction = await db.sequelize.transaction();
   try {
@@ -262,7 +295,9 @@ export const createComment = async (req: AuthRequestGeneric<MyDayComment, never,
       });
     }
  
+    // 게시물 존재 여부 확인
     const post = await db.MyDayPost.findByPk(id, { transaction });
+    
     if (!post) {
       await transaction.rollback();
       return res.status(404).json({
@@ -270,51 +305,51 @@ export const createComment = async (req: AuthRequestGeneric<MyDayComment, never,
         message: '게시물을 찾을 수 없습니다.'
       });
     }
-// 댓글 생성 
-const comment = await db.MyDayComment.create({
-  post_id: Number(id),
-  user_id: user_id,
-  content: content,
-  is_anonymous: is_anonymous || false
-}, { 
-  transaction 
-});
-
-// increment 부분도 수정
-await db.MyDayPost.increment('comment_count', {
-  by: 1,
-  where: { post_id: Number(id) },
-  transaction
-});
-
-if (post.get('user_id') !== user_id) {
-  await db.Notification.create({
-    user_id: post.get('user_id'),
-    content: '회원님의 게시물에 새로운 댓글이 달렸습니다.',
-    notification_type: 'comment',
-    is_read: false
-  }, { transaction });
-}
-
-  
-await transaction.commit();
-return res.status(201).json({
-  status: 'success',
-  data: {
-    comment_id: comment.get('comment_id')
+ 
+    // 댓글 생성 
+    const comment = await db.MyDayComment.create({
+      post_id: Number(id),
+      user_id: user_id,
+      content: content,
+      is_anonymous: is_anonymous || false
+    }, { 
+      transaction 
+    });
+ 
+    // increment comment_count
+    await db.MyDayPost.increment('comment_count', {
+      by: 1,
+      where: { post_id: Number(id) },
+      transaction
+    });
+ 
+    if (post.get('user_id') !== user_id) {
+      await db.Notification.create({
+        user_id: post.get('user_id'),
+        content: '회원님의 게시물에 새로운 댓글이 달렸습니다.',
+        notification_type: 'comment',
+        is_read: false
+      }, { transaction });
+    }
+ 
+    await transaction.commit();
+    return res.status(201).json({
+      status: 'success',
+      data: {
+        comment_id: comment.get('comment_id')
+      }
+    });
+ 
+  } catch (error) {
+    await transaction.rollback();
+    console.error('댓글 작성 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '댓글 작성 중 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다'
+    });
   }
-});
-
- } catch (error) {
-  await transaction.rollback();
-  console.error('댓글 작성 오류:', error);
-  return res.status(500).json({
-    status: 'error',
-    message: '댓글 작성 중 오류가 발생했습니다.',
-    details: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다'
-  });
-}
-};
+ };
 
 
 export const likePost = async (req: AuthRequestGeneric<never, never, PostParams>, res: Response) => {
@@ -391,11 +426,154 @@ export const likePost = async (req: AuthRequestGeneric<never, never, PostParams>
     });
   }
  };
+
+ 
+
+
+// myDayPost 삭제 함수 추가
+export const deletePost = async (req: AuthRequestGeneric<never, never, { id: string }>, res: Response) => {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const user_id = req.user?.user_id;
+
+    if (!user_id) {
+      await transaction.rollback();
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
+
+    // 게시물 조회
+    const post = await db.MyDayPost.findOne({
+      where: { 
+        post_id: id
+      },
+      transaction
+    });
+    
+    if (!post) {
+      await transaction.rollback();
+      return res.status(404).json({
+        status: 'error',
+        message: '게시물을 찾을 수 없습니다.'
+      });
+    }
+    
+    // 권한 체크
+    if (post.user_id !== user_id) {
+      await transaction.rollback();
+      return res.status(403).json({
+        status: 'error',
+        message: '이 게시물을 삭제할 권한이 없습니다.'
+      });
+    }
+
+    // 연관된 데이터 먼저 삭제
+    await db.MyDayEmotion.destroy({
+      where: { post_id: id },
+      transaction
+    });
+
+    await db.MyDayLike.destroy({
+      where: { post_id: id },
+      transaction  
+    });
+
+    await db.MyDayComment.destroy({
+      where: { post_id: id },
+      transaction
+    });
+
+    // 게시물 삭제  
+    await db.MyDayPost.destroy({
+      where: { post_id: id },
+      transaction
+    });
+
+    await transaction.commit();
+    return res.json({
+      status: 'success',
+      message: '게시물이 삭제되었습니다.'
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('게시물 삭제 오류:', error);
+    return res.status(500).json({
+      status: 'error', 
+      message: '게시물 삭제 중 오류가 발생했습니다.'
+    });
+  }
+};
+export const getMyPosts = async (req: AuthRequestGeneric<never, MyDayQuery>, res: Response) => {
+  try {
+    const user_id = req.user?.user_id;
+    if (!user_id) {
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
+
+    const { sort_by = 'latest' } = req.query;
+    const { limit, offset, page } = getPaginationOptions(req.query.page, req.query.limit);
+
+    const posts = await db.MyDayPost.findAndCountAll({
+      where: { user_id },
+      include: [
+        {
+          model: db.Emotion,
+          as: 'emotions',
+          attributes: ['emotion_id', 'name', 'icon'],
+          through: { attributes: [] }
+        }
+      ],
+      order: getOrderClause(sort_by),
+      limit,
+      offset,
+      distinct: true
+    });
+
+    const formattedPosts = posts.rows.map(post => {
+      const postData = post.get() as MyDayPostWithEmotions;
+      return {
+        ...postData,
+        emotions: postData.emotions || []
+      };
+    });
+
+    return res.json({
+      status: 'success',
+      data: {
+        posts: formattedPosts,
+        pagination: {
+          current_page: page,
+          items_per_page: limit,
+          total_pages: Math.ceil(posts.count / limit),
+          total_count: posts.count,
+          has_next: offset + limit < posts.count
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('내 게시물 조회 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '내 게시물 조회 중 오류가 발생했습니다.'
+    });
+  }
+};
+
 const myDayController = {
   createPost,
   getPosts,
+  getMyPosts, // getMyPosts 추가
   createComment,
-  likePost
+  likePost,
+  deletePost
 };
 
 export default myDayController;

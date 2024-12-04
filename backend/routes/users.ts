@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { validateRequest } from '../middleware/validationMiddleware';
 import authMiddleware from '../middleware/authMiddleware';
 import userController from '../controllers/userController';
-
 const router = Router();
 const expressValidator = require('express-validator');
 const { body, query } = expressValidator;
@@ -40,7 +39,8 @@ router.post(
   ]),
   userController.login
 );
-
+// 사용자 차단 해제
+router.delete('/block', authMiddleware, userController.unblockUser);
 // 프로필 조회 
 router.get('/profile', authMiddleware, userController.getProfile);
 
@@ -60,7 +60,8 @@ router.put(
   ]),
   userController.updateProfile
 );
-
+// 사용자차단
+router.post('/block', authMiddleware, userController.blockUser);
 // 비밀번호 변경
 router.put(
   '/password',
@@ -118,4 +119,16 @@ router.get(
   userController.checkNickname
 );
 
-export default router;
+// 알림 설정 업데이트 라우트 추가
+router.put(
+  '/notification-settings',
+  authMiddleware,
+  validateRequest([
+  body('like_notifications').isBoolean().withMessage('좋아요 알림 설정은 boolean 값이어야 합니다.'),
+  body('comment_notifications').isBoolean().withMessage('댓글 알림 설정은 boolean 값이어야 합니다.'),
+  body('challenge_notifications').isBoolean().withMessage('챌린지 알림 설정은 boolean 값이어야 합니다.'),
+  body('encouragement_notifications').isBoolean().withMessage('격려 알림 설정은 boolean 값이어야 합니다.')
+  ]),
+  userController.updateNotificationSettings
+  );
+  export default router;
