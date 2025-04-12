@@ -43,16 +43,6 @@ export class Emotion extends Model<EmotionAttributes> {
         color: {
           type: DataTypes.STRING(50),
           allowNull: false
-        },
-        created_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
-        },
-        updated_at: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW
         }
       },
       {
@@ -82,5 +72,3 @@ export const defaultEmotions = [
   { name: '충격', description: '놀랍고 충격적인 감정', icon: 'lightning-bolt' },
   { name: '편함', description: '평화롭고 편안한 감정', icon: 'sofa-outline' }
 ];
-
-export default Emotion;

@@ -1,10 +1,13 @@
-import request from 'supertest';
-import express, { Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
+import express, { Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
+import request from 'supertest';
 import { corsMiddleware } from '../middleware/corsMiddleware';
-import { apiLimiter } from '../middleware/rateLimitMiddleware';
 import { configSecurity } from '../middleware/securityMiddleware';
-import config from '../config/config';
+
+// 테스트용 rate limit 설정하기 위한 환경 변수
+const originalTestRateLimit = process.env.TEST_RATE_LIMIT;
+process.env.TEST_RATE_LIMIT = 'true';
 
 // 테스트용 앱과 실제 앱을 분리
 const createApp = (useRateLimit: boolean = true) => {
@@ -19,9 +22,27 @@ const createApp = (useRateLimit: boolean = true) => {
   configSecurity(app);
   app.use(corsMiddleware);
   
-  // rate limit은 조건부로 적용
+  // rate limit은 조건부로 적용 - 직접 생성
   if (useRateLimit) {
-    app.use(apiLimiter);
+    // 테스트용 rate limiter - 매우 작은 한계값 설정
+    const testLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 5, // 매우 작은 한계값
+      message: {
+        status: 'error',
+        message: '너무 많은 요청이 발생했습니다.'
+      },
+      standardHeaders: true,
+      legacyHeaders: true,
+      skipSuccessfulRequests: false,
+      handler: (req: Request, res: Response) => {
+        res.status(429).json({
+          status: 'error',
+          message: '너무 많은 요청이 발생했습니다.'
+        });
+      }
+    });
+    app.use(testLimiter);
   }
 
   // 테스트 라우트
@@ -55,7 +76,8 @@ describe('Security Middleware Tests', () => {
   const appWithoutRateLimit = createApp(false);
 
   it('should limit repeated requests', async () => {
-    for (let i = 0; i < 100; i++) {
+    // 많은 요청을 보내서 rate limit에 도달하게 함 - 10개만 해도 충분
+    for (let i = 0; i < 10; i++) {
       await request(appWithRateLimit).get('/api/users/profile');
     }
     const response = await request(appWithRateLimit).get('/api/users/profile');
@@ -111,5 +133,11 @@ describe('Security Middleware Tests', () => {
     if (process.env.NODE_ENV === 'production') {
       expect(authCookie).toMatch(/Secure/);
     }
+  });
+
+  // 테스트 후 원래 환경 변수 복원
+   // 테스트 후 원래 환경 변수 복원
+   afterAll(() => {
+    process.env.TEST_RATE_LIMIT = originalTestRateLimit;
   });
 });

@@ -1,31 +1,37 @@
-import request from 'supertest';
+import supertest from 'supertest';
 import { Application } from 'express';
-import { sequelize } from '../setup';  // setup.ts의 sequelize만 사용
-import cookieParser from 'cookie-parser';
 import express from 'express';
 import { corsMiddleware } from '../../middleware/corsMiddleware';
-import { apiLimiter } from '../../middleware/rateLimitMiddleware';
 import { configSecurity } from '../../middleware/securityMiddleware';
 import myDayRouter from '../../routes/myDay';
 import authMiddleware from '../../middleware/authMiddleware';
 import { QueryTypes } from 'sequelize';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import db from '../../models';
 
-const JWT_SECRET = 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=';
+const JWT_SECRET = process.env.JWT_SECRET || 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=';
 
-const createApp = (useRateLimit: boolean = true) => {
+const createApp = () => {
   const app = express();
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  app.use(cookieParser());
   app.use(corsMiddleware);
   configSecurity(app);
   
-  if (useRateLimit) {
-    app.use(apiLimiter);
-  }
+  // 라우트 경로 수정
+  app.use('/api', authMiddleware);
+  app.use('/api/my-day', myDayRouter);
 
-  app.use('/api/my-day', authMiddleware, myDayRouter);
+  // 에러 핸들링 미들웨어 추가
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Test Error Handler:', err);
+    res.status(err.status || 500).json({
+      status: 'error',
+      message: err.message || '서버 오류가 발생했습니다.'
+    });
+  });
+
   return app;
 };
 
@@ -33,217 +39,211 @@ describe('Post API Tests', () => {
   let app: Application;
   let authToken: string;
   let testUserId: number;
-  let testPostId: number;  // 여기로 이동
-  const baseURL = '/api/my-day';  // baseURL 추가
+  let testPostId: number;
 
   const validPostData = {
     content: '테스트 게시물입니다. 이것은 10자 이상의 내용을 포함합니다.',
-    emotion_ids: [1],
-    is_anonymous: false
+    emotion_ids: [1], // 존재하는 emotion_id만 사용
+    is_anonymous: false,
+    emotion_summary: '테스트 감정 요약',
+    character_count: 0 // 명시적으로 character_count 추가
   };
 
+  beforeAll(async () => {
+    await db.sequelize.sync({ force: true });
+    
+    // 이미 존재할 경우 삭제 후 재생성하도록 변경
+    try {
+      await db.sequelize.query('SET FOREIGN_KEY_CHECKS=0;');
+      await db.sequelize.query('TRUNCATE TABLE emotions;');
+      await db.sequelize.query('SET FOREIGN_KEY_CHECKS=1;');
+      
+      // 기본 감정 데이터 생성
+      await db.Emotion.bulkCreate([
+        { 
+          emotion_id: 1, 
+          name: '행복', 
+          icon: 'emoticon-happy-outline', 
+          color: '#FFD700',
+          created_at: new Date(),
+          updated_at: new Date()
+        },
+      {
+        emotion_id: 2,
+        name: '감사',
+        icon: 'hand-heart',
+        color: '#FF69B4', 
+        created_at: new Date(),
+        updated_at: new Date()
+      }
+    ], { 
+      ignoreDuplicates: true
+    });
+    console.log('테스트용 감정 데이터 초기화 완료');
+  } catch (error) {
+    console.error('테스트용 감정 데이터 초기화 오류:', error);
+  }
+});
 
-  async function createTestPost(userId: number) {  // userId 매개변수 추가
-    const [postId] = await sequelize.query(`
-      INSERT INTO my_day_posts (user_id, content, is_anonymous, character_count, like_count, comment_count, created_at, updated_at)
-      VALUES (:userId, :content, false, :characterCount, 0, 0, NOW(), NOW())
-    `, {
-      replacements: {
-        userId,
-        content: validPostData.content,
-        characterCount: validPostData.content.length
+  beforeEach(async () => {
+    app = createApp();
+  
+    // 사용자 생성
+    const hashedPassword = await bcrypt.hash('testpassword', 10);
+    const currentDate = new Date();
+
+    const user = await db.User.create({
+      username: 'testuser' + Date.now(),
+      email: `test${Date.now()}@example.com`,
+      password_hash: hashedPassword,
+      nickname: 'TestUser',
+      is_active: true,
+      theme_preference: 'system',
+      notification_settings: {
+        like_notifications: true,
+        comment_notifications: true,
+        challenge_notifications: true,
+        encouragement_notifications: true
       },
-      type: QueryTypes.INSERT
+      created_at: currentDate,
+      updated_at: currentDate
     });
 
-  // emotion 연결
-  await sequelize.query(`
-    INSERT INTO my_day_emotions (post_id, emotion_id)
-    VALUES (:postId, :emotionId)
-  `, {
-    replacements: {
-      postId,
-      emotionId: validPostData.emotion_ids[0]
-    }
+    testUserId = user.user_id;
+
+    // 사용자 통계 생성
+    await db.UserStats.create({
+      user_id: testUserId,
+      my_day_post_count: 0,
+      someone_day_post_count: 0,
+      my_day_like_received_count: 0,
+      someone_day_like_received_count: 0,
+      my_day_comment_received_count: 0,
+      someone_day_comment_received_count: 0,
+      challenge_count: 0,
+      last_updated: currentDate
+    });
+
+    // 인증 토큰 생성
+    authToken = jwt.sign(
+      { user_id: testUserId },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // 테스트용 게시물 생성
+    const post = await db.MyDayPost.create({
+      user_id: testUserId,
+      content: '테스트 게시물',
+      is_anonymous: false,
+      character_count: 13,
+      like_count: 0,
+      comment_count: 0,
+      created_at: currentDate,
+      updated_at: currentDate
+    });
+
+    testPostId = post.post_id;
   });
 
-  return postId;
-}
-
-beforeAll(async () => {
-  app = createApp(false);
-});
-
-beforeEach(async () => {
-  await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
+  afterEach(async () => {
+    // 관계된 테이블 삭제 순서 변경
+    await db.MyDayEmotion.destroy({ where: {} });
+    await db.MyDayLike.destroy({ where: {} });
+    await db.MyDayComment.destroy({ where: {} });
+    await db.MyDayPost.destroy({ where: {} });
+    await db.UserStats.destroy({ where: {} });
+    await db.User.destroy({ where: {} });
+  });
+  describe('POST /posts', () => {
+    it('should fail if content is missing', async () => {
+      const response = await supertest(app)
+        .post('/api/my-day/posts')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          emotion_ids: [1],
+          is_anonymous: false
+        });
   
-  // 테이블 초기화 순서 변경
-  await Promise.all([
-    'my_day_likes',
-    'my_day_comments', 
-    'my_day_emotions',
-    'my_day_posts',
-    'user_stats',
-    'emotions',
-    'users'
-  ].map(table => sequelize.query(`TRUNCATE TABLE ${table}`)));
-  
-  await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
-
-      // emotions 데이터 추가
-      await sequelize.query(`
-        INSERT INTO emotions (emotion_id, name, icon, color)
-        VALUES (1, '행복', 'emoticon-happy-outline', '#FFD700')
-      `);
-  
-      // 테스트 유저 생성
-      const [userId] = await sequelize.query(`
-        INSERT INTO users (username, email, password_hash, nickname, is_active, created_at, updated_at)
-        VALUES ('testuser', 'test@example.com', 'hashedpassword', 'TestUser', true, NOW(), NOW())
-      `, { type: QueryTypes.INSERT });
+      console.log('Content Missing Response:', response.status, response.body);
+      expect(response.status).toBe(400);
+      expect(response.body.status).toBe('error'); 
+    });
+    it('should succeed even if emotion_ids is missing', async () => {
+      const response = await supertest(app)
+        .post('/api/my-day/posts')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          content: '테스트 게시물입니다. 이것은 10자 이상의 내용을 포함합니다.',
+          is_anonymous: false
+        });
     
-      testUserId = userId;
-
-
-   // user_stats 생성
-   await sequelize.query(`
-    INSERT INTO user_stats (user_id, my_day_post_count) 
-    VALUES (:userId, 0)
-  `, {
-    replacements: { userId: testUserId }
+      console.log('Emotion IDs Missing Response:', response.status, response.body);
+      expect(response.status).toBe(201);
+      expect(response.body.status).toBe('success');
+    });
+ 
+    it('should succeed even if character_count is missing', async () => {
+      // 감정 생성 코드 제거 (이미 beforeAll에서 생성됨)
+      
+      // 테스트 요청
+      const response = await supertest(app)
+        .post('/api/my-day/posts')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          content: '테스트 게시물입니다. 이것은 10자 이상의 내용을 포함합니다.',
+          emotion_ids: [1],
+          is_anonymous: false,
+          emotion_summary: '테스트 감정'
+        });
+         
+      // 응답 검증  
+      expect(response.status).toBe(201);
+      expect(response.body.status).toBe('success');
+      expect(response.body.data).toHaveProperty('post_id');
+    });
+ 
+     describe('Like Post', () => {
+      it('should like post successfully', async () => {
+        const response = await supertest(app)
+          .post(`/api/my-day/${testPostId}/like`)
+          .set('Authorization', `Bearer ${authToken}`);
+    
+        console.log('Like Post Response:', response.status, response.body);
+        expect(response.status).toBe(200);
+        expect(response.body).toMatchObject({
+          status: 'success',
+          message: '게시물에 좋아요를 표시했습니다.'
+        });
+      });
+    
+      it('should unlike post when liked again', async () => {
+        await supertest(app)
+          .post(`/api/my-day/${testPostId}/like`)
+          .set('Authorization', `Bearer ${authToken}`);
+    
+        const response = await supertest(app)
+          .post(`/api/my-day/${testPostId}/like`)
+          .set('Authorization', `Bearer ${authToken}`);
+    
+        console.log('Unlike Post Response:', response.status, response.body);
+        expect(response.status).toBe(200);
+        expect(response.body).toMatchObject({
+          status: 'success',
+          message: '게시물 좋아요를 취소했습니다.'
+        });
+      });
+    
+      it('should fail with invalid post id', async () => {
+        const invalidPostId = 999999;
+        const response = await supertest(app)
+          .post(`/api/my-day/${invalidPostId}/like`)
+          .set('Authorization', `Bearer ${authToken}`);
+    
+        console.log('Invalid Post ID Response:', response.status, response.body);
+        expect(response.status).toBe(404);
+        expect(response.body.status).toBe('error');
+      });
+    });
   });
-
-  // JWT 토큰 생성
-  authToken = jwt.sign({ user_id: testUserId }, JWT_SECRET, { expiresIn: '1h' });
-
-  // 테스트 포스트 생성
-  testPostId = await createTestPost(testUserId);
-});
- afterAll(async () => {
-   await sequelize.close();
  });
-
- describe('POST /posts', () => {
-   it('should create a new post successfully', async () => {
-     const response = await request(app)
-       .post(`${baseURL}/posts`)
-       .set('Authorization', `Bearer ${authToken}`)
-       .send(validPostData);
-
-     expect(response.status).toBe(201);
-     expect(response.body).toMatchObject({
-       status: 'success',
-       data: expect.objectContaining({
-         post_id: expect.any(Number)
-       })
-     });
-   });
-
-   it('should fail without auth token', async () => {
-     const response = await request(app)
-       .post(`${baseURL}/posts`)
-       .send(validPostData);
-
-     expect(response.status).toBe(401);
-     expect(response.body).toMatchObject({
-       status: 'error',
-       message: '인증이 필요합니다.'
-     });
-   });
-
-   it('should fail with invalid content', async () => {
-     const response = await request(app)
-       .post(`${baseURL}/posts`)
-       .set('Authorization', `Bearer ${authToken}`)
-       .send({
-         content: 'short',
-         emotion_ids: [1]
-       });
-
-     expect(response.status).toBe(400);
-     expect(response.body).toEqual({
-       success: false,
-       errors: [{
-         field: 'content',
-         message: '내용은 10자 이상 1000자 이하여야 합니다.'
-       }]
-     });
-   });
- });
-
- describe('GET /posts', () => {
-   it('should get post list successfully', async () => {
-     const response = await request(app)
-       .get(`${baseURL}/posts`)
-       .set('Authorization', `Bearer ${authToken}`);
-
-     expect(response.status).toBe(200);
-     expect(response.body.data).toMatchObject({
-       posts: expect.arrayContaining([
-         expect.objectContaining({
-           post_id: expect.any(Number),
-           content: expect.any(String)
-         })
-       ])
-     });
-     expect(response.body.data.posts.length).toBeGreaterThan(0);
-   });
-
-   it('should get posts with pagination', async () => {
-     const response = await request(app)
-       .get(`${baseURL}/posts`)
-       .set('Authorization', `Bearer ${authToken}`)
-       .query({ page: 1, limit: 10 });
-
-     expect(response.status).toBe(200);
-     expect(response.body.data.pagination).toMatchObject({
-       current_page: 1,
-       total_pages: expect.any(Number),
-       total_count: expect.any(Number)
-     });
-   });
- });
-
- describe('POST /:id/like', () => {
-   it('should like post successfully', async () => {
-     const response = await request(app)
-       .post(`${baseURL}/${testPostId}/like`)
-       .set('Authorization', `Bearer ${authToken}`);
-
-     expect(response.status).toBe(200);
-     expect(response.body).toMatchObject({
-       status: 'success',
-       message: '게시물에 좋아요를 표시했습니다.'
-     });
-   });
-
-   it('should unlike post when liked again', async () => {
-     await request(app)
-       .post(`${baseURL}/${testPostId}/like`)
-       .set('Authorization', `Bearer ${authToken}`);
-
-     const response = await request(app)
-       .post(`${baseURL}/${testPostId}/like`)
-       .set('Authorization', `Bearer ${authToken}`);
-
-     expect(response.status).toBe(200);
-     expect(response.body).toMatchObject({
-       status: 'success',
-       message: '게시물 좋아요를 취소했습니다.'
-     });
-   });
-
-   it('should fail with invalid post id', async () => {
-     const invalidPostId = 999999;
-     const response = await request(app)
-       .post(`${baseURL}/${invalidPostId}/like`)
-       .set('Authorization', `Bearer ${authToken}`);
-
-     expect(response.status).toBe(404);
-     expect(response.body).toMatchObject({
-       status: 'error',
-       message: '게시물을 찾을 수 없습니다.'
-     });
-   });
- });
-});

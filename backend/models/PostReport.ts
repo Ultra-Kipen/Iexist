@@ -18,30 +18,31 @@ export enum ReportStatus {
 }
 
 interface PostReportAttributes {
- report_id: number;
- post_id: number;
- reporter_id: number;
- report_type: ReportType;
- description: string | null;
- status: ReportStatus;
-}
+  report_id?: number; // report_id를 선택적으로 변경
+  post_id: number;
+  reporter_id: number;
+  report_type: ReportType;
+  description: string | null;
+  status: ReportStatus;
+ }
 
-class PostReport extends Model<PostReportAttributes> {
- public report_id!: number;
- public post_id!: number;
- public reporter_id!: number;
- public report_type!: ReportType;
- public description!: string | null;
- public status!: ReportStatus;
+ class PostReport extends Model<PostReportAttributes> {
+  public report_id?: number; // 속성 정의도 선택적으로 변경
+  public post_id!: number;
+  public reporter_id!: number;
+  public report_type!: ReportType;
+  public description!: string | null;
+  public status!: ReportStatus;
 
- public static initialize(sequelize: Sequelize) {
-   const model = PostReport.init(
-     {
-       report_id: {
-         type: DataTypes.INTEGER,
-         autoIncrement: true,
-         primaryKey: true
-       },
+  public static initialize(sequelize: Sequelize) {
+    const model = PostReport.init(
+      {
+        report_id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+          allowNull: true // allowNull 추가
+        },
        post_id: {
          type: DataTypes.INTEGER,
          allowNull: false,

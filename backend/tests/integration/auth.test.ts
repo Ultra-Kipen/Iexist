@@ -11,12 +11,17 @@ const baseURL = '/api';
 // 데이터베이스 초기화 함수
 const clearDatabase = async () => {
   const tables = [
-    'my_day_posts',
-    'my_day_likes',
+    'encouragement_messages',
     'my_day_comments',
-    'my_day_emotions',
-    'users',
-    'emotions'  // emotions 테이블 추가
+    'my_day_emotions', 
+    'my_day_likes',
+    'my_day_posts',
+    'emotion_logs',
+    'user_stats',
+    'notifications',
+    'user_blocks',
+    'challenges',
+    'users'
   ];
 
   await db.sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
@@ -30,7 +35,7 @@ describe('Auth API Tests', () => {
   const testUser = {
     username: 'testuser',
     email: 'test@example.com',
-    password: 'password123',
+    password: 'password123!', // 특수문자 추가
     nickname: 'TestUser'
   };
 

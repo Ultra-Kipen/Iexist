@@ -14,15 +14,15 @@ class UserGoal extends Model {
           allowNull: false,
           references: {
             model: 'users',
-            key: 'user_id'  // id -> user_id로 변경
+            key: 'user_id'
           }
         },
         target_emotion_id: {
-          type: DataTypes.INTEGER,  // SQLite에서는 UNSIGNED 지원하지 않음
+          type: DataTypes.TINYINT.UNSIGNED,  // INTEGER에서 TINYINT.UNSIGNED로 변경
           allowNull: false,
           references: {
             model: 'emotions',
-            key: 'emotion_id'  // id -> emotion_id로 변경
+            key: 'emotion_id'
           }
         },
         start_date: {
@@ -44,10 +44,13 @@ class UserGoal extends Model {
         modelName: 'UserGoal',
         tableName: 'user_goals',
         timestamps: true,
-        underscored: true
+        underscored: true,
+        charset: 'utf8mb4',
+        collate: 'utf8mb4_general_ci'
       }
     );
-  }
+}
+
   public static associate(models: any) {
     UserGoal.belongsTo(models.User, {
       foreignKey: 'user_id',

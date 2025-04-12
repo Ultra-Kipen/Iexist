@@ -27,7 +27,30 @@ router.post('/',
   ]),
   (req, res) => someoneDayController.createPost(req as any, res)
 );
+router.post('/:id/encourage',
+  authMiddleware,
+  validateRequest([
+    param('id').isInt().withMessage('올바른 게시물 ID가 아닙니다.'),
+    body('message').isLength({ min: 1, max: 1000 })
+      .withMessage('격려 메시지는 1자 이상 1000자 이하여야 합니다.'),
+    body('is_anonymous').optional().isBoolean()
+      .withMessage('익명 여부는 boolean 값이어야 합니다.')
+  ]),
+  (req, res) => someoneDayController.sendEncouragement(req as any, res)
+);
 
+// 기존 엔드포인트와 명칭 통일을 위해 라우트 추가 또는 수정
+router.post('/:id/message',
+  authMiddleware,
+  validateRequest([
+    param('id').isInt().withMessage('올바른 게시물 ID가 아닙니다.'),
+    body('message').isLength({ min: 1, max: 1000 })
+      .withMessage('격려 메시지는 1자 이상 1000자 이하여야 합니다.'),
+    body('is_anonymous').optional().isBoolean()
+      .withMessage('익명 여부는 boolean 값이어야 합니다.')
+  ]),
+  (req, res) => someoneDayController.sendEncouragement(req as any, res)
+);
 router.get('/', 
   authMiddleware,
   validateRequest([

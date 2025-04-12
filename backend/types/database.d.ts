@@ -90,11 +90,3 @@ export interface Database {
   UserGoal: Model<any>;
   EncouragementMessage: Model<EncouragementMessageAttributes>;
 }
-
-declare global {
-  namespace Express {
-    interface User {
-      id: number;
-    }
-  }
-}

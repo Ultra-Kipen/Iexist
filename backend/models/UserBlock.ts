@@ -6,47 +6,44 @@ interface UserBlockAttributes {
 }
 
 class UserBlock extends Model<UserBlockAttributes> {
-  public static initialize(sequelize: Sequelize) {
-    const model = UserBlock.init(
+  public static initialize(sequelize: Sequelize): typeof UserBlock {
+    return UserBlock.init(
       {
         user_id: {
           type: DataTypes.INTEGER,
           primaryKey: true,
           allowNull: false,
-          references: {
-            model: 'users',
-            key: 'user_id'
-          }
+          references: { model: 'users', key: 'user_id' },
         },
         blocked_user_id: {
           type: DataTypes.INTEGER,
           primaryKey: true,
           allowNull: false,
-          references: {
-            model: 'users',
-            key: 'user_id'
-          }
-        }
+          references: { model: 'users', key: 'user_id' },
+        },
       },
       {
         sequelize,
         modelName: 'UserBlock',
         tableName: 'user_blocks',
         timestamps: true,
-        underscored: true
+        underscored: true,
+        freezeTableName: true
       }
     );
-    return model;
   }
 
-  public static associate(models: any) {
+  public static associate(models: any): void {
     UserBlock.belongsTo(models.User, {
       foreignKey: 'user_id',
-      as: 'user'
+      as: 'user',
+      onDelete: 'CASCADE'
     });
+    
     UserBlock.belongsTo(models.User, {
       foreignKey: 'blocked_user_id',
-      as: 'blocked_user'
+      as: 'blocked_user', 
+      onDelete: 'CASCADE'
     });
   }
 }

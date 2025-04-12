@@ -3,12 +3,14 @@ import { Model, DataTypes, Sequelize } from 'sequelize';
 import { User } from './User';
 import { Emotion } from './Emotion';
 
-interface EmotionLogAttributes {
-  log_id: number;
+interface EmotionLogAttributes { 
+  log_id?: number;
   user_id: number;
   emotion_id: number;
-  note: string | null;     // null 허용
+  note: string | null;
   log_date: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export class EmotionLog extends Model<EmotionLogAttributes> {
@@ -32,7 +34,9 @@ export class EmotionLog extends Model<EmotionLogAttributes> {
           references: {
             model: 'users',
             key: 'user_id'
-          }
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE'
         },
         emotion_id: {
           type: DataTypes.TINYINT.UNSIGNED,
@@ -44,13 +48,12 @@ export class EmotionLog extends Model<EmotionLogAttributes> {
         },
         note: {
           type: DataTypes.STRING(200),
-          allowNull: true,
-          defaultValue: null
+          allowNull: true
         },
         log_date: {
-          type: DataTypes.DATEONLY,
+          type: DataTypes.DATE,
           allowNull: false,
-          defaultValue: DataTypes.NOW
+          defaultValue: DataTypes.NOW 
         }
       },
       {
@@ -58,7 +61,18 @@ export class EmotionLog extends Model<EmotionLogAttributes> {
         modelName: 'EmotionLog',
         tableName: 'emotion_logs',
         timestamps: true,
-        underscored: true
+        underscored: true,
+        indexes: [
+          {
+            fields: ['user_id']
+          },
+          {
+            fields: ['emotion_id']
+          },
+          {
+            fields: ['log_date']
+          }
+        ]
       }
     );
   }

@@ -2,8 +2,6 @@ import { Application, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
-// xss-clean은 CommonJS 모듈이므로 require 사용
-const xssClean = require('xss-clean');
 
 export const configSecurity = (app: Application): void => {
   // 기본 보안 헤더 설정
@@ -16,19 +14,30 @@ export const configSecurity = (app: Application): void => {
         imgSrc: ["'self'", "data:", "https:"],
       },
     },
-    xssFilter: true,
+    xssFilter: true,  // XSS 필터 활성화
     noSniff: true,
     referrerPolicy: { policy: 'same-origin' }
   }));
-
-  // XSS 공격 방지
-  app.use(xssClean());
 
   // HTTP Parameter Pollution 방지
   app.use(hpp());
 
   // Cookie Parser
   app.use(cookieParser());
+
+  // 추가적인 XSS 방어 미들웨어
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // 입력값 검증 로직 (예시)
+    if (req.body) {
+      for (const key in req.body) {
+        if (typeof req.body[key] === 'string') {
+          // 기본적인 HTML 태그 제거
+          req.body[key] = req.body[key].replace(/<[^>]*>/g, '');
+        }
+      }
+    }
+    next();
+  });
 
   // 보안 관련 응답 헤더 설정
   app.use((req: Request, res: Response, next: NextFunction) => {

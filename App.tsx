@@ -12,10 +12,10 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { enableScreens } from 'react-native-screens';
 
 // 스크린 임포트 시 절대 경로 사용
-import HomeScreen from '@screens/HomeScreen';
-import ComfortScreen from '@screens/ComfortScreen';
-import ReviewScreen from '@screens/ReviewScreen';
-import ChallengeScreen from '@screens/ChallengeScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import ComfortScreen from './src/screens/ComfortScreen';
+import ReviewScreen from './src/screens/ReviewScreen';
+import ChallengeScreen from './src/screens/ChallengeScreen';
 
 enableScreens();
 

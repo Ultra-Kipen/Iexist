@@ -1,7 +1,6 @@
-import { Model, DataTypes, Sequelize } from 'sequelize';
+import { DataTypes, Model, Sequelize } from 'sequelize';
 import { User } from '../models/User';
-import Tag from '../models/Tag';
-import EncouragementMessage from '../models/EncouragementMessage';
+// Tag와 EncouragementMessage 직접 임포트 제거
 
 interface SomeoneDayPostAttributes {
  post_id?: number; 
@@ -47,113 +46,116 @@ class SomeoneDayPost extends Model<SomeoneDayPostAttributes> {
         model: User,
         as: 'user',
         attributes: ['nickname', 'profile_image_url']
-      },
-      {
-        model: Tag,
-        as: 'tags',
-        through: { attributes: [] }
       }
+      // Tag 모델은 실제 사용 시점에서 동적으로 조회
     ]
   });
 }
 
- public static initialize(sequelize: Sequelize) {
-   const model = SomeoneDayPost.init(
-     {
-       post_id: {
-         type: DataTypes.INTEGER,
-         autoIncrement: true,
-         primaryKey: true
-       },
-       user_id: {
-         type: DataTypes.INTEGER,
-         allowNull: false,
-         references: {
-           model: 'users',
-           key: 'user_id'
-         }
-       },
-       title: {
-         type: DataTypes.STRING(100),
-         allowNull: false,
-         validate: {
-           len: [5, 100]
-         }
-       },
-       content: {
-         type: DataTypes.TEXT,
-         allowNull: false,
-         validate: {
-           len: [20, 2000]
-         }
-       },
-       summary: {
-         type: DataTypes.STRING(200),
-         allowNull: true
-       },
-       image_url: {
-         type: DataTypes.STRING(255),
-         allowNull: true
-       },
-       is_anonymous: {
-         type: DataTypes.BOOLEAN,
-         allowNull: false,
-         defaultValue: false
-       },
-       character_count: {
-         type: DataTypes.INTEGER,
-         allowNull: true
-       },
-       like_count: {
-         type: DataTypes.INTEGER,
-         allowNull: false,
-         defaultValue: 0
-       },
-       comment_count: {
-         type: DataTypes.INTEGER,
-         allowNull: false,
-         defaultValue: 0
-       },
-           },
-     {
-       sequelize,
-       modelName: 'SomeoneDayPost',
-       tableName: 'someone_day_posts',
-       timestamps: true,
-       underscored: true,
-       indexes: [
-         {
-           fields: ['user_id']
-         },
-         {
-           fields: ['created_at']
-         },
-         {
-           fields: ['like_count']
-         }
-       ]
-     }
-   );
-   return model;
- }
+public static initialize(sequelize: Sequelize) {
+  const model = SomeoneDayPost.init(
+    {
+      post_id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true
+      },
+      user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'users',
+          key: 'user_id'
+        }
+      },
+      title: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        validate: {
+          len: [5, 100]
+        }
+      },
+      content: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        validate: {
+          len: [20, 2000]
+        }
+      },
+      summary: {
+        type: DataTypes.STRING(200),
+        allowNull: true
+      },
+      image_url: {
+        type: DataTypes.STRING(255),
+        allowNull: true
+      },
+      is_anonymous: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      },
+      character_count: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+      },
+      like_count: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+      },
+      comment_count: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+      },
+      created_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+      },
+      updated_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+      }
+    },
+    {
+      sequelize,
+      modelName: 'SomeoneDayPost',
+      tableName: 'someone_day_posts',
+      timestamps: false, // 자동 타임스탬프 비활성화
+      underscored: true,
+      indexes: [
+        {
+          fields: ['user_id']
+        },
+        {
+          fields: ['created_at']
+        },
+        {
+          fields: ['like_count']
+        }
+      ]
+    }
+  );
+  return model;
+}
 
- public static associate(models: {
-  User: typeof User;
-  Tag: typeof Tag;
-  EncouragementMessage: typeof EncouragementMessage; // 추가
-}): void {
-   SomeoneDayPost.belongsTo(models.User, {
-     foreignKey: 'user_id',
-     as: 'user'
-   });
+public static associate(models: any): void {
+  SomeoneDayPost.belongsTo(models.User, {
+    foreignKey: 'user_id',
+    as: 'user'
+  });
 
-   SomeoneDayPost.belongsToMany(models.Tag, {
-     through: 'someone_day_tags',
-     foreignKey: 'post_id',
-     otherKey: 'tag_id',
-     as: 'tags'
-   });
-   SomeoneDayPost.hasMany(models.EncouragementMessage, {
+  SomeoneDayPost.belongsToMany(models.Tag, {
+    through: 'someone_day_tags',
+    foreignKey: 'post_id',
+    otherKey: 'tag_id',
+    as: 'tags'
+  });
+ 
+  SomeoneDayPost.hasMany(models.EncouragementMessage, {
     foreignKey: 'post_id',
     as: 'encouragement_messages'
   });

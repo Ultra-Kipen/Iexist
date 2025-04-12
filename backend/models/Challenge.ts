@@ -39,7 +39,9 @@ public static initialize(sequelize: Sequelize) {
         references: {
           model: 'users',
           key: 'user_id'
-        }
+        },
+        onDelete: 'CASCADE', // 변경 - CASCADE 제약 추가
+        onUpdate: 'CASCADE'  // 변경 - CASCADE 제약 추가
       },
       title: {
         type: DataTypes.STRING(100),

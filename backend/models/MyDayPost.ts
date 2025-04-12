@@ -60,6 +60,8 @@ public static associate(models: any): void {
  });
 }
 
+// models/MyDayPost.ts 파일 수정
+
 static initialize(sequelize: Sequelize): typeof MyDayPost {
   return MyDayPost.init(
     {
@@ -117,19 +119,41 @@ static initialize(sequelize: Sequelize): typeof MyDayPost {
       timestamps: true,
       underscored: true,
       hooks: {
-        beforeDestroy: async (instance: MyDayPost) => {
-          const { MyDayEmotion, MyDayLike, MyDayComment } = sequelize.models;
-          await Promise.all([
-            MyDayEmotion.destroy({
-              where: { post_id: instance.post_id }
-            }),
-            MyDayLike.destroy({ 
-              where: { post_id: instance.post_id }
-            }), 
-            MyDayComment.destroy({
-              where: { post_id: instance.post_id }
-            })
-          ]);
+        beforeDestroy: async (instance: MyDayPost, options) => {
+          try {
+            const { MyDayEmotion, MyDayLike, MyDayComment } = sequelize.models;
+            
+            // 개별적으로 삭제하고 각 단계에서 오류를 처리
+            try {
+              await MyDayEmotion.destroy({
+                where: { post_id: instance.post_id },
+                transaction: options.transaction
+              });
+            } catch (error) {
+              console.log(`MyDayEmotion 삭제 오류 무시 (post_id: ${instance.post_id}):`, error);
+            }
+            
+            try {
+              await MyDayLike.destroy({ 
+                where: { post_id: instance.post_id },
+                transaction: options.transaction
+              });
+            } catch (error) {
+              console.log(`MyDayLike 삭제 오류 무시 (post_id: ${instance.post_id}):`, error);
+            }
+            
+            try {
+              await MyDayComment.destroy({
+                where: { post_id: instance.post_id },
+                transaction: options.transaction
+              });
+            } catch (error) {
+              console.log(`MyDayComment 삭제 오류 무시 (post_id: ${instance.post_id}):`, error);
+            }
+          } catch (error) {
+            console.error('beforeDestroy hook 오류:', error);
+            // hook에서 오류가 발생해도 삭제는 계속 진행
+          }
         }
       }
     }

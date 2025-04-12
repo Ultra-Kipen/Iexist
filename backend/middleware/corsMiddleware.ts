@@ -1,7 +1,7 @@
-import { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
-import config from '../config/config';
+import { NextFunction, Request, Response } from 'express';
 
+// CORS 설정
 export const corsMiddleware = cors({
   origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
   credentials: true,
@@ -13,13 +13,8 @@ export const corsMiddleware = cors({
   optionsSuccessStatus: 204
 });
 
-// CORS 에러 핸들러
+// 최대한 단순화된 CORS 에러 핸들러
 export const corsErrorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
-  if (err.message === 'CORS 정책에 의해 차단되었습니다.') {
-    return res.status(403).json({
-      status: 'error',
-      message: err.message
-    });
-  }
+  // 바로 다음 에러 핸들러로 전달
   next(err);
 };

@@ -1,28 +1,16 @@
-import { 
-  Model, 
-  DataTypes, 
-  Sequelize,
-  InferAttributes,
-  InferCreationAttributes,
-  CreationOptional,
-  ForeignKey
-} from 'sequelize';
+import { Model, DataTypes, Sequelize } from 'sequelize';
 
-class UserStats extends Model<
-  InferAttributes<UserStats>,
-  InferCreationAttributes<UserStats>
-> {
-  public static initialize(sequelize: Sequelize) {  // initModel -> initialize
-    const model = UserStats.init(
+class UserStats extends Model {
+  public static initialize(sequelize: Sequelize) {
+    return UserStats.init(
       {
         user_id: {
           type: DataTypes.INTEGER,
           primaryKey: true,
           allowNull: false,
-          unique: true,
           references: {
             model: 'users',
-            key: 'user_id' // id -> user_id로 수정
+            key: 'user_id'
           }
         },
         my_day_post_count: {
@@ -70,20 +58,16 @@ class UserStats extends Model<
         sequelize,
         modelName: 'UserStats',
         tableName: 'user_stats',
-        timestamps: true,
-        underscored: true
+        timestamps: false  // createdAt, updatedAt 필드를 사용하지 않음
       }
     );
-    return model;
   }
 
-  public static associate(models: {
-    User: any;
-  }): void {
+  public static associate(models: any): void {
     UserStats.belongsTo(models.User, {
       foreignKey: 'user_id',
-      targetKey: 'user_id',
-      as: 'user'
+      as: 'user',
+      onDelete: 'CASCADE'
     });
   }
 }

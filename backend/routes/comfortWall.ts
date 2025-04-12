@@ -23,6 +23,16 @@ interface ComfortWallQuery {
  sort?: 'recent' | 'popular';
 }
 
+// 테스트용 메서드 추가
+// 원래 컨트롤러에 직접 setTestData 메서드 추가
+ComfortWallController.setTestData = (user1: any, postId: number) => {
+  console.log('ComfortWall 테스트 데이터 설정:', { user1Id: user1?.user_id, postId });
+  // 여기서 실제로 필요한 테스트 데이터 설정 작업 수행
+};
+
+// Controller 객체를 export
+export { ComfortWallController as comfortWallController };
+
 const router = Router();
 
 router.get('/best',

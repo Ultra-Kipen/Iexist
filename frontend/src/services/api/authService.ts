@@ -1,0 +1,64 @@
+// src/services/api/authService.ts
+
+import apiClient from './client';
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  status: string;
+  message: string;
+  data: {
+    token: string;
+    user: {
+      user_id: number;
+      username: string;
+      email: string;
+      nickname?: string;
+    };
+  };
+}
+
+const authService = {
+  login: async (credentials: LoginCredentials) => {
+    return await apiClient.post<AuthResponse>('/auth/login', credentials);
+  },
+  
+  register: async (data: RegisterData) => {
+    return await apiClient.post<AuthResponse>('/auth/register', data);
+  },
+  
+  logout: async () => {
+    return await apiClient.post('/auth/logout');
+  },
+  
+  refreshToken: async (oldToken: string) => {
+    return await apiClient.post<AuthResponse>('/auth/refresh', { token: oldToken });
+  },
+  
+  forgotPassword: async (email: string) => {
+    return await apiClient.post('/users/forgot-password', { email });
+  },
+  
+  resetPassword: async (token: string, newPassword: string) => {
+    return await apiClient.post('/users/reset-password', { token, newPassword });
+  },
+  
+  getProfile: async () => {
+    return await apiClient.get('/users/profile');
+  },
+  
+  updateProfile: async (data: any) => {
+    return await apiClient.put('/users/profile', data);
+  }
+};
+
+export default authService;

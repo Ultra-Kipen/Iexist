@@ -1,17 +1,18 @@
-import { 
-  Model, 
-  DataTypes, 
-  Sequelize, 
-  InferAttributes, 
-  InferCreationAttributes,
+// EncouragementMessage.ts
+import {
   CreationOptional,
+  DataTypes,
   ForeignKey,
-  NonAttribute
+  InferAttributes,
+  InferCreationAttributes,
+  Model,
+  NonAttribute,
+  Sequelize
 } from 'sequelize';
-import { User } from '../models/User';
-import SomeoneDayPost from '../models/SomeoneDayPost';
+import { User } from './User'; // 상대 경로 수정
+import { SomeoneDayPostInterface } from './interfaces/SomeoneDayPostInterface';
 
-class EncouragementMessage extends Model<
+class EncouragementMessage extends Model <
   InferAttributes<EncouragementMessage>,
   InferCreationAttributes<EncouragementMessage>
 > {
@@ -25,107 +26,102 @@ class EncouragementMessage extends Model<
 
   declare sender?: NonAttribute<User>;
   declare receiver?: NonAttribute<User>;
-  declare post?: NonAttribute<SomeoneDayPost>;
+  // any 대신 인터페이스 활용
+  declare post?: NonAttribute<SomeoneDayPostInterface>;
 
-// models/EncouragementMessage.ts
-
-public static initialize(sequelize: Sequelize) {
-  const model = EncouragementMessage.init(
-    {
-      message_id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-      },
-      sender_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'user_id'
-        }
-      },
-      receiver_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'user_id'
-        }
-      },
-      post_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'someone_day_posts',
-          key: 'post_id'
+  public static initialize(sequelize: Sequelize) {
+    const model = EncouragementMessage.init(
+      {
+        message_id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
         },
-        onDelete: 'CASCADE'
-      },
-      message: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-        validate: {
-          len: [1, 1000]
+        sender_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'users',
+            key: 'user_id'
+          }
+        },
+        receiver_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'users',
+            key: 'user_id'
+          }
+        },
+        post_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'someone_day_posts',
+            key: 'post_id'
+          },
+          onDelete: 'CASCADE'
+        },
+        message: {
+          type: DataTypes.TEXT,
+          allowNull: false,
+          validate: {
+            len: [1, 1000]
+          }
+        },
+        is_anonymous: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
         }
       },
-      is_anonymous: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false
-      },
-      created_at: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW
+      {
+        sequelize,
+        modelName: 'EncouragementMessage',
+        tableName: 'encouragement_messages',
+        timestamps: true,
+        updatedAt: false,
+        underscored: true,
+        indexes: [
+          {
+            fields: ['sender_id']
+          },
+          {
+            fields: ['receiver_id']
+          },
+          {
+            fields: ['post_id']
+          },
+          {
+            fields: ['created_at']
+          }
+        ]
       }
-    },
-    {
-      sequelize,
-      modelName: 'EncouragementMessage',
-      tableName: 'encouragement_messages',
-      timestamps: true,
-      updatedAt: false,
-      underscored: true,
-      indexes: [
-        {
-          fields: ['sender_id']
-        },
-        {
-          fields: ['receiver_id']
-        },
-        {
-          fields: ['post_id']
-        },
-        {
-          fields: ['created_at']
-        }
-      ]
-    }
-  );
- 
-  return model; // Return the initialized model
- }
+    );
+   
+    return model;
+  }
 
- public static associate(models: {
-  User: typeof User;
-  SomeoneDayPost: typeof SomeoneDayPost; // 추가
-}): void {
+  public static associate(models: any): void {
     this.belongsTo(models.User, {
       foreignKey: 'sender_id',
       as: 'sender'
     });
-  
+
     this.belongsTo(models.User, {
       foreignKey: 'receiver_id',
       as: 'receiver'
     });
-  
+
     this.belongsTo(models.SomeoneDayPost, {
       foreignKey: 'post_id',
       as: 'post'
     });
-    
   }
 
   toJSON() {

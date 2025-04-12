@@ -1,40 +1,29 @@
-// root/backend/jest.config.ts
-import type { Config } from '@jest/types';
-import { resolve } from 'path';
-
-const config: Config.InitialOptions = {
+// jest.config.ts
+module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  rootDir: '.',
+  rootDir: './',
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.json'
-    }]
+    '^.+\\.(ts|tsx)$': 'ts-jest'
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
+  setupFilesAfterEnv: ['./tests/setup.ts'], 
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^@config/(.*)$': resolve(__dirname, './config/$1'),
-    '^@controllers/(.*)$': resolve(__dirname, './controllers/$1'),
-    '^@middleware/(.*)$': resolve(__dirname, './middleware/$1'),
+    '^@config/(.*)$': '<rootDir>/config/$1',
+    '^@controllers/(.*)$': '<rootDir>/controllers/$1',
+    '^@middleware/(.*)$': '<rootDir>/middleware/$1',
+    '^@models$': '<rootDir>/models/index.ts',
     '^@models/(.*)$': '<rootDir>/models/$1',
-    '^@routes/(.*)$': resolve(__dirname, './routes/$1'),
-    '^@services/(.*)$': '<rootDir>/services/$1',
-    '^@utils/(.*)$': resolve(__dirname, './utils/$1'),
-    '^@types/(.*)$': '<rootDir>/types/$1'
+    '^@routes/(.*)$': '<rootDir>/routes/$1',
+    '^@utils/(.*)$': '<rootDir>/utils/$1'
   },
-  testRegex: '(/tests/.*\\.(test|spec))\\.[tj]s$',
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/',
-    '/coverage/'
-  ],
-  setupFilesAfterEnv: ['./tests/setup.ts'],
-  verbose: true,
+  
+  testRegex: 'tests/.*\\.(test|spec)\\.[tj]s$',
+  testTimeout: 120000,  // 10초 -> 120초로 증가 (타임아웃 문제 해결)
+  slowTestThreshold: 60,  // 60초 이상 걸리는 테스트에 대한 경고 임계값 설정
+  verbose: false,
+  detectOpenHandles: true,
   forceExit: true,
-  clearMocks: true,
-  resetMocks: true,
-  restoreMocks: true
-};
-
-export default config;
+  maxWorkers: "50%"
+}

@@ -1,10 +1,14 @@
 import { Router } from 'express';
-import { validateRequest } from '../middleware/validationMiddleware';
-import authMiddleware from '../middleware/authMiddleware';
+import { uploadProfileImage } from '../controllers/uploadController';
 import userController from '../controllers/userController';
+import authMiddleware from '../middleware/authMiddleware';
+import { validateRequest } from '../middleware/validationMiddleware';
+import { handleMulterError, handleProfileImageUpload } from './uploads';
+
 const router = Router();
 const expressValidator = require('express-validator');
 const { body, query } = expressValidator;
+
 // 회원가입
 router.post(
   '/register',
@@ -60,6 +64,7 @@ router.put(
   ]),
   userController.updateProfile
 );
+
 // 사용자차단
 router.post('/block', authMiddleware, userController.blockUser);
 // 비밀번호 변경
@@ -82,6 +87,33 @@ router.put(
 // 로그아웃
 router.post('/logout', authMiddleware, userController.logout);
 
+// 비밀번호 재설정 요청
+router.post(
+  '/forgot-password',
+  validateRequest([
+    body('email')
+      .isEmail()
+      .withMessage('유효한 이메일을 입력해주세요.')
+      .normalizeEmail()
+  ]),
+  (req, res) => userController.forgotPassword(req, res)
+);
+
+// 비밀번호 재설정
+router.post(
+  '/reset-password',
+  validateRequest([
+    body('token')
+      .notEmpty()
+      .withMessage('토큰은 필수 항목입니다.'),
+    body('newPassword')
+      .isLength({ min: 6 })
+      .withMessage('비밀번호는 최소 6자 이상이어야 합니다.')
+      .matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{6,}$/)
+      .withMessage('비밀번호는 영문, 숫자, 특수문자를 포함해야 합니다.')
+  ]),
+  userController.resetPassword
+);
 // 회원탈퇴
 router.delete(
   '/withdrawal',
@@ -119,16 +151,26 @@ router.get(
   userController.checkNickname
 );
 
+// 프로필 이미지 업로드 라우트
+// 프로필 이미지 업로드 라우트
+router.post('/profile/image', 
+  authMiddleware, 
+  handleProfileImageUpload,
+  handleMulterError,
+  uploadProfileImage
+);
+
 // 알림 설정 업데이트 라우트 추가
 router.put(
   '/notification-settings',
   authMiddleware,
   validateRequest([
-  body('like_notifications').isBoolean().withMessage('좋아요 알림 설정은 boolean 값이어야 합니다.'),
-  body('comment_notifications').isBoolean().withMessage('댓글 알림 설정은 boolean 값이어야 합니다.'),
-  body('challenge_notifications').isBoolean().withMessage('챌린지 알림 설정은 boolean 값이어야 합니다.'),
-  body('encouragement_notifications').isBoolean().withMessage('격려 알림 설정은 boolean 값이어야 합니다.')
+    body('like_notifications').isBoolean().withMessage('좋아요 알림 설정은 boolean 값이어야 합니다.'),
+    body('comment_notifications').isBoolean().withMessage('댓글 알림 설정은 boolean 값이어야 합니다.'),
+    body('challenge_notifications').isBoolean().withMessage('챌린지 알림 설정은 boolean 값이어야 합니다.'),
+    body('encouragement_notifications').isBoolean().withMessage('격려 알림 설정은 boolean 값이어야 합니다.')
   ]),
   userController.updateNotificationSettings
-  );
-  export default router;
+);
+
+export default router;

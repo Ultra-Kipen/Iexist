@@ -61,7 +61,13 @@ export const register = async (req: Request, res: Response) => {
       username,
       is_active: true, // 기본값 설정
       created_at: new Date(), // 기본값 설정
-      updated_at: new Date() // 기본값 설정
+      updated_at: new Date(), // 기본값 설정
+      notification_settings: {
+        like_notifications: true,
+        comment_notifications: true,
+        challenge_notifications: true,
+        encouragement_notifications: true
+      }
     });
 
     if (!process.env.JWT_SECRET) {
@@ -90,7 +96,13 @@ const createUser = async (req: Request, res: Response) => {
       username,
       is_active: true, // 기본값 설정
       created_at: new Date(), // 기본값 설정
-      updated_at: new Date() // 기본값 설정
+      updated_at: new Date(), // 기본값 설정
+      notification_settings: {
+        like_notifications: true,
+        comment_notifications: true,
+        challenge_notifications: true,
+        encouragement_notifications: true
+      }
     });
 
     return res.status(201).json(newUser);
