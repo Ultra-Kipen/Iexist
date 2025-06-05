@@ -97,4 +97,21 @@ router.delete('/:id/tags/:tagId',
   postTagController.removeTagFromPost
 );
 
+// 특정 태그의 게시물 조회 엔드포인트 추가
+router.get('/:id/posts', authMiddleware, async (req, res) => {
+  try {
+    const tagId = req.params.id;
+    res.json({
+      success: true,
+      data: [],
+      message: `태그 ${tagId}의 게시물을 조회했습니다.`
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
 export default router;

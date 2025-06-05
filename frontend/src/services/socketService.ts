@@ -1,6 +1,5 @@
 // services/socketService.ts
-import { io, Socket } from 'socket.io-client'; // 패키지를 설치해야 함
-import authService from './api/authService';
+import { io, Socket } from 'socket.io-client';
 
 /**
  * Socket.IO 연결 및 이벤트 처리를 위한 서비스
@@ -19,6 +18,7 @@ class SocketService {
    * Socket.IO 연결 초기화
    */
   public init = async (): Promise<void> => {
+    // 이미 연결된 소켓이 있으면 바로 반환
     if (this.socket && this.socket.connected) {
       return Promise.resolve();
     }
@@ -36,12 +36,11 @@ class SocketService {
     });
 
     try {
-      // authService에서 토큰 가져오기
-      // getToken 함수 대신 인증 정보를 직접 가져옴
+      // 토큰 가져오기
       const token = localStorage.getItem('token');
       
       if (!token) {
-        throw new Error('인증 토큰이 없습니다. 로그인이 필요합니다.');
+        throw new Error('인증 토큰 없음');
       }
 
       const socketUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
@@ -95,7 +94,7 @@ class SocketService {
    */
   public on = (event: string, callback: (...args: any[]) => void): void => {
     if (!this.socket) {
-      console.error('소켓이 초기화되지 않았습니다. init()을 먼저 호출하세요.');
+      console.error('소켓이 초기화되지 않았습니다');
       return;
     }
     this.socket.on(event, callback);
@@ -108,6 +107,7 @@ class SocketService {
    */
   public off = (event: string, callback?: (...args: any[]) => void): void => {
     if (!this.socket) return;
+    
     if (callback) {
       this.socket.off(event, callback);
     } else {
@@ -122,7 +122,7 @@ class SocketService {
    */
   public emit = (event: string, data?: any): void => {
     if (!this.socket || !this.socket.connected) {
-      console.error('소켓이 연결되지 않았습니다.');
+      console.error('소켓이 연결되지 않았습니다');
       return;
     }
     this.socket.emit(event, data);
@@ -149,12 +149,8 @@ class SocketService {
   };
 
   private handleDisconnect = (reason: string): void => {
-    console.log('소켓 연결 해제됨. 이유:', reason);
-    if (reason === 'io server disconnect') {
-      // 서버에서 명시적으로 연결을 끊었으므로 자동 재연결 시도하지 않음
-    } else {
-      this.attemptReconnect();
-    }
+    console.log('소켓 연결 해제됨:', reason);
+    this.attemptReconnect();
   };
 
   private handleError = (error: Error): void => {
@@ -171,11 +167,11 @@ class SocketService {
     }
 
     this.reconnectAttempts++;
-    console.log(`${this.reconnectAttempts}번째 재연결 시도 (${this.reconnectDelay / 1000}초 후)...`);
+    console.log(`${this.reconnectAttempts}번째 재연결 시도...`);
     
     this.reconnectTimer = setTimeout(() => {
       this.init().catch(error => {
-        console.error('재연결 실패:', error.message);
+        console.error('재연결 실패:', error);
       });
     }, this.reconnectDelay);
   };

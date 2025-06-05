@@ -1,16 +1,47 @@
 // services/api/statsService.ts
 import client from './client';
+import { AxiosInstance, AxiosResponse } from 'axios';
+
+interface StatsServiceType {
+  client: AxiosInstance;
+  getUserStats: () => Promise<AxiosResponse<any>>;
+  getEmotionTrends: (options?: {
+    start_date?: string;
+    end_date?: string;
+    type?: 'daily' | 'weekly' | 'monthly';
+  }) => Promise<AxiosResponse<any>>;
+  getWeeklyTrends: (options?: {
+    start_date?: string;
+    end_date?: string;
+  }) => Promise<AxiosResponse<any>>;
+  getMonthlyTrends: (options?: {
+    start_date?: string;
+    end_date?: string;
+  }) => Promise<AxiosResponse<any>>;
+  getEmotionStats: (emotionId: number, period?: 'week' | 'month' | 'year') => Promise<AxiosResponse<any>>;
+  getActivitySummary: (period?: 'week' | 'month' | 'year') => Promise<AxiosResponse<any>>;
+}
 
 /**
  * 사용자 통계 API 서비스
  */
-const statsService = {
+const statsService: StatsServiceType = {
+  client, // 테스트를 위해 client 객체 노출
+
   /**
    * 사용자 통계 조회
    * @returns 사용자 통계 정보
    */
   getUserStats: async () => {
-    return client.get('/stats');
+    try {
+      const response = await statsService.client.get('/stats');
+      return response;
+    } catch (error) {
+      if (error instanceof Error && error.message === '통계 정보 조회에 실패했습니다') {
+        throw error;
+      }
+      throw new Error('통계 정보 조회에 실패했습니다');
+    }
   },
 
   /**
@@ -23,21 +54,26 @@ const statsService = {
     end_date?: string;
     type?: 'daily' | 'weekly' | 'monthly';
   }) => {
-    const params = new URLSearchParams();
-    
-    if (options?.start_date) {
-      params.append('start_date', options.start_date);
+    try {
+      const params = new URLSearchParams();
+      
+      if (options?.start_date) {
+        params.append('start_date', options.start_date);
+      }
+      
+      if (options?.end_date) {
+        params.append('end_date', options.end_date);
+      }
+      
+      if (options?.type) {
+        params.append('type', options.type);
+      }
+      
+      const response = await statsService.client.get('/stats/trends', { params });
+      return response;
+    } catch (error) {
+      throw new Error('감정 트렌드 조회에 실패했습니다');
     }
-    
-    if (options?.end_date) {
-      params.append('end_date', options.end_date);
-    }
-    
-    if (options?.type) {
-      params.append('type', options.type);
-    }
-    
-    return client.get('/stats/trends', { params });
   },
 
   /**
@@ -49,17 +85,22 @@ const statsService = {
     start_date?: string;
     end_date?: string;
   }) => {
-    const params = new URLSearchParams();
-    
-    if (options?.start_date) {
-      params.append('start_date', options.start_date);
+    try {
+      const params = new URLSearchParams();
+      
+      if (options?.start_date) {
+        params.append('start_date', options.start_date);
+      }
+      
+      if (options?.end_date) {
+        params.append('end_date', options.end_date);
+      }
+      
+      const response = await statsService.client.get('/stats/weekly', { params });
+      return response;
+    } catch (error) {
+      throw new Error('주간 트렌드 조회에 실패했습니다');
     }
-    
-    if (options?.end_date) {
-      params.append('end_date', options.end_date);
-    }
-    
-    return client.get('/stats/weekly', { params });
   },
 
   /**
@@ -71,17 +112,22 @@ const statsService = {
     start_date?: string;
     end_date?: string;
   }) => {
-    const params = new URLSearchParams();
-    
-    if (options?.start_date) {
-      params.append('start_date', options.start_date);
+    try {
+      const params = new URLSearchParams();
+      
+      if (options?.start_date) {
+        params.append('start_date', options.start_date);
+      }
+      
+      if (options?.end_date) {
+        params.append('end_date', options.end_date);
+      }
+      
+      const response = await statsService.client.get('/stats/monthly', { params });
+      return response;
+    } catch (error) {
+      throw new Error('월간 트렌드 조회에 실패했습니다');
     }
-    
-    if (options?.end_date) {
-      params.append('end_date', options.end_date);
-    }
-    
-    return client.get('/stats/monthly', { params });
   },
   
   /**
@@ -91,9 +137,14 @@ const statsService = {
    * @returns 감정별 통계 데이터
    */
   getEmotionStats: async (emotionId: number, period: 'week' | 'month' | 'year' = 'month') => {
-    return client.get(`/stats/emotions/${emotionId}`, {
-      params: { period }
-    });
+    try {
+      const response = await statsService.client.get(`/stats/emotions/${emotionId}`, {
+        params: { period }
+      });
+      return response;
+    } catch (error) {
+      throw new Error('감정별 통계 조회에 실패했습니다');
+    }
   },
   
   /**
@@ -102,9 +153,14 @@ const statsService = {
    * @returns 활동 요약 통계 데이터
    */
   getActivitySummary: async (period: 'week' | 'month' | 'year' = 'month') => {
-    return client.get('/stats/activity', {
-      params: { period }
-    });
+    try {
+      const response = await statsService.client.get('/stats/activity', {
+        params: { period }
+      });
+      return response;
+    } catch (error) {
+      throw new Error('활동 요약 조회에 실패했습니다');
+    }
   }
 };
 

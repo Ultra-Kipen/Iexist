@@ -163,7 +163,7 @@ const PostDetailScreen = () => {
   };
 
   if (loading) {
-    return <LoadingIndicator text="게시물 로딩 중..." />;
+    return <LoadingIndicator text="로딩 중..." />;
   }
 
   if (error) {

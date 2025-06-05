@@ -1,0 +1,42 @@
+f2cf6d9f0fcf2fa6cebc9c21b33b2e6f
+'use strict';
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.checkCppVersion = checkCppVersion;
+exports.matchVersion = matchVersion;
+var _slicedToArray2 = _interopRequireDefault(require("@babel/runtime/helpers/slicedToArray"));
+var _errors = require("../errors.js");
+var _index = require("../logger/index.js");
+var _jsVersion = require("./jsVersion.js");
+function checkCppVersion() {
+  var cppVersion = global._REANIMATED_VERSION_CPP;
+  if (cppVersion === undefined) {
+    _index.logger.warn(`Couldn't determine the version of the native part of Reanimated.
+    See \`https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#couldnt-determine-the-version-of-the-native-part-of-reanimated\` for more details.`);
+    return;
+  }
+  var ok = matchVersion(_jsVersion.jsVersion, cppVersion);
+  if (!ok) {
+    throw new _errors.ReanimatedError(`Mismatch between JavaScript part and native part of Reanimated (${_jsVersion.jsVersion} vs ${cppVersion}).
+    See \`https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#mismatch-between-javascript-part-and-native-part-of-reanimated\` for more details.`);
+  }
+}
+function matchVersion(version1, version2) {
+  if (version1.match(/^\d+\.\d+\.\d+$/) && version2.match(/^\d+\.\d+\.\d+$/)) {
+    var _version1$split = version1.split('.'),
+      _version1$split2 = (0, _slicedToArray2.default)(_version1$split, 2),
+      major1 = _version1$split2[0],
+      minor1 = _version1$split2[1];
+    var _version2$split = version2.split('.'),
+      _version2$split2 = (0, _slicedToArray2.default)(_version2$split, 2),
+      major2 = _version2$split2[0],
+      minor2 = _version2$split2[1];
+    return major1 === major2 && minor1 === minor2;
+  } else {
+    return version1 === version2;
+  }
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJfaW50ZXJvcFJlcXVpcmVEZWZhdWx0IiwicmVxdWlyZSIsIk9iamVjdCIsImRlZmluZVByb3BlcnR5IiwiZXhwb3J0cyIsInZhbHVlIiwiY2hlY2tDcHBWZXJzaW9uIiwibWF0Y2hWZXJzaW9uIiwiX3NsaWNlZFRvQXJyYXkyIiwiX2Vycm9ycyIsIl9pbmRleCIsIl9qc1ZlcnNpb24iLCJjcHBWZXJzaW9uIiwiZ2xvYmFsIiwiX1JFQU5JTUFURURfVkVSU0lPTl9DUFAiLCJ1bmRlZmluZWQiLCJsb2dnZXIiLCJ3YXJuIiwib2siLCJqc1ZlcnNpb24iLCJSZWFuaW1hdGVkRXJyb3IiLCJ2ZXJzaW9uMSIsInZlcnNpb24yIiwibWF0Y2giLCJfdmVyc2lvbjEkc3BsaXQiLCJzcGxpdCIsIl92ZXJzaW9uMSRzcGxpdDIiLCJkZWZhdWx0IiwibWFqb3IxIiwibWlub3IxIiwiX3ZlcnNpb24yJHNwbGl0IiwiX3ZlcnNpb24yJHNwbGl0MiIsIm1ham9yMiIsIm1pbm9yMiJdLCJzb3VyY2VzIjpbIi4uLy4uLy4uL3NyYy9wbGF0Zm9ybS1zcGVjaWZpYy9jaGVja0NwcFZlcnNpb24udHMiXSwic291cmNlc0NvbnRlbnQiOltudWxsXSwibWFwcGluZ3MiOiJBQUFBLFlBQVk7O0FBQUEsSUFBQUEsc0JBQUEsR0FBQUMsT0FBQTtBQUFBQyxNQUFBLENBQUFDLGNBQUEsQ0FBQUMsT0FBQTtFQUFBQyxLQUFBO0FBQUE7QUFBQUQsT0FBQSxDQUFBRSxlQUFBLEdBQUFBLGVBQUE7QUFBQUYsT0FBQSxDQUFBRyxZQUFBLEdBQUFBLFlBQUE7QUFBQSxJQUFBQyxlQUFBLEdBQUFSLHNCQUFBLENBQUFDLE9BQUE7QUFFWixJQUFBUSxPQUFBLEdBQUFSLE9BQUE7QUFDQSxJQUFBUyxNQUFBLEdBQUFULE9BQUE7QUFDQSxJQUFBVSxVQUFBLEdBQUFWLE9BQUE7QUFFTyxTQUFTSyxlQUFlQSxDQUFBLEVBQUc7RUFDaEMsSUFBTU0sVUFBVSxHQUFHQyxNQUFNLENBQUNDLHVCQUF1QjtFQUNqRCxJQUFJRixVQUFVLEtBQUtHLFNBQVMsRUFBRTtJQUM1QkMsYUFBTSxDQUFDQyxJQUFJLENBQ1Q7QUFDTiw0S0FDSSxDQUFDO0lBQ0Q7RUFDRjtFQUNBLElBQU1DLEVBQUUsR0FBR1gsWUFBWSxDQUFDWSxvQkFBUyxFQUFFUCxVQUFVLENBQUM7RUFDOUMsSUFBSSxDQUFDTSxFQUFFLEVBQUU7SUFDUCxNQUFNLElBQUlFLHVCQUFlLENBQ3ZCLG1FQUFtRUQsb0JBQVMsT0FBT1AsVUFBVTtBQUNuRyw0S0FDSSxDQUFDO0VBQ0g7QUFDRjtBQUlPLFNBQVNMLFlBQVlBLENBQUNjLFFBQWdCLEVBQUVDLFFBQWdCLEVBQUU7RUFDL0QsSUFBSUQsUUFBUSxDQUFDRSxLQUFLLENBQUMsaUJBQWlCLENBQUMsSUFBSUQsUUFBUSxDQUFDQyxLQUFLLENBQUMsaUJBQWlCLENBQUMsRUFBRTtJQUUxRSxJQUFBQyxlQUFBLEdBQXlCSCxRQUFRLENBQUNJLEtBQUssQ0FBQyxHQUFHLENBQUM7TUFBQUMsZ0JBQUEsT0FBQWxCLGVBQUEsQ0FBQW1CLE9BQUEsRUFBQUgsZUFBQTtNQUFyQ0ksTUFBTSxHQUFBRixnQkFBQTtNQUFFRyxNQUFNLEdBQUFILGdCQUFBO0lBQ3JCLElBQUFJLGVBQUEsR0FBeUJSLFFBQVEsQ0FBQ0csS0FBSyxDQUFDLEdBQUcsQ0FBQztNQUFBTSxnQkFBQSxPQUFBdkIsZUFBQSxDQUFBbUIsT0FBQSxFQUFBRyxlQUFBO01BQXJDRSxNQUFNLEdBQUFELGdCQUFBO01BQUVFLE1BQU0sR0FBQUYsZ0JBQUE7SUFDckIsT0FBT0gsTUFBTSxLQUFLSSxNQUFNLElBQUlILE1BQU0sS0FBS0ksTUFBTTtFQUMvQyxDQUFDLE1BQU07SUFFTCxPQUFPWixRQUFRLEtBQUtDLFFBQVE7RUFDOUI7QUFDRiIsImlnbm9yZUxpc3QiOltdfQ==

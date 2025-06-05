@@ -1,13 +1,12 @@
 // __tests__/unit/services/postService.test.ts
 
 import axios from 'axios';
-import MockAdapter from 'axios-mock-adapter';
 import apiClient from '../../../src/services/api/client';
 import postService, { PostCreateData, PostCommentData } from '../../../src/services/api/postService';
 
-// apiClient가 사용하는 axios 인스턴스를 모킹해야 합니다.
-// 실제 apiClient.getAxiosInstance()로 가져오거나, 직접 apiClient의 axios 인스턴스를 모킹합니다.
-// 여기서는 단순화를 위해 직접 모킹합니다
+// 불필요한 MockAdapter 제거 (apiClient를 직접 모킹할 것이므로)
+
+// apiClient 직접 모킹
 jest.mock('../../../src/services/api/client', () => {
   return {
     post: jest.fn(),
@@ -15,8 +14,6 @@ jest.mock('../../../src/services/api/client', () => {
     delete: jest.fn()
   };
 });
-
-const mock = new MockAdapter(axios);
 
 describe('postService', () => {
   beforeEach(() => {
@@ -37,7 +34,7 @@ describe('postService', () => {
       message: '게시물이 성공적으로 생성되었습니다.'
     };
 
-    // axios 모킹 대신 apiClient 직접 모킹
+    // apiClient 직접 모킹
     (apiClient.post as jest.Mock).mockResolvedValue({ data: responseData });
 
     const response = await postService.createPost(postData);

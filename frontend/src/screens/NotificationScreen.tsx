@@ -6,55 +6,75 @@ import notificationService, { Notification } from '../services/api/notificationS
 import LoadingIndicator from '../components/LoadingIndicator';
 import Button from '../components/Button';
 
-const NotificationScreen = () => {
+interface NotificationScreenProps {
+  testNotifications?: Notification[];
+  testLoading?: boolean;
+  testError?: string | null;
+  testEmptyState?: boolean;  // 이 속성 추가
+}
+
+const NotificationScreen = (props: NotificationScreenProps = {}) => {
   const navigation = useNavigation();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>(props.testNotifications || []);
+  const [loading, setLoading] = useState(props.testLoading !== undefined ? props.testLoading : true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(props.testError || null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  const fetchNotifications = async (refresh = false) => {
-    try {
-      if (refresh) {
-        setPage(1);
-        setHasMore(true);
-      }
-      
-      if (!hasMore && !refresh) return;
-      
-      setLoading(true);
-      setError(null);
-      
-      const response = await notificationService.getNotifications({
-        page: refresh ? 1 : page,
-        limit: 20,
-      });
-      
-      const data = response.data.data;
-      const pagination = response.data.pagination;
-      
-      if (refresh) {
-        setNotifications(data);
-      } else {
-        setNotifications(prev => [...prev, ...data]);
-      }
-      
-      setHasMore(!!pagination && pagination.page * pagination.limit < pagination.total);
-      setPage(prev => refresh ? 2 : prev + 1);
-    } catch (err) {
-      console.error('알림 데이터 로딩 오류:', err);
-      setError('알림을 불러오는 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+// 두 번째 useEffect 제거 (이미 첫 번째 useEffect에서 동일한 기능 수행)
+useEffect(() => {
+  if (props.testNotifications !== undefined) {
+    setNotifications(props.testNotifications);
+  }
+  if (props.testLoading !== undefined) {
+    setLoading(props.testLoading);
+  }
+  if (props.testError !== undefined) {
+    setError(props.testError);
+  }
+  if (props.testEmptyState) {
+    setNotifications([]);
+  }
+}, [props.testNotifications, props.testLoading, props.testError, props.testEmptyState]);
+// src/screens/NotificationScreen.tsx (일부 수정)
+const fetchNotifications = async (refresh = false) => {
+  try {
+    if (refresh) {
+      setPage(1);
+      setHasMore(true);
     }
-  };
+    
+    if (!hasMore && !refresh) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    const response = await notificationService.getNotifications({
+      page: refresh ? 1 : page,
+      limit: 20,
+    });
+    
+    // 여기서 response 구조 수정
+    const data = response.data || response;
+    const pagination = response.pagination;
+    
+    if (refresh) {
+      setNotifications(data);
+    } else {
+      setNotifications(prev => [...prev, ...data]);
+    }
+    
+    setHasMore(!!pagination && pagination.page * pagination.limit < pagination.total);
+    setPage(prev => refresh ? 2 : prev + 1);
+  } catch (err) {
+    console.error('알림 데이터 로딩 오류:', err);
+    setError('알림을 불러오는 중 오류가 발생했습니다.');
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -196,7 +216,7 @@ const NotificationScreen = () => {
       
       <FlatList
         data={notifications}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item: { id: { toString: () => any; }; }) => item.id.toString()}
         renderItem={renderNotificationItem}
         onRefresh={handleRefresh}
         refreshing={refreshing}

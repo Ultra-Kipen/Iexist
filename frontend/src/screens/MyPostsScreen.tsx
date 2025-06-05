@@ -1,10 +1,26 @@
 // src/screens/MyPostsScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Alert, 
+  ScrollView
+} from 'react-native';
 import { Button, Card, Chip, Dialog, Portal } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import postService from '../services/api/postService';
+
+// 게시물 타입 정의
+interface Post {
+  post_id: number;
+  content: string;
+  emotion_summary: string;
+  like_count: number;
+  comment_count: number;
+  created_at: string;
+}
 
 interface MyPostsScreenProps {
   navigation: any;
@@ -12,7 +28,7 @@ interface MyPostsScreenProps {
 }
 
 const MyPostsScreen: React.FC<MyPostsScreenProps> = ({ navigation }) => {
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
@@ -103,45 +119,6 @@ const MyPostsScreen: React.FC<MyPostsScreenProps> = ({ navigation }) => {
     );
   };
 
-  const renderItem = ({ item }: { item: any }) => (
-    <Card style={styles.postCard} testID="post-item">
-      <Card.Content>
-        <View style={styles.postHeader}>
-          <Text style={styles.postDate}>
-            {new Date(item.created_at).toLocaleDateString()}
-          </Text>
-          {renderEmotionChip(item.emotion_summary)}
-        </View>
-        
-        <Text style={styles.postContent}>{item.content}</Text>
-        
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <MaterialCommunityIcons name="heart-outline" size={18} color="#FF6347" />
-            <Text style={styles.statText}>{item.like_count}</Text>
-          </View>
-          <View style={styles.statItem}>
-            <MaterialCommunityIcons name="comment-outline" size={18} color="#4682B4" />
-            <Text style={styles.statText}>{item.comment_count}</Text>
-          </View>
-        </View>
-      </Card.Content>
-      
-      <Card.Actions>
-        <Button onPress={() => navigation.navigate('Post', { postId: item.post_id })}>
-          자세히
-        </Button>
-        <Button 
-          testID="delete-button"
-          onPress={() => showDeleteConfirm(item.post_id)}
-          textColor="#f44336"
-        >
-          삭제
-        </Button>
-      </Card.Actions>
-    </Card>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -149,39 +126,74 @@ const MyPostsScreen: React.FC<MyPostsScreenProps> = ({ navigation }) => {
         <Button 
           mode="contained"
           onPress={() => navigation.navigate('CreatePost')}
+          testID="new-post-button"
         >
           새 게시물
         </Button>
       </View>
 
-      <FlatList
-        data={posts}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.post_id.toString()}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-          />
-        }
+      <ScrollView 
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="post-outline" size={48} color="#ccc" />
-              <Text style={styles.emptyText}>게시물이 없습니다</Text>
-              <Button 
-                mode="outlined" 
-                onPress={() => navigation.navigate('CreatePost')}
-                style={{ marginTop: 16 }}
-              >
-                첫 게시물 작성하기
-              </Button>
-            </View>
-          ) : null
-        }
-      />
+      >
+        {loading ? (
+          <View style={styles.emptyContainer}>
+            <Text>로딩 중...</Text>
+          </View>
+        ) : posts.length > 0 ? (
+          posts.map(post => (
+            <Card key={post.post_id} style={styles.postCard} testID="post-item">
+              <Card.Content>
+                <View style={styles.postHeader}>
+                  <Text style={styles.postDate}>
+                    {new Date(post.created_at).toLocaleDateString()}
+                  </Text>
+                  {renderEmotionChip(post.emotion_summary)}
+                </View>
+                
+                <Text style={styles.postContent}>{post.content}</Text>
+                
+                <View style={styles.statsContainer}>
+                  <View style={styles.statItem}>
+                    <MaterialCommunityIcons name="heart-outline" size={18} color="#FF6347" />
+                    <Text style={styles.statText}>{post.like_count}</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <MaterialCommunityIcons name="comment-outline" size={18} color="#4682B4" />
+                    <Text style={styles.statText}>{post.comment_count}</Text>
+                  </View>
+                </View>
+              </Card.Content>
+              
+              <Card.Actions>
+                <Button onPress={() => navigation.navigate('Post', { postId: post.post_id })}>
+                  자세히
+                </Button>
+                <Button 
+                  testID="delete-button"
+                  onPress={() => showDeleteConfirm(post.post_id)}
+                  textColor="#f44336"
+                >
+                  삭제
+                </Button>
+              </Card.Actions>
+            </Card>
+          ))
+        ) : (
+          <View style={styles.emptyContainer} testID="empty-state">
+            <MaterialCommunityIcons name="post-outline" size={48} color="#ccc" />
+            <Text style={styles.emptyText}>게시물이 없습니다</Text>
+            <Button 
+              mode="outlined" 
+              onPress={() => navigation.navigate('CreatePost')}
+              style={{ marginTop: 16 }}
+            >
+              첫 게시물 작성하기
+            </Button>
+          </View>
+        )}
+      </ScrollView>
 
+      {/* 다이얼로그 부분 */}
       <Portal>
         <Dialog
           visible={deleteDialogVisible}

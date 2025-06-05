@@ -1,0 +1,38 @@
+2c8344d15bddb1c6aec318c1a3757b48
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.setGestureState = void 0;
+var _index = require("../logger/index.js");
+var _PlatformChecker = require("../PlatformChecker.js");
+var setGestureState;
+function setGestureStateNative(handlerTag, newState) {
+  'worklet';
+
+  if (!_WORKLET) {
+    _index.logger.warn('You can not use setGestureState in non-worklet function.');
+    return;
+  }
+  global._setGestureState(handlerTag, newState);
+}
+function setGestureStateJest() {
+  _index.logger.warn('setGestureState() cannot be used with Jest.');
+}
+function setGestureStateChromeDebugger() {
+  _index.logger.warn('setGestureState() cannot be used with Chrome Debugger.');
+}
+function setGestureStateDefault() {
+  _index.logger.warn('setGestureState() is not supported on this configuration.');
+}
+if (!(0, _PlatformChecker.shouldBeUseWeb)()) {
+  exports.setGestureState = setGestureState = setGestureStateNative;
+} else if ((0, _PlatformChecker.isJest)()) {
+  exports.setGestureState = setGestureState = setGestureStateJest;
+} else if ((0, _PlatformChecker.isChromeDebugger)()) {
+  exports.setGestureState = setGestureState = setGestureStateChromeDebugger;
+} else {
+  exports.setGestureState = setGestureState = setGestureStateDefault;
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJPYmplY3QiLCJkZWZpbmVQcm9wZXJ0eSIsImV4cG9ydHMiLCJ2YWx1ZSIsInNldEdlc3R1cmVTdGF0ZSIsIl9pbmRleCIsInJlcXVpcmUiLCJfUGxhdGZvcm1DaGVja2VyIiwic2V0R2VzdHVyZVN0YXRlTmF0aXZlIiwiaGFuZGxlclRhZyIsIm5ld1N0YXRlIiwiX1dPUktMRVQiLCJsb2dnZXIiLCJ3YXJuIiwiZ2xvYmFsIiwiX3NldEdlc3R1cmVTdGF0ZSIsInNldEdlc3R1cmVTdGF0ZUplc3QiLCJzZXRHZXN0dXJlU3RhdGVDaHJvbWVEZWJ1Z2dlciIsInNldEdlc3R1cmVTdGF0ZURlZmF1bHQiLCJzaG91bGRCZVVzZVdlYiIsImlzSmVzdCIsImlzQ2hyb21lRGVidWdnZXIiXSwic291cmNlcyI6WyIuLi8uLi8uLi9zcmMvcGxhdGZvcm1GdW5jdGlvbnMvc2V0R2VzdHVyZVN0YXRlLnRzIl0sInNvdXJjZXNDb250ZW50IjpbbnVsbF0sIm1hcHBpbmdzIjoiQUFBQSxZQUFZOztBQUFBQSxNQUFBLENBQUFDLGNBQUEsQ0FBQUMsT0FBQTtFQUFBQyxLQUFBO0FBQUE7QUFBQUQsT0FBQSxDQUFBRSxlQUFBO0FBRVosSUFBQUMsTUFBQSxHQUFBQyxPQUFBO0FBQ0EsSUFBQUMsZ0JBQUEsR0FBQUQsT0FBQTtBQUlPLElBQUlGLGVBQWdDO0FBRTNDLFNBQVNJLHFCQUFxQkEsQ0FBQ0MsVUFBa0IsRUFBRUMsUUFBZ0IsRUFBRTtFQUNuRSxTQUFTOztFQUNULElBQUksQ0FBQ0MsUUFBUSxFQUFFO0lBQ2JDLGFBQU0sQ0FBQ0MsSUFBSSxDQUFDLDBEQUEwRCxDQUFDO0lBQ3ZFO0VBQ0Y7RUFDQUMsTUFBTSxDQUFDQyxnQkFBZ0IsQ0FBQ04sVUFBVSxFQUFFQyxRQUFRLENBQUM7QUFDL0M7QUFFQSxTQUFTTSxtQkFBbUJBLENBQUEsRUFBRztFQUM3QkosYUFBTSxDQUFDQyxJQUFJLENBQUMsNkNBQTZDLENBQUM7QUFDNUQ7QUFFQSxTQUFTSSw2QkFBNkJBLENBQUEsRUFBRztFQUN2Q0wsYUFBTSxDQUFDQyxJQUFJLENBQUMsd0RBQXdELENBQUM7QUFDdkU7QUFFQSxTQUFTSyxzQkFBc0JBLENBQUEsRUFBRztFQUNoQ04sYUFBTSxDQUFDQyxJQUFJLENBQUMsMkRBQTJELENBQUM7QUFDMUU7QUFFQSxJQUFJLENBQUMsSUFBQU0sK0JBQWMsRUFBQyxDQUFDLEVBQUU7RUFDckJqQixPQUFBLENBQUFFLGVBQUEsR0FBQUEsZUFBZSxHQUFHSSxxQkFBcUI7QUFDekMsQ0FBQyxNQUFNLElBQUksSUFBQVksdUJBQU0sRUFBQyxDQUFDLEVBQUU7RUFDbkJsQixPQUFBLENBQUFFLGVBQUEsR0FBQUEsZUFBZSxHQUFHWSxtQkFBbUI7QUFDdkMsQ0FBQyxNQUFNLElBQUksSUFBQUssaUNBQWdCLEVBQUMsQ0FBQyxFQUFFO0VBQzdCbkIsT0FBQSxDQUFBRSxlQUFBLEdBQUFBLGVBQWUsR0FBR2EsNkJBQTZCO0FBQ2pELENBQUMsTUFBTTtFQUNMZixPQUFBLENBQUFFLGVBQUEsR0FBQUEsZUFBZSxHQUFHYyxzQkFBc0I7QUFDMUMiLCJpZ25vcmVMaXN0IjpbXX0=

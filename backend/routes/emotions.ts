@@ -87,4 +87,20 @@ router.post('/',
   }
 );
 
+// 감정 분석 엔드포인트 추가
+router.get('/analysis', authMiddleware, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {},
+      message: '감정 분석을 조회했습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
 export default router;

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// HomeScreen.tsx 파일 상단에 import 수정
+import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Image } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
@@ -17,7 +18,8 @@ import {
     Portal,
     Dialog
 } from 'react-native-paper';
-
+import { useAuth } from '../contexts/AuthContext';
+import { useEmotion } from '../contexts/EmotionContext';
 // 타입 정의
 export type Emotion = {
     label: string;
@@ -90,9 +92,10 @@ export const initialPosts: Post[] = [
     },
 ];
 
-// 이모티콘 렌더링 헬퍼 함수
+// 이모티콘 렌더링 헬퍼 함수 수정
 export const renderEmotionIcon = (iconName: string, color: string) => {
     try {
+        // 아이콘 이름이 유효한지 확인
         return <MaterialCommunityIcons name={iconName} size={20} color={color} />;
     } catch (error) {
         console.error("Icon rendering error:", error);
@@ -292,8 +295,16 @@ export const renderPosts = (
 };
 
 // 메인 컴포넌트
-const HomeScreen = () => {
+const HomeScreen: React.FC = () => {  // React.FC 타입 명시
     const theme = useTheme();
+    const { user, isAuthenticated } = useAuth();
+    const { 
+        emotions: apiEmotions, 
+        selectedEmotions, 
+        selectEmotion: selectApiEmotion, 
+        logEmotion 
+    } = useEmotion();
+    
     const [selectedEmotion, setSelectedEmotion] = useState<Emotion | null>(null);
     const [postContent, setPostContent] = useState('');
     const [imageUrl, setImageUrl] = useState('');
@@ -301,52 +312,76 @@ const HomeScreen = () => {
     const [isDialogVisible, setIsDialogVisible] = useState(false);
     const [posts, setPosts] = useState<Post[]>(initialPosts);
 
-    // 이벤트 핸들러들
-    const handlePost = () => {
-        handlePostSubmission(
-            postContent,
-            selectedEmotion,
-            imageUrl,
-            setIsLoading,
-            setIsDialogVisible
-        );
-    };
+   // 이벤트 핸들러들
+   const handlePost = () => {
+    const result = handlePostSubmission(
+        postContent,
+        selectedEmotion,
+        imageUrl,
+        setIsLoading,
+        setIsDialogVisible
+    );
     
-    const handleImageUpload = () => {
-        handleImageUploadAction(setImageUrl);
-    };
+     // 게시 성공 시 감정 기록
+     if (result && selectedEmotion) {
+        // API에서 해당 감정 ID 찾기
+        const apiEmotion = apiEmotions.find(e => e.name === selectedEmotion.label);
+        if (apiEmotion && apiEmotion.emotion_id) {
+            // 감정 기록 API 호출
+            logEmotion(apiEmotion.emotion_id, postContent);
+        }
+    }
+};
 
-    const handleLike = (postId: number) => {
-        handleLikeAction(posts, postId, setPosts);
-    };
-    
-    const handleComment = (postId: number, commentContent: string) => {
-        handleCommentAction(posts, postId, commentContent, setPosts);
-    };
-    
+const handleImageUpload = () => {
+    handleImageUploadAction(setImageUrl);
+};
+
+const handleLike = (postId: number) => {
+    handleLikeAction(posts, postId, setPosts);
+};
+
+const handleComment = (postId: number, commentContent: string) => {
+    handleCommentAction(posts, postId, commentContent, setPosts);
+};
+
+// 사용자 인증 상태에 따른 조건부 렌더링
+if (!isAuthenticated) {
     return (
-        <View style={styles.container} testID="home-screen-container">
-            <ScrollView style={styles.content}>
-                <Surface style={styles.emotionSurface} testID="emotion-surface">
-                    <Text style={styles.sectionTitle}>오늘의 감정</Text>
-                    {renderEmotionSelector(selectedEmotion, setSelectedEmotion, styles)}
-                </Surface>
-                <Card style={styles.inputCard} testID="post-input-card">
-                    {renderPostInput(postContent, setPostContent, imageUrl, handleImageUpload, styles)}
-                    <Card.Actions>
-                        <Button
-                            mode="contained"
-                            onPress={handlePost}
-                            disabled={isLoading}
-                            style={styles.postButton}
-                            testID="share-post-button"
-                        >
-                            {isLoading ? <ActivityIndicator color={theme.colors.surface} /> : '나의 하루 공유하기'}
-                        </Button>
-                    </Card.Actions>
-                </Card>
-
-                <Text style={styles.sectionTitle}>누군가의 하루는..</Text>
+        <View style={[styles.container, styles.centerContent]}>
+            <Text style={styles.sectionTitle}>로그인이 필요합니다</Text>
+            <Text>게시물을 보려면, 먼저 로그인해주세요.</Text>
+        </View>
+    );
+}
+    
+return (
+    <View style={styles.container} testID="home-screen-container">
+        <ScrollView style={styles.content}>
+            {user && (
+                <Text style={styles.welcomeText}>
+                    환영합니다, {user.nickname || user.username}님
+                </Text>
+            )}
+            <Surface style={styles.emotionSurface} testID="emotion-surface">
+                <Text style={styles.sectionTitle}>오늘의 감정</Text>
+                {renderEmotionSelector(selectedEmotion, setSelectedEmotion, styles)}
+            </Surface>
+            <Card style={styles.inputCard} testID="post-input-card">
+                {renderPostInput(postContent, setPostContent, imageUrl, handleImageUpload, styles)}
+                <Card.Actions>
+                    <Button
+                        mode="contained"
+                        onPress={handlePost}
+                        disabled={isLoading}
+                        style={styles.postButton}
+                        testID="share-post-button"
+                    >
+                        {isLoading ? <ActivityIndicator color={theme.colors.surface} /> : '나의 하루 공유하기'}
+                    </Button>
+                </Card.Actions>
+            </Card>
+            <Text style={styles.sectionTitle}>누군가의 하루는..</Text>
                 {renderPosts(posts, handleLike, handleComment, theme, styles)}
             </ScrollView>
             <Portal>
@@ -375,6 +410,17 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f0e6ff',
+    },
+    centerContent: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    welcomeText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 16,
+        color: '#4a0e4e',
+        textAlign: 'center',
     },
     emotionSurface: {
         elevation: 4,

@@ -25,14 +25,14 @@
         "test:complex": "cross-env NODE_ENV=test jest --config ./jest.config.ts tests/database/complex-transaction.test.ts --detectOpenHandles --forceExit",
         "test:errors": "cross-env NODE_ENV=test jest --config ./jest.config.ts tests/database/error-handling.test.ts --detectOpenHandles --forceExit",
         "test:db": "cross-env NODE_ENV=test jest --config ./jest.config.ts tests/database/*.test.ts --detectOpenHandles --forceExit",
-        "test:websocket": "cross-env NODE_ENV=test jest tests/websocket.test.ts --detectOpenHandles --forceExit",
+        "test:websocket": "cross-env NODE_ENV=test jest --config ./jest.config.ts tests/websocket.test.ts --detectOpenHandles --forceExit",
         "test:api-docs": "cross-env NODE_ENV=test jest --config ./jest.config.ts tests/api-docs.test.ts --detectOpenHandles --forceExit",
         "test:controllers:coverage": "cross-env NODE_ENV=test jest --config ./jest.config.ts --coverage --collectCoverageFrom=\"controllers/**/*.ts\" --coverageReporters=json-summary --coverageDirectory=\"coverage/controllers\" --testMatch \"tests/**/*Controller.test.ts\" --passWithNoTests",
-        "test:comfort-wall": "jest --testPathPattern=comfortWall",
-        "test:comfortwall": "cross-env NODE_ENV=test jest tests/coverage/comfortWallController.coverage.test.ts --coverage",
-        "test:comfort-wall-full-coverage": "jest --testPathPattern='comfortWall|comfortWallController' --coverage",
-        "test:comfort-wall-coverage": "jest --config=jest.config.ts --testPathPattern=comfortWallController --coverage",
-        "test:postcontroller": "jest tests/unit/postController.test.ts --coverage --collectCoverageFrom=\"controllers/postController.ts\""
+        "test:comfort-wall": "jest --config ./jest.config.ts --testPathPattern=comfortWallController",
+        "test:comfortwall": "cross-env NODE_ENV=test jest --config ./jest.config.ts tests/coverage/comfortWallController.coverage.test.ts --coverage",
+        "test:comfort-wall-full-coverage": "jest --config ./jest.config.ts --testPathPattern='comfortWall|comfortWallController' --coverage",
+        "test:comfort-wall-coverage": "jest --config ./jest.config.ts --testPathPattern=comfortWallController --coverage",
+        "test:postcontroller": "jest --config ./jest.config.ts tests/unit/postController.test.ts --coverage --collectCoverageFrom=\"controllers/postController.ts\""
     },
     "dependencies": {
         "@types/nodemailer": "^6.4.17",
@@ -94,30 +94,5 @@
     "type": "commonjs",
     "engines": {
         "node": ">=14.0.0"
-    },
-    "jest": {
-        "preset": "ts-jest",
-        "testEnvironment": "node",
-        "testRegex": "(tests/.*\\.(test|spec))\\.[tj]s$",
-        "setupFilesAfterEnv": [
-            "./tests/setup.ts"
-        ],
-        "collectCoverageFrom": [
-            "**/controllers/comfortWallController.ts"
-        ],
-        "coverageReporters": [
-            "text",
-            "text-summary",
-            "html"
-        ],
-        "moduleNameMapper": {
-            "^@/(.*)$": "<rootDir>/$1"
-        },
-        "transform": {
-            "^.+\\.(ts|tsx)$": "ts-jest"
-        },
-        "testTimeout": 600000,
-        "detectOpenHandles": true,
-        "forceExit": true
     }
 }

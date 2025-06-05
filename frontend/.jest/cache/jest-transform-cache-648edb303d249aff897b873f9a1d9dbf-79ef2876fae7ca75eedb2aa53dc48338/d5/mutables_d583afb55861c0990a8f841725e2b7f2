@@ -1,0 +1,190 @@
+3493b97399ff75656d90b64dc7330377
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.makeMutable = void 0;
+exports.makeMutableUI = makeMutableUI;
+var _errors = require("./errors.js");
+var _index = require("./logger/index.js");
+var _PlatformChecker = require("./PlatformChecker.js");
+var _reactUtils = require("./reactUtils.js");
+var _shareableMappingCache = require("./shareableMappingCache.js");
+var _shareables = require("./shareables.js");
+var _threads = require("./threads.js");
+var _valueSetter = require("./valueSetter.js");
+var SHOULD_BE_USE_WEB = (0, _PlatformChecker.shouldBeUseWeb)();
+function shouldWarnAboutAccessDuringRender() {
+  return true && (0, _reactUtils.isReactRendering)() && !(0, _reactUtils.isFirstReactRender)();
+}
+function checkInvalidReadDuringRender() {
+  if (shouldWarnAboutAccessDuringRender()) {
+    _index.logger.warn("Reading from `value` during component render. Please ensure that you don't access the `value` property nor use `get` method of a shared value while React is rendering a component.", {
+      strict: true
+    });
+  }
+}
+function checkInvalidWriteDuringRender() {
+  if (shouldWarnAboutAccessDuringRender()) {
+    _index.logger.warn("Writing to `value` during component render. Please ensure that you don't access the `value` property nor use `set` method of a shared value while React is rendering a component.", {
+      strict: true
+    });
+  }
+}
+function addCompilerSafeGetAndSet(mutable) {
+  'worklet';
+
+  Object.defineProperties(mutable, {
+    get: {
+      value: function value() {
+        return mutable.value;
+      },
+      configurable: false,
+      enumerable: false
+    },
+    set: {
+      value: function value(newValue) {
+        if (typeof newValue === 'function' && !newValue.__isAnimationDefinition) {
+          mutable.value = newValue(mutable.value);
+        } else {
+          mutable.value = newValue;
+        }
+      },
+      configurable: false,
+      enumerable: false
+    }
+  });
+}
+function hideInternalValueProp(mutable) {
+  'worklet';
+
+  Object.defineProperty(mutable, '_value', {
+    configurable: false,
+    enumerable: false
+  });
+}
+function makeMutableUI(initial) {
+  'worklet';
+
+  var listeners = new Map();
+  var value = initial;
+  var mutable = {
+    get value() {
+      return value;
+    },
+    set value(newValue) {
+      (0, _valueSetter.valueSetter)(mutable, newValue);
+    },
+    get _value() {
+      return value;
+    },
+    set _value(newValue) {
+      value = newValue;
+      listeners.forEach(function (listener) {
+        listener(newValue);
+      });
+    },
+    modify: function modify(modifier) {
+      var forceUpdate = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+      (0, _valueSetter.valueSetter)(mutable, modifier !== undefined ? modifier(value) : value, forceUpdate);
+    },
+    addListener: function addListener(id, listener) {
+      listeners.set(id, listener);
+    },
+    removeListener: function removeListener(id) {
+      listeners.delete(id);
+    },
+    _animation: null,
+    _isReanimatedSharedValue: true
+  };
+  hideInternalValueProp(mutable);
+  addCompilerSafeGetAndSet(mutable);
+  return mutable;
+}
+function makeMutableNative(initial) {
+  var handle = (0, _shareables.makeShareableCloneRecursive)({
+    __init: function __init() {
+      'worklet';
+
+      return makeMutableUI(initial);
+    }
+  });
+  var mutable = {
+    get value() {
+      checkInvalidReadDuringRender();
+      var uiValueGetter = (0, _threads.executeOnUIRuntimeSync)(function (sv) {
+        return sv.value;
+      });
+      return uiValueGetter(mutable);
+    },
+    set value(newValue) {
+      checkInvalidWriteDuringRender();
+      (0, _threads.runOnUI)(function () {
+        mutable.value = newValue;
+      })();
+    },
+    get _value() {
+      throw new _errors.ReanimatedError('Reading from `_value` directly is only possible on the UI runtime. Perhaps you passed an Animated Style to a non-animated component?');
+    },
+    set _value(_newValue) {
+      throw new _errors.ReanimatedError('Setting `_value` directly is only possible on the UI runtime. Perhaps you want to assign to `value` instead?');
+    },
+    modify: function modify(modifier) {
+      var forceUpdate = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+      (0, _threads.runOnUI)(function () {
+        mutable.modify(modifier, forceUpdate);
+      })();
+    },
+    addListener: function addListener() {
+      throw new _errors.ReanimatedError('Adding listeners is only possible on the UI runtime.');
+    },
+    removeListener: function removeListener() {
+      throw new _errors.ReanimatedError('Removing listeners is only possible on the UI runtime.');
+    },
+    _isReanimatedSharedValue: true
+  };
+  hideInternalValueProp(mutable);
+  addCompilerSafeGetAndSet(mutable);
+  _shareableMappingCache.shareableMappingCache.set(mutable, handle);
+  return mutable;
+}
+function makeMutableWeb(initial) {
+  var value = initial;
+  var listeners = new Map();
+  var mutable = {
+    get value() {
+      checkInvalidReadDuringRender();
+      return value;
+    },
+    set value(newValue) {
+      checkInvalidWriteDuringRender();
+      (0, _valueSetter.valueSetter)(mutable, newValue);
+    },
+    get _value() {
+      return value;
+    },
+    set _value(newValue) {
+      value = newValue;
+      listeners.forEach(function (listener) {
+        listener(newValue);
+      });
+    },
+    modify: function modify(modifier) {
+      var forceUpdate = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+      (0, _valueSetter.valueSetter)(mutable, modifier !== undefined ? modifier(mutable.value) : mutable.value, forceUpdate);
+    },
+    addListener: function addListener(id, listener) {
+      listeners.set(id, listener);
+    },
+    removeListener: function removeListener(id) {
+      listeners.delete(id);
+    },
+    _isReanimatedSharedValue: true
+  };
+  hideInternalValueProp(mutable);
+  addCompilerSafeGetAndSet(mutable);
+  return mutable;
+}
+var makeMutable = exports.makeMutable = SHOULD_BE_USE_WEB ? makeMutableWeb : makeMutableNative;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJPYmplY3QiLCJkZWZpbmVQcm9wZXJ0eSIsImV4cG9ydHMiLCJ2YWx1ZSIsIm1ha2VNdXRhYmxlIiwibWFrZU11dGFibGVVSSIsIl9lcnJvcnMiLCJyZXF1aXJlIiwiX2luZGV4IiwiX1BsYXRmb3JtQ2hlY2tlciIsIl9yZWFjdFV0aWxzIiwiX3NoYXJlYWJsZU1hcHBpbmdDYWNoZSIsIl9zaGFyZWFibGVzIiwiX3RocmVhZHMiLCJfdmFsdWVTZXR0ZXIiLCJTSE9VTERfQkVfVVNFX1dFQiIsInNob3VsZEJlVXNlV2ViIiwic2hvdWxkV2FybkFib3V0QWNjZXNzRHVyaW5nUmVuZGVyIiwiaXNSZWFjdFJlbmRlcmluZyIsImlzRmlyc3RSZWFjdFJlbmRlciIsImNoZWNrSW52YWxpZFJlYWREdXJpbmdSZW5kZXIiLCJsb2dnZXIiLCJ3YXJuIiwic3RyaWN0IiwiY2hlY2tJbnZhbGlkV3JpdGVEdXJpbmdSZW5kZXIiLCJhZGRDb21waWxlclNhZmVHZXRBbmRTZXQiLCJtdXRhYmxlIiwiZGVmaW5lUHJvcGVydGllcyIsImdldCIsImNvbmZpZ3VyYWJsZSIsImVudW1lcmFibGUiLCJzZXQiLCJuZXdWYWx1ZSIsIl9faXNBbmltYXRpb25EZWZpbml0aW9uIiwiaGlkZUludGVybmFsVmFsdWVQcm9wIiwiaW5pdGlhbCIsImxpc3RlbmVycyIsIk1hcCIsInZhbHVlU2V0dGVyIiwiX3ZhbHVlIiwiZm9yRWFjaCIsImxpc3RlbmVyIiwibW9kaWZ5IiwibW9kaWZpZXIiLCJmb3JjZVVwZGF0ZSIsImFyZ3VtZW50cyIsImxlbmd0aCIsInVuZGVmaW5lZCIsImFkZExpc3RlbmVyIiwiaWQiLCJyZW1vdmVMaXN0ZW5lciIsImRlbGV0ZSIsIl9hbmltYXRpb24iLCJfaXNSZWFuaW1hdGVkU2hhcmVkVmFsdWUiLCJtYWtlTXV0YWJsZU5hdGl2ZSIsImhhbmRsZSIsIm1ha2VTaGFyZWFibGVDbG9uZVJlY3Vyc2l2ZSIsIl9faW5pdCIsInVpVmFsdWVHZXR0ZXIiLCJleGVjdXRlT25VSVJ1bnRpbWVTeW5jIiwic3YiLCJydW5PblVJIiwiUmVhbmltYXRlZEVycm9yIiwiX25ld1ZhbHVlIiwic2hhcmVhYmxlTWFwcGluZ0NhY2hlIiwibWFrZU11dGFibGVXZWIiXSwic291cmNlcyI6WyIuLi8uLi9zcmMvbXV0YWJsZXMudHMiXSwic291cmNlc0NvbnRlbnQiOltudWxsXSwibWFwcGluZ3MiOiJBQUFBLFlBQVk7O0FBQUFBLE1BQUEsQ0FBQUMsY0FBQSxDQUFBQyxPQUFBO0VBQUFDLEtBQUE7QUFBQTtBQUFBRCxPQUFBLENBQUFFLFdBQUE7QUFBQUYsT0FBQSxDQUFBRyxhQUFBLEdBQUFBLGFBQUE7QUFFWixJQUFBQyxPQUFBLEdBQUFDLE9BQUE7QUFDQSxJQUFBQyxNQUFBLEdBQUFELE9BQUE7QUFDQSxJQUFBRSxnQkFBQSxHQUFBRixPQUFBO0FBQ0EsSUFBQUcsV0FBQSxHQUFBSCxPQUFBO0FBQ0EsSUFBQUksc0JBQUEsR0FBQUosT0FBQTtBQUNBLElBQUFLLFdBQUEsR0FBQUwsT0FBQTtBQUNBLElBQUFNLFFBQUEsR0FBQU4sT0FBQTtBQUNBLElBQUFPLFlBQUEsR0FBQVAsT0FBQTtBQUVBLElBQU1RLGlCQUFpQixHQUFHLElBQUFDLCtCQUFjLEVBQUMsQ0FBQztBQUUxQyxTQUFTQyxpQ0FBaUNBLENBQUEsRUFBRztFQUMzQyxPQUFPLFFBQVcsSUFBQUMsNEJBQWdCLEVBQUMsQ0FBQyxJQUFJLENBQUMsSUFBQUMsOEJBQWtCLEVBQUMsQ0FBQztBQUMvRDtBQUVBLFNBQVNDLDRCQUE0QkEsQ0FBQSxFQUFHO0VBQ3RDLElBQUlILGlDQUFpQyxDQUFDLENBQUMsRUFBRTtJQUN2Q0ksYUFBTSxDQUFDQyxJQUFJLENBQ1QscUxBQXFMLEVBQ3JMO01BQUVDLE1BQU0sRUFBRTtJQUFLLENBQ2pCLENBQUM7RUFDSDtBQUNGO0FBRUEsU0FBU0MsNkJBQTZCQSxDQUFBLEVBQUc7RUFDdkMsSUFBSVAsaUNBQWlDLENBQUMsQ0FBQyxFQUFFO0lBQ3ZDSSxhQUFNLENBQUNDLElBQUksQ0FDVCxtTEFB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

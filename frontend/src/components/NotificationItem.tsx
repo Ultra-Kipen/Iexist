@@ -45,31 +45,30 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onPre
   // 알림 시간 포맷팅 - 직접 구현으로 변경
   const formattedTime = formatRelativeTime(notification.created_at);
   
-  // 알림 클릭 처리
-  const handlePress = async () => {
-    if (!notification.is_read) {
-      await markAsRead(notification.id);
-    }
-    
-    // 알림 유형에 따라 다른 화면으로 이동
-    if (notification.related_id) {
-      switch (notification.notification_type) {
-        case 'like':
-        case 'comment':
-          navigation.navigate('PostDetailScreen', { postId: notification.related_id });
-          break;
-        case 'challenge':
-          navigation.navigate('ChallengeDetailScreen', { challengeId: notification.related_id });
-          break;
-        default:
-          // 기본 처리 (제공된 onPress 콜백 호출)
-          if (onPress) onPress();
-      }
-    } else if (onPress) {
-      onPress();
-    }
-  };
+ // 알림 클릭 처리
+ const handlePress = async () => {
+  // onPress 콜백을 먼저 호출
+  if (onPress) {
+    onPress();
+  }
+
+  if (!notification.is_read) {
+    await markAsRead(notification.id);
+  }
   
+  // 알림 유형에 따라 다른 화면으로 이동
+  if (notification.related_id) {
+    switch (notification.notification_type) {
+      case 'like':
+      case 'comment':
+        navigation.navigate('PostDetailScreen', { postId: notification.related_id });
+        break;
+      case 'challenge':
+        navigation.navigate('ChallengeDetailScreen', { challengeId: notification.related_id });
+        break;
+    }
+  }
+};
   // 알림 삭제 확인
   const confirmDelete = () => {
     Alert.alert(
@@ -88,6 +87,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onPre
   
   return (
     <TouchableOpacity
+      testID="notification-item"
       style={[
         styles.container,
         !notification.is_read && styles.unread
@@ -102,7 +102,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onPre
         <Text style={styles.content}>{notification.content}</Text>
         <Text style={styles.time}>{formattedTime}</Text>
       </View>
-      {!notification.is_read && <View style={styles.unreadDot} />}
+      {!notification.is_read && <View testID="unread-indicator" style={styles.unreadDot} />}
     </TouchableOpacity>
   );
 };

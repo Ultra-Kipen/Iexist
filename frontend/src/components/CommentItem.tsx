@@ -40,7 +40,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
         <Text style={styles.userName}>{displayName}</Text>
         <Text style={styles.date}>{formattedDate}</Text>
       </View>
-      <Text style={styles.content}>{content}</Text>
+      // content 부분에 testID 추가
+<Text style={styles.content} testID="content">{content}</Text>
       <View style={styles.footer}>
         {onLike && (
           <TouchableOpacity onPress={onLike} style={styles.button}>

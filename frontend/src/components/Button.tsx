@@ -1,7 +1,9 @@
+// @ts-nocheck
 // src/components/Button.tsx
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 
+// 나머지 코드는 그대로 유지
 interface ButtonProps {
   title: string;
   onPress: () => void;

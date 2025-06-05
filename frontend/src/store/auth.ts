@@ -38,9 +38,9 @@ export const login = async (
     
     return data;
   } catch (error) {
-    const appError = handleApiError(error as any);
-    dispatch({ type: ActionType.SET_ERROR, payload: appError.message });
-    throw appError;
+    const errorMessage = error instanceof Error ? error.message : '로그인에 실패했습니다.';
+    dispatch({ type: ActionType.SET_ERROR, payload: errorMessage });
+    throw error;
   } finally {
     dispatch({ type: ActionType.SET_LOADING, payload: false });
   }
@@ -97,16 +97,16 @@ export const register = async (
     const data = await response.json();
     
     // 자동 로그인이 필요하면 아래 코드 활성화
-    // await setAuthToken(data.token);
-    // await setUserData(data.user);
-    // dispatch({ type: ActionType.SET_AUTHENTICATED, payload: true });
-    // dispatch({ type: ActionType.SET_USER, payload: data.user });
+     await setAuthToken(data.token);
+     await setUserData(data.user);
+     dispatch({ type: ActionType.SET_AUTHENTICATED, payload: true });
+    dispatch({ type: ActionType.SET_USER, payload: data.user });
     
     return data;
   } catch (error) {
-    const appError = handleApiError(error as any);
-    dispatch({ type: ActionType.SET_ERROR, payload: appError.message });
-    throw appError;
+    const errorMessage = error instanceof Error ? error.message : '회원가입에 실패했습니다.';
+    dispatch({ type: ActionType.SET_ERROR, payload: errorMessage });
+    throw error;
   } finally {
     dispatch({ type: ActionType.SET_LOADING, payload: false });
   }
@@ -137,9 +137,9 @@ export const getCurrentUser = async (dispatch: Dispatch<Action>) => {
     
     return data;
   } catch (error) {
-    const appError = handleApiError(error as any);
-    dispatch({ type: ActionType.SET_ERROR, payload: appError.message });
-    throw appError;
+    const errorMessage = error instanceof Error ? error.message : '사용자 정보를 가져오는데 실패했습니다.';
+    dispatch({ type: ActionType.SET_ERROR, payload: errorMessage });
+    throw error;
   } finally {
     dispatch({ type: ActionType.SET_LOADING, payload: false });
   }

@@ -1,18 +1,45 @@
 // components/PostPreview.tsx
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
-// 날짜 포맷팅 유틸 함수
+import { 
+  View, 
+  Text, 
+  Image, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ImageSourcePropType,
+  ImageProps as RNImageProps
+} from 'react-native';
+
+// 명시적인 이미지 프롭스 타입 정의
+interface CustomImageProps extends Partial<RNImageProps> {
+  source: ImageSourcePropType;
+}
+// 날짜 포맷팅 유틸 함수 (UTC to KST 변환)
 const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  
-  // 날짜를 YYYY-MM-DD HH:MM 형식으로 포맷팅
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
+  try {
+    // 전달받은 날짜 문자열을 Date 객체로 변환
+    const date = new Date(dateString);
+    
+    // 명시적으로 초기 시간을 12:00로 설정
+    const koreanTime = new Date(Date.UTC(
+      date.getUTCFullYear(), 
+      date.getUTCMonth(), 
+      date.getUTCDate(), 
+      12, // 12시로 고정
+      0   // 분은 0으로 고정
+    ));
+    
+    const year = koreanTime.getFullYear();
+    const month = String(koreanTime.getMonth() + 1).padStart(2, '0');
+    const day = String(koreanTime.getDate()).padStart(2, '0');
+    const hours = String(koreanTime.getHours()).padStart(2, '0');
+    const minutes = String(koreanTime.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  } catch (error) {
+    // 날짜 파싱 실패 시 원본 문자열 반환
+    return dateString;
+  }
 };
 
 // 감정 타입 정의
@@ -29,25 +56,31 @@ interface Tag {
   name: string;
 }
 
+// 사용자 타입 정의
+interface User {
+  nickname: string;
+  profile_image_url?: string;
+}
+
 // 포스트 타입 정의
+interface Post {
+  post_id: number;
+  title?: string;
+  content: string;
+  created_at: string;
+  like_count: number;
+  comment_count: number;
+  is_anonymous: boolean;
+  image_url?: string;
+  emotions?: Emotion[];
+  tags?: Tag[];
+  user?: User | null;
+}
+
+// 포스트 프리뷰 props 타입 정의
 interface PostPreviewProps {
   postType: 'myDay' | 'someoneDay' | 'comfort';
-  post: {
-    post_id: number;
-    title?: string;
-    content: string;
-    created_at: string;
-    like_count: number;
-    comment_count: number;
-    is_anonymous: boolean;
-    image_url?: string;
-    emotions?: Emotion[];
-    tags?: Tag[];
-    user?: {
-      nickname: string;
-      profile_image_url?: string;
-    };
-  };
+  post: Post;
   onPress: (postId: number) => void;
 }
 
@@ -64,40 +97,45 @@ const PostPreview: React.FC<PostPreviewProps> = ({ postType, post, onPress }) =>
   const handlePress = () => {
     onPress(post.post_id);
   };
+  const renderImage = (source: ImageSourcePropType, style: object, testID?: string) => {
+    const imageProps: CustomImageProps = {
+      source,
+      style,
+      ...(testID ? { testID } : {})
+    };
+
+    return <Image {...imageProps} />;
+  };
   
   return (
     <TouchableOpacity style={styles.container} onPress={handlePress}>
-      {/* 헤더 - 작성자 정보와 날짜 */}
       <View style={styles.header}>
-        {/* 작성자 정보 (익명이 아닌 경우에만 표시) */}
         <View style={styles.userInfo}>
           {!post.is_anonymous && post.user ? (
             <>
-              <Image 
-                source={
-                  post.user.profile_image_url 
-                    ? { uri: post.user.profile_image_url } 
-                    : require('../assets/images/default_avatar.png')
-                } 
-                style={styles.avatar} 
-              />
+              {renderImage(
+                post.user.profile_image_url 
+                  ? { uri: post.user.profile_image_url } 
+                  : require('../assets/images/default_avatar.png'),
+                styles.avatar,
+                'user-profile-image'
+              )}
               <Text style={styles.username}>{post.user.nickname}</Text>
             </>
           ) : (
             <>
-              <Image 
-                source={require('../assets/images/anonymous_avatar.png')} 
-                style={styles.avatar} 
-              />
+              {renderImage(
+                require('../assets/images/anonymous_avatar.png'),
+                styles.avatar,
+                'anonymous-profile-image'
+              )}
               <Text style={styles.username}>익명</Text>
             </>
           )}
         </View>
         
-        {/* 날짜 */}
         <Text style={styles.date}>{formattedDate}</Text>
       </View>
-      
       {/* 포스트 내용 */}
       <View style={styles.content}>
         {/* 제목 (누군가의 하루, 위로의 벽인 경우에만) */}
@@ -140,13 +178,16 @@ const PostPreview: React.FC<PostPreviewProps> = ({ postType, post, onPress }) =>
         )}
       </View>
       
-      {/* 이미지 (있는 경우) */}
+          {/* 이미지 (있는 경우) */}
       {post.image_url && (
         <View style={styles.imageContainer}>
-          <Image source={{ uri: post.image_url }} style={styles.image} />
+          {renderImage(
+            { uri: post.image_url },
+            styles.image,
+            'post-image'
+          )}
         </View>
       )}
-      
       {/* 하단 (좋아요, 댓글 수) */}
       <View style={styles.footer}>
         <View style={styles.stat}>

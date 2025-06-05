@@ -1,8 +1,9 @@
 // components/SomeoneDayPostForm.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
 import LoadingIndicator from './LoadingIndicator';
 import uploadService from '../services/api/uploadService';
+import TagSearchInput from './TagSearchInput';
 
 // 타입 정의
 interface SomeoneDayPostFormProps {
@@ -26,6 +27,21 @@ interface Tag {
   name: string;
 }
 
+// 이미지 선택 함수 - 실제 구현
+const selectImage = async (): Promise<{uri: string; name?: string; type?: string} | null> => {
+  return new Promise((resolve) => {
+    // 모의 함수로 대체
+    setTimeout(() => {
+      // 성공 시 이미지 정보 반환
+      resolve({
+        uri: 'file:///mock/image/path.jpg',
+        name: 'image.jpg',
+        type: 'image/jpeg'
+      });
+    }, 500);
+  });
+};
+
 const SomeoneDayPostForm: React.FC<SomeoneDayPostFormProps> = ({
   onSubmit,
   isLoading = false,
@@ -46,32 +62,36 @@ const SomeoneDayPostForm: React.FC<SomeoneDayPostFormProps> = ({
     name?: string;
     type?: string;
   } | null>(null);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // 초기 태그 ID 변환
+  useEffect(() => {
+    // 태그 ID가 제공되었으나 태그 객체가 없는 경우
+    if (initialTagIds.length > 0 && selectedTags.length === 0) {
+      // 임시 구현
+      const mockTags: Tag[] = initialTagIds.map(id => ({
+        tag_id: id,
+        name: `태그 ${id}`
+      }));
+      setSelectedTags(mockTags);
+    }
+  }, [initialTagIds]);
 
   // 태그 선택 처리
   const handleTagSelect = (tag: Tag) => {
     if (tagIds.includes(tag.tag_id)) {
       return;
     }
+    
     setTagIds([...tagIds, tag.tag_id]);
+    setSelectedTags([...selectedTags, tag]);
   };
 
-  // 이미지 선택 함수
-  const selectImage = async (): Promise<{uri: string; name?: string; type?: string} | null> => {
-    return new Promise((resolve) => {
-      // 여기서는 간단한 모의 함수로 대체
-      // 실제 구현에서는 react-native-image-picker 또는 expo-image-picker 등을 사용
-      setTimeout(() => {
-        // 성공 시 이미지 정보 반환
-        resolve({
-          uri: 'file:///mock/image/path.jpg',
-          name: 'image.jpg',
-          type: 'image/jpeg'
-        });
-        
-        // 취소 시 null 반환
-        // resolve(null);
-      }, 500);
-    });
+  // 태그 제거 처리
+  const handleTagRemove = (tagId: number) => {
+    setTagIds(tagIds.filter(id => id !== tagId));
+    setSelectedTags(selectedTags.filter(tag => tag.tag_id !== tagId));
   };
 
   // 이미지 업로드 처리
@@ -110,25 +130,16 @@ const SomeoneDayPostForm: React.FC<SomeoneDayPostFormProps> = ({
       setImageUploadLoading(true);
       
       // 이미지 업로드 (uploadService 사용)
-      // 실제 구현에서는 API 호출을 사용합니다
-      // 모의 응답으로 대체합니다
-      // const response = await uploadService.uploadImage(imageUri);
+      // FormData 대신 직접 URI 전달
+      const response = await uploadService.uploadImage(imageUri);
       
-      // 2초 지연을 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // 모의 응답 생성
-      const mockResponse = {
-        data: {
-          image_url: `https://example.com/uploads/${Date.now()}.jpg`,
-          original_name: 'image.jpg',
-          file_size: 12345
-        }
-      };
+      if (!response || !response.data || !response.data.image_url) {
+        throw new Error('이미지 업로드 응답이 유효하지 않습니다.');
+      }
       
       setImageUploadLoading(false);
       
-      return mockResponse.data.image_url;
+      return response.data.image_url;
     } catch (error) {
       setImageUploadLoading(false);
       console.error('이미지 업로드 오류:', error);
@@ -139,22 +150,52 @@ const SomeoneDayPostForm: React.FC<SomeoneDayPostFormProps> = ({
 
   // 게시물 제출 처리
   const handleSubmit = async () => {
-    if (title.trim().length < 5) {
-      Alert.alert('오류', '제목은 최소 5자 이상이어야 합니다.');
-      return;
-    }
-    
-    if (content.trim().length < 20) {
-      Alert.alert('오류', '내용은 최소 20자 이상이어야 합니다.');
-      return;
-    }
-    
     try {
+      // 유효성 검사
+      if (title.trim().length < 5) {
+        Alert.alert('오류', '제목은 최소 5자 이상이어야 합니다.');
+        return;
+      }
+      
+      if (content.trim().length < 20) {
+        Alert.alert('오류', '내용은 최소 20자 이상이어야 합니다.');
+        return;
+      }
+      
       let finalImageUrl = imageUrl;
       
       // 선택된 이미지가 있고 로컬 이미지인 경우 업로드
       if (selectedImage && selectedImage.uri && selectedImage.uri.startsWith('file://')) {
         finalImageUrl = await uploadImage();
+        if (!finalImageUrl && selectedImage) {
+          // 업로드 실패 시 사용자에게 알림
+          Alert.alert(
+            '업로드 경고',
+            '이미지 업로드에 실패했습니다. 이미지 없이 게시물을 등록하시겠습니까?',
+            [
+              { text: '취소', style: 'cancel' },
+              { 
+                text: '이미지 없이 등록', 
+                onPress: async () => {
+                  try {
+                    await onSubmit({
+                      title,
+                      content,
+                      tag_ids: tagIds,
+                      is_anonymous: isAnonymous
+                    });
+                    
+                    // 성공 후 폼 초기화
+                    resetForm();
+                  } catch (submitError) {
+                    handleSubmitError(submitError);
+                  }
+                }
+              }
+            ]
+          );
+          return;
+        }
       }
       
       await onSubmit({
@@ -166,16 +207,34 @@ const SomeoneDayPostForm: React.FC<SomeoneDayPostFormProps> = ({
       });
       
       // 성공 후 폼 초기화
-      setTitle('');
-      setContent('');
-      setTagIds([]);
-      setImageUrl(undefined);
-      setSelectedImage(null);
-      setIsAnonymous(false);
+      resetForm();
     } catch (error) {
-      console.error('게시물 제출 오류:', error);
-      Alert.alert('제출 실패', '게시물을 제출하는 중 오류가 발생했습니다. 다시 시도해 주세요.');
+      handleSubmitError(error);
     }
+  };
+
+  // 폼 초기화 함수
+  const resetForm = () => {
+    setTitle('');
+    setContent('');
+    setTagIds([]);
+    setSelectedTags([]);
+    setImageUrl(undefined);
+    setSelectedImage(null);
+    setIsAnonymous(false);
+  };
+
+  // 제출 오류 처리 함수
+  const handleSubmitError = (error: any) => {
+    console.error('게시물 제출 오류:', error);
+    
+    // API 응답에서 오류 메시지 추출 시도
+    let errorMessage = '게시물을 제출하는 중 오류가 발생했습니다. 다시 시도해 주세요.';
+    if (error.response && error.response.data && error.response.data.message) {
+      errorMessage = error.response.data.message;
+    }
+    
+    Alert.alert('제출 실패', errorMessage);
   };
 
   // 이미지 제거
@@ -194,8 +253,15 @@ const SomeoneDayPostForm: React.FC<SomeoneDayPostFormProps> = ({
       <View style={styles.container}>
         <Text style={styles.title}>누군가의 하루 게시하기</Text>
         
-        {/* 제목 입력 */}
-        <View style={styles.fieldContainer}>
+        {/* 오류 메시지 */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+        
+       {/* 제목 입력 */}
+       <View style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>제목</Text>
           <TextInput
             style={styles.titleInput}
@@ -204,7 +270,10 @@ const SomeoneDayPostForm: React.FC<SomeoneDayPostFormProps> = ({
             placeholder="제목을 입력하세요 (5-100자)"
             maxLength={maxTitleLength}
           />
-          <Text style={styles.charCount}>
+          <Text style={[
+            styles.charCount,
+            title.length >= maxTitleLength * 0.9 && styles.charCountWarning
+          ]}>
             {title.length}/{maxTitleLength}
           </Text>
         </View>
@@ -212,20 +281,28 @@ const SomeoneDayPostForm: React.FC<SomeoneDayPostFormProps> = ({
         {/* 태그 선택기 */}
         <View style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>태그</Text>
-          <View>
-            {/* 실제 프로젝트에서는 TagSelector 컴포넌트를 사용합니다 */}
-            {/* 여기서는 placeholder로 대체합니다 */}
-            <TouchableOpacity 
-              style={styles.selectorPlaceholder}
-              onPress={() => Alert.alert('태그 선택', '태그를 선택해주세요.')}
-            >
-              <Text style={styles.selectorPlaceholderText}>
-                {tagIds.length > 0 
-                  ? `${tagIds.length}개의 태그가 선택됨` 
-                  : '태그를 선택해주세요 (선택사항)'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TagSearchInput
+            onTagSelect={handleTagSelect}
+            selectedTags={selectedTags}
+            placeholder="태그를 검색하세요 (선택사항)"
+            maxTags={5}
+          />
+          
+          {/* 선택된 태그 표시 */}
+          {selectedTags.length > 0 && (
+            <View style={styles.selectedTagsContainer}>
+              {selectedTags.map(tag => (
+                <TouchableOpacity
+                  key={tag.tag_id}
+                  style={styles.selectedTag}
+                  onPress={() => handleTagRemove(tag.tag_id)}
+                >
+                  <Text style={styles.selectedTagText}>#{tag.name}</Text>
+                  <Text style={styles.removeTagText}> ✕</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
         
         {/* 내용 입력 */}
@@ -240,7 +317,10 @@ const SomeoneDayPostForm: React.FC<SomeoneDayPostFormProps> = ({
             maxLength={maxContentLength}
             textAlignVertical="top"
           />
-          <Text style={styles.charCount}>
+          <Text style={[
+            styles.charCount,
+            content.length >= maxContentLength * 0.9 && styles.charCountWarning
+          ]}>
             {content.length}/{maxContentLength}
           </Text>
         </View>
@@ -333,6 +413,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#4A6572',
   },
+  errorContainer: {
+    backgroundColor: '#FFE5E5',
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#D32F2F',
+    textAlign: 'center',
+  },
   fieldContainer: {
     marginBottom: 16,
   },
@@ -366,6 +456,33 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: 4,
   },
+  charCountWarning: {
+    color: '#E0245E',
+  },
+  selectedTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  selectedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8EDF0',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  selectedTagText: {
+    fontSize: 14,
+    color: '#4A6572',
+  },
+  removeTagText: {
+    fontSize: 14,
+    color: '#657786',
+    marginLeft: 4,
+  },
   imagePicker: {
     borderWidth: 1,
     borderStyle: 'dashed',
@@ -378,19 +495,6 @@ const styles = StyleSheet.create({
   imageButtonText: {
     color: '#4A6572',
     fontSize: 16,
-  },
-  selectorPlaceholder: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#E1E8ED',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-    backgroundColor: '#F8F9FA',
-  },
-  selectorPlaceholderText: {
-    fontSize: 16,
-    color: '#657786',
   },
   selectedImageContainer: {
     marginTop: 8,

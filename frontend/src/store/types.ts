@@ -7,7 +7,14 @@ export interface AppState {
     loading: boolean;
     error: string | null;
   }
-  
+  export interface Notification {
+    id: string;
+    content: string;
+    notificationType: 'like' | 'comment' | 'challenge' | 'system';
+    relatedId?: number;
+    isRead: boolean;
+    createdAt: string;
+  }
   // 액션 타입
   export enum ActionType {
     SET_AUTHENTICATED = 'SET_AUTHENTICATED',

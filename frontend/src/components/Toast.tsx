@@ -1,5 +1,12 @@
 import React, { useState, useEffect, ReactNode, useRef } from 'react';
-import { View, Text, Animated, StyleSheet, TouchableOpacity } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity,
+  // @ts-ignore - TypeScript 오류 무시
+  Animated
+} from 'react-native';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -11,6 +18,7 @@ interface ToastProps {
   type?: ToastType;
   position?: 'top' | 'bottom';
   icon?: ReactNode;
+  testID?: string; // testID 속성 추가
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -21,6 +29,7 @@ const Toast: React.FC<ToastProps> = ({
   type = 'info',
   position = 'bottom',
   icon,
+  testID,
 }) => {
   const [isVisible, setIsVisible] = useState(visible);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -80,13 +89,14 @@ const Toast: React.FC<ToastProps> = ({
 
   return (
     <Animated.View
+      testID={testID}
       style={[
         styles.container,
         positionStyle,
         { backgroundColor: getBackgroundColor(), opacity: fadeAnim },
       ]}
     >
-      <TouchableOpacity onPress={hideToast} style={styles.content}>
+      <TouchableOpacity onPress={hideToast} style={styles.content} testID="toast-touchable">
         {icon && <View style={styles.iconContainer}>{icon}</View>}
         <Text style={styles.text}>{message}</Text>
       </TouchableOpacity>

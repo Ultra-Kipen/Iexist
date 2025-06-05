@@ -1,0 +1,86 @@
+5779d7ae8d5e03cb8f5a13fdc6496170
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.measure = void 0;
+var _index = require("../logger/index.js");
+var _PlatformChecker = require("../PlatformChecker.js");
+var measure;
+function measureFabric(animatedRef) {
+  'worklet';
+
+  if (!_WORKLET) {
+    return null;
+  }
+  var viewTag = animatedRef();
+  if (viewTag === -1) {
+    _index.logger.warn(`The view with tag ${viewTag} is not a valid argument for measure(). This may be because the view is not currently rendered, which may not be a bug (e.g. an off-screen FlatList item).`);
+    return null;
+  }
+  var measured = global._measureFabric(viewTag);
+  if (measured === null) {
+    _index.logger.warn(`The view has some undefined, not-yet-computed or meaningless value of \`LayoutMetrics\` type. This may be because the view is not currently rendered, which may not be a bug (e.g. an off-screen FlatList item).`);
+    return null;
+  } else if (measured.x === -1234567) {
+    _index.logger.warn(`The view returned an invalid measurement response. Please make sure the view is currently rendered.`);
+    return null;
+  } else if (isNaN(measured.x)) {
+    _index.logger.warn(`The view gets view-flattened on Android. To disable view-flattening, set \`collapsable={false}\` on this component.`);
+    return null;
+  } else {
+    return measured;
+  }
+}
+function measurePaper(animatedRef) {
+  'worklet';
+
+  if (!_WORKLET) {
+    return null;
+  }
+  var viewTag = animatedRef();
+  if (viewTag === -1) {
+    _index.logger.warn(`The view with tag ${viewTag} is not a valid argument for measure(). This may be because the view is not currently rendered, which may not be a bug (e.g. an off-screen FlatList item).`);
+    return null;
+  }
+  var measured = global._measurePaper(viewTag);
+  if (measured === null) {
+    _index.logger.warn(`The view with tag ${viewTag} has some undefined, not-yet-computed or meaningless value of \`LayoutMetrics\` type. This may be because the view is not currently rendered, which may not be a bug (e.g. an off-screen FlatList item).`);
+    return null;
+  } else if (measured.x === -1234567) {
+    _index.logger.warn(`The view with tag ${viewTag} returned an invalid measurement response. Please make sure the view is currently rendered.`);
+    return null;
+  } else if (isNaN(measured.x)) {
+    _index.logger.warn(`The view with tag ${viewTag} gets view-flattened on Android. To disable view-flattening, set \`collapsable={false}\` on this component.`);
+    return null;
+  } else {
+    return measured;
+  }
+}
+function measureJest() {
+  _index.logger.warn('measure() cannot be used with Jest.');
+  return null;
+}
+function measureChromeDebugger() {
+  _index.logger.warn('measure() cannot be used with Chrome Debugger.');
+  return null;
+}
+function measureDefault() {
+  _index.logger.warn('measure() is not supported on this configuration.');
+  return null;
+}
+if (!(0, _PlatformChecker.shouldBeUseWeb)()) {
+  if ((0, _PlatformChecker.isFabric)()) {
+    exports.measure = measure = measureFabric;
+  } else {
+    exports.measure = measure = measurePaper;
+  }
+} else if ((0, _PlatformChecker.isJest)()) {
+  exports.measure = measure = measureJest;
+} else if ((0, _PlatformChecker.isChromeDebugger)()) {
+  exports.measure = measure = measureChromeDebugger;
+} else {
+  exports.measure = measure = measureDefault;
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJPYmplY3QiLCJkZWZpbmVQcm9wZXJ0eSIsImV4cG9ydHMiLCJ2YWx1ZSIsIm1lYXN1cmUiLCJfaW5kZXgiLCJyZXF1aXJlIiwiX1BsYXRmb3JtQ2hlY2tlciIsIm1lYXN1cmVGYWJyaWMiLCJhbmltYXRlZFJlZiIsIl9XT1JLTEVUIiwidmlld1RhZyIsImxvZ2dlciIsIndhcm4iLCJtZWFzdXJlZCIsImdsb2JhbCIsIl9tZWFzdXJlRmFicmljIiwieCIsImlzTmFOIiwibWVhc3VyZVBhcGVyIiwiX21lYXN1cmVQYXBlciIsIm1lYXN1cmVKZXN0IiwibWVhc3VyZUNocm9tZURlYnVnZ2VyIiwibWVhc3VyZURlZmF1bHQiLCJzaG91bGRCZVVzZVdlYiIsImlzRmFicmljIiwiaXNKZXN0IiwiaXNDaHJvbWVEZWJ1Z2dlciJdLCJzb3VyY2VzIjpbIi4uLy4uLy4uL3NyYy9wbGF0Zm9ybUZ1bmN0aW9ucy9tZWFzdXJlLnRzIl0sInNvdXJjZXNDb250ZW50IjpbbnVsbF0sIm1hcHBpbmdzIjoiQUFBQSxZQUFZOztBQUFBQSxNQUFBLENBQUFDLGNBQUEsQ0FBQUMsT0FBQTtFQUFBQyxLQUFBO0FBQUE7QUFBQUQsT0FBQSxDQUFBRSxPQUFBO0FBU1osSUFBQUMsTUFBQSxHQUFBQyxPQUFBO0FBQ0EsSUFBQUMsZ0JBQUEsR0FBQUQsT0FBQTtBQXNCTyxJQUFJRixPQUFnQjtBQUUzQixTQUFTSSxhQUFhQSxDQUFDQyxXQUE4QyxFQUFFO0VBQ3JFLFNBQVM7O0VBQ1QsSUFBSSxDQUFDQyxRQUFRLEVBQUU7SUFDYixPQUFPLElBQUk7RUFDYjtFQUVBLElBQU1DLE9BQU8sR0FBR0YsV0FBVyxDQUFDLENBQUM7RUFDN0IsSUFBSUUsT0FBTyxLQUFLLENBQUMsQ0FBQyxFQUFFO0lBQ2xCQyxhQUFNLENBQUNDLElBQUksQ0FDVCxxQkFBcUJGLE9BQU8sNEpBQzlCLENBQUM7SUFDRCxPQUFPLElBQUk7RUFDYjtFQUVBLElBQU1HLFFBQVEsR0FBR0MsTUFBTSxDQUFDQyxjQUFjLENBQUVMLE9BQTRCLENBQUM7RUFDckUsSUFBSUcsUUFBUSxLQUFLLElBQUksRUFBRTtJQUNyQkYsYUFBTSxDQUFDQyxJQUFJLENBQ1Qsa05BQ0YsQ0FBQztJQUNELE9BQU8sSUFBSTtFQUNiLENBQUMsTUFBTSxJQUFJQyxRQUFRLENBQUNHLENBQUMsS0FBSyxDQUFDLE9BQU8sRUFBRTtJQUNsQ0wsYUFBTSxDQUFDQyxJQUFJLENBQ1QscUdBQ0YsQ0FBQztJQUNELE9BQU8sSUFBSTtFQUNiLENBQUMsTUFBTSxJQUFJSyxLQUFLLENBQUNKLFFBQVEsQ0FBQ0csQ0FBQyxDQUFDLEVBQUU7SUFDNUJMLGFBQU0sQ0FBQ0MsSUFBSSxDQUNULHFIQUNGLENBQUM7SUFDRCxPQUFPLElBQUk7RUFDYixDQUFDLE1BQU07SUFDTCxPQUFPQyxRQUFRO0VBQ2pCO0FBQ0Y7QUFFQSxTQUFTSyxZQUFZQSxDQUFDVixXQUE4QyxFQUFFO0VBQ3BFLFNBQVM7O0VBQ1QsSUFBSSxDQUFDQyxRQUFRLEVBQUU7SUFDYixPQUFPLElBQUk7RUFDYjtFQUVBLElBQU1DLE9BQU8sR0FBR0YsV0FBVyxDQUFDLENBQUM7RUFDN0IsSUFBSUUsT0FBTyxLQUFLLENBQUMsQ0FBQyxFQUFFO0lBQ2xCQyxhQUFNLENBQUNDLElBQUksQ0FDVCxxQkFBcUJGLE9BQU8sNEpBQzlCLENBQUM7SUFDRCxPQUFPLElBQUk7RUFDYjtFQUVBLElBQU1HLFFBQVEsR0FBR0MsTUFBTSxDQUFDSyxhQUFhLENBQUVULE9BQWlCLENBQUM7RUFDekQsSUFBSUcsUUFBUSxLQUFLLElBQUksRUFBRTtJQUNyQkYsYUFBTSxDQUFDQyxJQUFJLENBQ1QscUJBQ0VGLE9BQU8sME1BRVgsQ0FBQztJQUNELE9BQU8sSUFBSTtFQUNiLENBQUMsTUFBTSxJQUFJRyxRQUFRLENBQUNHLENBQUMsS0FBSyxDQUFDLE9BQU8sRUFBRTtJQUNsQ0wsYUFBTSxDQUFDQyxJQUFJLENBQ1QscUJBQ0VGLE9BQU8sNkZBRVgsQ0FBQztJQUNELE9BQU8sSUFBSTtFQUNiLENBQUMsTUFBTSxJQUFJTyxLQUFLLENBQUNKLFFBQVEsQ0FBQ0csQ0FBQyxDQUFDLEVBQUU7SUFDNUJMLGFBQU0sQ0FBQ0MsSUFBSSxDQUNULHFCQUNFRixPQUFPLDZHQUVYLENBQUM7SUFDRCxPQUFPLElBQUk7RUFDYixDQUFDLE1BQU07SUFDTCxPQUFPRyxRQUFRO0VBQ2pCO0FBQ0Y7QUFFQSxTQUFTTyxXQUFXQSxDQUFBLEVBQUc7RUFDckJULGFBQU0sQ0FBQ0MsSUFBSSxDQUFDLHFDQUFxQyxDQUFDO0VBQ2xELE9BQU8sSUFBSTtBQUNiO0FBRUEsU0FBU1MscUJBQXFCQSxDQUFBLEVBQUc7RUFDL0JWLGFBQU0sQ0FBQ0MsSUFBSSxDQUFDLGdEQUFnRCxDQUFDO0VBQzdELE9BQU8sSUFBSTtBQUNiO0FBRUEsU0FBU1UsY0FBY0EsQ0FBQSxFQUFHO0VBQ3hCWCxhQUFNLENBQUNDLElBQUksQ0FBQyxtREFBbUQsQ0FBQztFQUNoRSxPQUFPLElBQUk7QUFDYjtBQUVBLElBQUksQ0FBQyxJQUFBVywrQkFBYyxFQUFDLENBQUMsRUFBRTtFQUlyQixJQUFJLElBQUFDLHlCQUFRLEVBQUMsQ0FBQyxFQUFFO0lBQ2R2QixPQUFBLENBQUFFLE9BQUEsR0FBQUEsT0FBTyxHQUFHSSxhQUFtQztFQUMvQyxDQUFDLE1BQU07SUFDTE4sT0FBQSxDQUFBRSxPQUFBLEdBQUFBLE9BQU8sR0FBR2UsWUFBa0M7RUFDOUM7QUFDRixDQUFDLE1BQU0sSUFBSSxJQUFBTyx1QkFBTSxFQUFDLENBQUMsRUFBRTtFQUNuQnhCLE9BQUEsQ0FBQUUsT0FBQSxHQUFBQSxPQUFPLEdBQUdpQixXQUFXO0FBQ3ZCLENBQUMsTUFBTSxJQUFJLElBQUFNLGlDQUFnQixFQUFDLENBQUMsRUFBRTtFQUM3QnpCLE9BQUEsQ0FBQUUsT0FBQSxHQUFBQSxPQUFPLEdBQUdrQixxQkFBcUI7QUFDakMsQ0FBQyxNQUFNO0VBQ0xwQixPQUFBLENBQUFFLE9BQUEsR0FBQUEsT0FBTyxHQUFHbUIsY0FBYztBQUMxQiIsImlnbm9yZUxpc3QiOltdfQ==

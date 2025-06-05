@@ -27,8 +27,14 @@ const ProfileScreen = () => {
       const profileResponse = await userService.getProfile();
       const statsResponse = await userService.getUserStats();
       
-      setProfile(profileResponse.data.data);
-      setStats(statsResponse.data.data);
+      // API 응답 구조를 직접 확인하여 올바른 접근 방식 사용
+      if (profileResponse && profileResponse.data) {
+        setProfile(profileResponse.data);
+      }
+      
+      if (statsResponse && statsResponse.data) {
+        setStats(statsResponse.data);
+      }
     } catch (err) {
       console.error('프로필 데이터 로딩 오류:', err);
       setError('프로필 정보를 불러오는 중 오류가 발생했습니다.');

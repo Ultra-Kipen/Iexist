@@ -1,0 +1,112 @@
+f38352b808437b2c6c85a0130badd1c3
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.LogLevel = exports.DEFAULT_LOGGER_CONFIG = void 0;
+exports.logToLogBoxAndConsole = logToLogBoxAndConsole;
+exports.logger = void 0;
+exports.registerLoggerConfig = registerLoggerConfig;
+exports.replaceLoggerImplementation = replaceLoggerImplementation;
+exports.updateLoggerConfig = updateLoggerConfig;
+var _LogBox = require("./LogBox.js");
+var DOCS_URL = 'https://docs.swmansion.com/react-native-reanimated/docs/debugging/logger-configuration';
+var DOCS_REFERENCE = `If you don't want to see this message, you can disable the \`strict\` mode. Refer to:\n${DOCS_URL} for more details.`;
+var LogLevel = exports.LogLevel = function (LogLevel) {
+  LogLevel[LogLevel["warn"] = 1] = "warn";
+  LogLevel[LogLevel["error"] = 2] = "error";
+  return LogLevel;
+}({});
+function logToConsole(data) {
+  'worklet';
+
+  switch (data.level) {
+    case 'warn':
+      console.warn(data.message.content);
+      break;
+    case 'error':
+    case 'fatal':
+    case 'syntax':
+      console.error(data.message.content);
+      break;
+  }
+}
+var DEFAULT_LOGGER_CONFIG = exports.DEFAULT_LOGGER_CONFIG = {
+  logFunction: logToConsole,
+  level: LogLevel.warn,
+  strict: true
+};
+function formatMessage(message) {
+  'worklet';
+
+  return `[Reanimated] ${message}`;
+}
+function createLog(level, message) {
+  'worklet';
+
+  var formattedMessage = formatMessage(message);
+  return {
+    level: level,
+    message: {
+      content: formattedMessage,
+      substitutions: []
+    },
+    category: formattedMessage,
+    componentStack: [],
+    componentStackType: null,
+    stack: new Error().stack
+  };
+}
+function logToLogBoxAndConsole(data) {
+  (0, _LogBox.addLogBoxLog)(data);
+  logToConsole(data);
+}
+function registerLoggerConfig(config) {
+  'worklet';
+
+  global.__reanimatedLoggerConfig = config;
+}
+function replaceLoggerImplementation(logFunction) {
+  'worklet';
+
+  registerLoggerConfig(Object.assign({}, global.__reanimatedLoggerConfig, {
+    logFunction: logFunction
+  }));
+}
+function updateLoggerConfig(options) {
+  'worklet';
+
+  var _options$level, _options$strict;
+  registerLoggerConfig(Object.assign({}, global.__reanimatedLoggerConfig, {
+    level: (_options$level = options == null ? void 0 : options.level) != null ? _options$level : DEFAULT_LOGGER_CONFIG.level,
+    strict: (_options$strict = options == null ? void 0 : options.strict) != null ? _options$strict : DEFAULT_LOGGER_CONFIG.strict
+  }));
+}
+function handleLog(level, message, options) {
+  'worklet';
+
+  var config = global.__reanimatedLoggerConfig;
+  if (options.strict && !config.strict || LogLevel[level] < config.level) {
+    return;
+  }
+  if (options.strict) {
+    message += `\n\n${DOCS_REFERENCE}`;
+  }
+  config.logFunction(createLog(level, message));
+}
+var logger = exports.logger = {
+  warn: function warn(message) {
+    'worklet';
+
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    handleLog('warn', message, options);
+  },
+  error: function error(message) {
+    'worklet';
+
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    handleLog('error', message, options);
+  }
+};
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJPYmplY3QiLCJkZWZpbmVQcm9wZXJ0eSIsImV4cG9ydHMiLCJ2YWx1ZSIsIkxvZ0xldmVsIiwiREVGQVVMVF9MT0dHRVJfQ09ORklHIiwibG9nVG9Mb2dCb3hBbmRDb25zb2xlIiwibG9nZ2VyIiwicmVnaXN0ZXJMb2dnZXJDb25maWciLCJyZXBsYWNlTG9nZ2VySW1wbGVtZW50YXRpb24iLCJ1cGRhdGVMb2dnZXJDb25maWciLCJfTG9nQm94IiwicmVxdWlyZSIsIkRPQ1NfVVJMIiwiRE9DU19SRUZFUkVOQ0UiLCJsb2dUb0NvbnNvbGUiLCJkYXRhIiwibGV2ZWwiLCJjb25zb2xlIiwid2FybiIsIm1lc3NhZ2UiLCJjb250ZW50IiwiZXJyb3IiLCJsb2dGdW5jdGlvbiIsInN0cmljdCIsImZvcm1hdE1lc3NhZ2UiLCJjcmVhdGVMb2ciLCJmb3JtYXR0ZWRNZXNzYWdlIiwic3Vic3RpdHV0aW9ucyIsImNhdGVnb3J5IiwiY29tcG9uZW50U3RhY2siLCJjb21wb25lbnRTdGFja1R5cGUiLCJzdGFjayIsIkVycm9yIiwiYWRkTG9nQm94TG9nIiwiY29uZmlnIiwiZ2xvYmFsIiwiX19yZWFuaW1hdGVkTG9nZ2VyQ29uZmlnIiwiYXNzaWduIiwib3B0aW9ucyIsIl9vcHRpb25zJGxldmVsIiwiX29wdGlvbnMkc3RyaWN0IiwiaGFuZGxlTG9nIiwiYXJndW1lbnRzIiwibGVuZ3RoIiwidW5kZWZpbmVkIl0sInNvdXJjZXMiOlsiLi4vLi4vLi4vc3JjL2xvZ2dlci9sb2dnZXIudHMiXSwic291cmNlc0NvbnRlbnQiOltudWxsXSwibWFwcGluZ3MiOiJBQUFBLFlBQVk7O0FBQUFBLE1BQUEsQ0FBQUMsY0FBQSxDQUFBQyxPQUFBO0VBQUFDLEtBQUE7QUFBQTtBQUFBRCxPQUFBLENBQUFFLFFBQUEsR0FBQUYsT0FBQSxDQUFBRyxxQkFBQTtBQUFBSCxPQUFBLENBQUFJLHFCQUFBLEdBQUFBLHFCQUFBO0FBQUFKLE9BQUEsQ0FBQUssTUFBQTtBQUFBTCxPQUFBLENBQUFN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

@@ -25,7 +25,7 @@ export const useEmotions = (): UseEmotionsReturn => {
   const { state, dispatch } = useStore();
   const [emotions, setEmotions] = useState<Emotion[]>([]);
   const [selectedEmotions, setSelectedEmotions] = useState<number[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true); // 초기 로딩 상태를 true로 변경
   const [error, setError] = useState<string | null>(null);
 
   const fetchEmotions = useCallback(async () => {
@@ -33,18 +33,22 @@ export const useEmotions = (): UseEmotionsReturn => {
       setLoading(true);
       setError(null);
       
-      // API 호출 코드 (실제 구현 필요)
+      // API 호출 코드
       const response = await fetch('/api/emotions');
-      const data = await response.json();
       
+      if (!response.ok) {
+        throw new Error('감정 목록을 불러오는데 실패했습니다.');
+      }
+      
+      const data = await response.json();
       setEmotions(data);
     } catch (error: any) {
-      setError(error.message || '감정 목록을 불러오는데 실패했습니다.');
+      // 명시적으로 한국어 에러 메시지 설정
+      setError('감정 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     fetchEmotions();
   }, [fetchEmotions]);

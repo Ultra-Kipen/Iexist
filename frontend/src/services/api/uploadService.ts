@@ -1,30 +1,53 @@
-// services/api/uploadService.ts
 import client from './client';
+import { AxiosResponse } from 'axios';
 
-/**
- * 파일 업로드 API 서비스
- */
+interface UploadResponse {
+  image_url: string;
+  original_name: string;
+  file_size: number;
+}
+
 const uploadService = {
-  /**
-   * 단일 이미지 업로드
-   * @param file 업로드할 파일
-   * @param onProgress 진행 상태 콜백 (선택 사항)
-   */
-  uploadImage: async (file: File, onProgress?: (progress: number) => void) => {
+  uploadImage: async (
+    file: string | File, 
+    onProgress?: (progress: number) => void
+  ): Promise<AxiosResponse<UploadResponse>> => {
+    // 파일 유효성 검사
+    if (!file) {
+      throw new Error('업로드할 파일이 없습니다.');
+    }
+
     const formData = new FormData();
-    formData.append('image', file);
     
-    return client.post('/uploads/image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      },
-      onUploadProgress: onProgress ? (progressEvent) => {
-        const percentCompleted = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total!
-        );
-        onProgress(percentCompleted);
-      } : undefined
-    });
+    // 파일 타입에 따른 처리
+    if (typeof file === 'string') {
+      // URI 문자열인 경우
+      formData.append('file', {
+        uri: file,
+        name: file.split('/').pop() || 'image.jpg',
+        type: 'image/jpeg'
+      } as any);
+    } else {
+      // File 객체인 경우
+      formData.append('file', file);
+    }
+    
+    try {
+      return await client.post<UploadResponse>('/uploads/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: onProgress ? (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total!
+          );
+          onProgress(percentCompleted);
+        } : undefined
+      });
+    } catch (error) {
+      // 오류를 그대로 던짐
+      throw error;
+    }
   },
   
   /**

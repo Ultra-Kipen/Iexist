@@ -51,35 +51,36 @@ const TagSelector: React.FC<TagSelectorProps> = ({
         horizontal={false} 
         showsVerticalScrollIndicator={false}
         style={styles.tagScroll}
-        contentContainerStyle={styles.tagContainer}
       >
-        {tags.map((tag) => {
-          const isSelected = selectedTags.includes(tag.id);
-          const disabled = !isSelected && isMaxSelected;
-          
-          return (
-            <TouchableOpacity
-              key={tag.id}
-              style={[
-                styles.tag,
-                isSelected && styles.selectedTag,
-                disabled && styles.disabledTag,
-              ]}
-              onPress={() => handleTagSelect(tag.id)}
-              disabled={disabled}
-            >
-              <Text
+        <View style={styles.tagContainer}>
+          {tags.map((tag) => {
+            const isSelected = selectedTags.includes(tag.id);
+            const disabled = !isSelected && isMaxSelected;
+            
+            return (
+              <TouchableOpacity
+                key={tag.id}
                 style={[
-                  styles.tagText,
-                  isSelected && styles.selectedTagText,
-                  disabled && styles.disabledTagText,
+                  styles.tag,
+                  isSelected && styles.selectedTag,
+                  disabled && styles.disabledTag,
                 ]}
+                onPress={() => handleTagSelect(tag.id)}
+                disabled={disabled}
               >
-                {tag.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                <Text
+                  style={[
+                    styles.tagText,
+                    isSelected && styles.selectedTagText,
+                    disabled && styles.disabledTagText,
+                  ]}
+                >
+                  {tag.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </ScrollView>
       
       {allowCreation && onTagCreate && (

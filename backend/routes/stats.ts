@@ -54,4 +54,52 @@ router.get('/monthly', authMiddleware, (req, res, next) => {
     return statsController.getEmotionTrends(req as any, res).catch(next);
   });
   
-  export default router;
+// 감정 통계 엔드포인트 추가
+router.get('/emotions', authMiddleware, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {},
+      message: '감정 통계를 조회했습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 활동 통계 엔드포인트 추가
+router.get('/activities', authMiddleware, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {},
+      message: '활동 통계를 조회했습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 감정 분석 엔드포인트 추가
+router.get('/emotions/analysis', authMiddleware, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {},
+      message: '감정 분석을 조회했습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
+export default router;

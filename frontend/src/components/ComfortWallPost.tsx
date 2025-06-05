@@ -146,11 +146,16 @@ const ComfortWallPost: React.FC<ComfortWallPostProps> = ({
       </TouchableOpacity>
 
       {/* 게시물 이미지 (있는 경우) */}
-      {post.image_url && (
-        <TouchableOpacity onPress={handlePostPress} style={styles.imageContainer}>
-          <Image source={{ uri: post.image_url }} style={styles.image} />
-        </TouchableOpacity>
-      )}
+      // ComfortWallPost.tsx 의 이미지 부분 수정
+{post.image_url && (
+  <TouchableOpacity onPress={handlePostPress} style={styles.imageContainer}>
+    <Image 
+      source={{ uri: post.image_url }} 
+      style={styles.image} 
+      testID="post-image" 
+    />
+  </TouchableOpacity>
+)}
 
       {/* 게시물 작업 버튼 (좋아요, 댓글) */}
       <View style={styles.actionsContainer}>

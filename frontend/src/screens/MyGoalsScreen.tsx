@@ -1,6 +1,18 @@
-// src/screens/MyGoalsScreen.tsx
+// 파일 상단에 추가
+declare module 'react-native' {
+  export const FlatList: any;
+}
+
+import { FlatList } from 'react-native';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, FlatList } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  Alert
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import goalService, { Goal } from '../services/api/goalService';
 import emotionService, { Emotion } from '../services/api/emotionService';
@@ -56,6 +68,14 @@ const MyGoalsScreen = () => {
     }
   };
 
+  // resetForm 함수를 상위 레벨로 이동
+  const resetForm = () => {
+    setSelectedEmotionId(null);
+    setStartDate(new Date());
+    setEndDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+    setShowCreateForm(false);
+  };
+
   const handleCreateGoal = async () => {
     if (!selectedEmotionId) {
       Alert.alert('알림', '목표 감정을 선택해주세요.');
@@ -87,10 +107,9 @@ const MyGoalsScreen = () => {
       '목표 삭제',
       '정말 이 목표를 삭제하시겠습니까?',
       [
-        { text: '취소', style: 'cancel' },
+        { text: '취소' }, // style 속성 제거
         {
           text: '삭제',
-          style: 'destructive',
           onPress: async () => {
             try {
               await goalService.deleteGoal(goalId);
@@ -104,14 +123,7 @@ const MyGoalsScreen = () => {
         },
       ]
     );
-  };
-
-  const resetForm = () => {
-    setSelectedEmotionId(null);
-    setStartDate(new Date());
-    setEndDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
-    setShowCreateForm(false);
-  };
+  }; // handleDeleteGoal 함수의 닫는 중괄호 추가
 
   const handleEmotionSelect = (emotionId: number) => {
     setSelectedEmotionId(emotionId === selectedEmotionId ? null : emotionId);
@@ -144,6 +156,7 @@ const MyGoalsScreen = () => {
     return emotions.find(emotion => emotion.emotion_id === emotionId);
   };
 
+  // renderGoalItem 함수의 매개변수에 명시적 타입 지정
   const renderGoalItem = ({ item }: { item: Goal }) => {
     const emotion = getEmotionById(item.target_emotion_id);
     const now = new Date();
@@ -160,7 +173,10 @@ const MyGoalsScreen = () => {
             </Text>
           </View>
           
-          <TouchableOpacity onPress={() => handleDeleteGoal(item.goal_id)}>
+          <TouchableOpacity 
+            testID="delete-goal-button"
+            onPress={() => handleDeleteGoal(item.goal_id)}
+          >
             <Text style={styles.deleteIcon}>🗑️</Text>
           </TouchableOpacity>
         </View>
@@ -190,7 +206,7 @@ const MyGoalsScreen = () => {
   };
 
   if (loading && !refreshing) {
-    return <LoadingIndicator text="목표 데이터 로딩 중..." />;
+    return <LoadingIndicator testID="loading-indicator" text="목표 데이터 로딩 중..." />;
   }
 
   return (
@@ -286,7 +302,7 @@ const MyGoalsScreen = () => {
         <FlatList
           data={goals}
           renderItem={renderGoalItem}
-          keyExtractor={(item) => item.goal_id.toString()}
+          keyExtractor={(item: Goal) => item.goal_id.toString()}
           contentContainerStyle={styles.goalsList}
           onRefresh={() => fetchData(true)}
           refreshing={refreshing}

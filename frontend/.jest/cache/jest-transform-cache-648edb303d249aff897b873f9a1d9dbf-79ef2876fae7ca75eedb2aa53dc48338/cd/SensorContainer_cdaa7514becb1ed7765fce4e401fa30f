@@ -1,0 +1,62 @@
+571fb2a998800c980318da31bef0b60f
+'use strict';
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.SensorContainer = void 0;
+var _classCallCheck2 = _interopRequireDefault(require("@babel/runtime/helpers/classCallCheck"));
+var _createClass2 = _interopRequireDefault(require("@babel/runtime/helpers/createClass"));
+var _Sensor = _interopRequireDefault(require("./Sensor.js"));
+var SensorContainer = exports.SensorContainer = function () {
+  function SensorContainer() {
+    (0, _classCallCheck2.default)(this, SensorContainer);
+    this.nativeSensors = new Map();
+  }
+  return (0, _createClass2.default)(SensorContainer, [{
+    key: "getSensorId",
+    value: function getSensorId(sensorType, config) {
+      return sensorType * 100 + config.iosReferenceFrame * 10 + Number(config.adjustToInterfaceOrientation);
+    }
+  }, {
+    key: "initializeSensor",
+    value: function initializeSensor(sensorType, config) {
+      var sensorId = this.getSensorId(sensorType, config);
+      if (!this.nativeSensors.has(sensorId)) {
+        var newSensor = new _Sensor.default(sensorType, config);
+        this.nativeSensors.set(sensorId, newSensor);
+      }
+      var sensor = this.nativeSensors.get(sensorId);
+      return sensor.getSharedValue();
+    }
+  }, {
+    key: "registerSensor",
+    value: function registerSensor(sensorType, config, handler) {
+      var sensorId = this.getSensorId(sensorType, config);
+      if (!this.nativeSensors.has(sensorId)) {
+        return -1;
+      }
+      var sensor = this.nativeSensors.get(sensorId);
+      if (sensor && sensor.isAvailable() && (sensor.isRunning() || sensor.register(handler))) {
+        sensor.listenersNumber++;
+        return sensorId;
+      }
+      return -1;
+    }
+  }, {
+    key: "unregisterSensor",
+    value: function unregisterSensor(sensorId) {
+      if (this.nativeSensors.has(sensorId)) {
+        var sensor = this.nativeSensors.get(sensorId);
+        if (sensor && sensor.isRunning()) {
+          sensor.listenersNumber--;
+          if (sensor.listenersNumber === 0) {
+            sensor.unregister();
+          }
+        }
+      }
+    }
+  }]);
+}();
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJfaW50ZXJvcFJlcXVpcmVEZWZhdWx0IiwicmVxdWlyZSIsIk9iamVjdCIsImRlZmluZVByb3BlcnR5IiwiZXhwb3J0cyIsInZhbHVlIiwiU2Vuc29yQ29udGFpbmVyIiwiX2NsYXNzQ2FsbENoZWNrMiIsIl9jcmVhdGVDbGFzczIiLCJfU2Vuc29yIiwiZGVmYXVsdCIsIm5hdGl2ZVNlbnNvcnMiLCJNYXAiLCJrZXkiLCJnZXRTZW5zb3JJZCIsInNlbnNvclR5cGUiLCJjb25maWciLCJpb3NSZWZlcmVuY2VGcmFtZSIsIk51bWJlciIsImFkanVzdFRvSW50ZXJmYWNlT3JpZW50YXRpb24iLCJpbml0aWFsaXplU2Vuc29yIiwic2Vuc29ySWQiLCJoYXMiLCJuZXdTZW5zb3IiLCJTZW5zb3IiLCJzZXQiLCJzZW5zb3IiLCJnZXQiLCJnZXRTaGFyZWRWYWx1ZSIsInJlZ2lzdGVyU2Vuc29yIiwiaGFuZGxlciIsImlzQXZhaWxhYmxlIiwiaXNSdW5uaW5nIiwicmVnaXN0ZXIiLCJsaXN0ZW5lcnNOdW1iZXIiLCJ1bnJlZ2lzdGVyU2Vuc29yIiwidW5yZWdpc3RlciJdLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9TZW5zb3JDb250YWluZXIudHMiXSwic291cmNlc0NvbnRlbnQiOltudWxsXSwibWFwcGluZ3MiOiJBQUFBLFlBQVk7O0FBQUEsSUFBQUEsc0JBQUEsR0FBQUMsT0FBQTtBQUFBQyxNQUFBLENBQUFDLGNBQUEsQ0FBQUMsT0FBQTtFQUFBQyxLQUFBO0FBQUE7QUFBQUQsT0FBQSxDQUFBRSxlQUFBO0FBQUEsSUFBQUMsZ0JBQUEsR0FBQVAsc0JBQUEsQ0FBQUMsT0FBQTtBQUFBLElBQUFPLGFBQUEsR0FBQVIsc0JBQUEsQ0FBQUMsT0FBQTtBQVNaLElBQUFRLE9BQUEsR0FBQVQsc0JBQUEsQ0FBQUMsT0FBQTtBQUE2QixJQUVoQkssZUFBZSxHQUFBRixPQUFBLENBQUFFLGVBQUE7RUFBQSxTQUFBQSxnQkFBQTtJQUFBLElBQUFDLGdCQUFBLENBQUFHLE9BQUEs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

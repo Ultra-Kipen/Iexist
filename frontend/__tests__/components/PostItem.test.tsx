@@ -69,8 +69,8 @@ describe('PostItem Component', () => {
   it('calls onLikePress when like button is pressed', () => {
     const { getByText } = render(<PostItem {...defaultProps} />);
     
-    // "공감" 텍스트를 가진 버튼 찾기
-    fireEvent.press(getByText('공감'));
+    // 하트 아이콘으로 버튼 찾기
+    fireEvent.press(getByText('♡'));
     
     expect(mockOnLikePress).toHaveBeenCalledTimes(1);
   });
@@ -78,8 +78,8 @@ describe('PostItem Component', () => {
   it('calls onCommentPress when comment button is pressed', () => {
     const { getByText } = render(<PostItem {...defaultProps} />);
     
-    // "댓글" 텍스트를 가진 버튼 찾기
-    fireEvent.press(getByText('댓글'));
+    // 댓글 아이콘으로 버튼 찾기
+    fireEvent.press(getByText('💬'));
     
     expect(mockOnCommentPress).toHaveBeenCalledTimes(1);
   });

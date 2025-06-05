@@ -1,22 +1,24 @@
 // layouts/AuthLayout.tsx
-// 인증(로그인/회원가입) 화면을 위한 레이아웃 컴포넌트
-
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  SafeAreaView,
-  Platform,
-  StatusBar,
-  ScrollView,
-  KeyboardAvoidingView,
-  TouchableWithoutFeedback,
-  Keyboard,
-  ImageBackground,
-  Image,
-} from 'react-native';
+import * as ReactNative from 'react-native';
+// @ts-ignore
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../hooks/useTheme';
 import LoadingIndicator from '../components/LoadingIndicator';
+
+// 타입 문제 없이 사용할 수 있는 방식으로 컴포넌트 가져오기
+const { 
+  View, 
+  StyleSheet, 
+  Platform, 
+  ScrollView, 
+  KeyboardAvoidingView, 
+  TouchableWithoutFeedback, 
+  Keyboard, 
+  ImageBackground, 
+  Image, 
+  StatusBar 
+} = ReactNative;
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -37,76 +39,93 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
 }) => {
   const { theme } = useTheme();
   
+  // Keyboard.dismiss를 안전하게 호출
+  const dismissKeyboard = () => {
+    try {
+      if (Keyboard && typeof Keyboard.dismiss === 'function') {
+        Keyboard.dismiss();
+      }
+    } catch (error) {
+      console.error('키보드 닫기 오류', error);
+    }
+  };
+  
   const renderContent = () => (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.keyboardView}
+      testID="keyboard-avoiding-view"
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <TouchableWithoutFeedback onPress={dismissKeyboard} testID="keyboard-dismiss">
         <ScrollView
           contentContainerStyle={styles.scrollView}
           keyboardShouldPersistTaps="handled"
+          testID="scroll-view"
         >
           {/* 로고 */}
           {logoVisible && (
-            <View style={styles.logoContainer}>
+            <View style={styles.logoContainer} testID="logo-container">
               <Image
-                // 앱 로고 이미지 경로를 설정해주세요
                 source={require('../assets/images/logo.png')}
                 style={styles.logo}
                 resizeMode="contain"
+                testID="logo-image"
               />
             </View>
           )}
           
           {/* 제목 */}
-          {title && <View style={styles.titleContainer}>{title}</View>}
+          {title && <View style={styles.titleContainer} testID="title-container">{title}</View>}
           
           {/* 메인 콘텐츠 */}
-          <View style={styles.contentContainer}>
+          <View style={styles.contentContainer} testID="content-container">
             {loading ? <LoadingIndicator /> : children}
           </View>
           
           {/* 푸터 */}
-          {footer && <View style={styles.footerContainer}>{footer}</View>}
+          {footer && <View style={styles.footerContainer} testID="footer-container">{footer}</View>}
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
   
   // 배경 이미지 사용 여부에 따라 다른 레이아웃 반환
+  // SafeAreaView 대신 View 사용
   if (imageBackground) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container} testID="auth-layout">
         <StatusBar
           backgroundColor="transparent"
-          translucent
           barStyle="light-content"
+          testID="status-bar"
         />
         <ImageBackground
-          // 배경 이미지 경로를 설정해주세요
           source={require('../assets/images/auth-background.jpg')}
           style={styles.backgroundImage}
           resizeMode="cover"
+          testID="image-background"
         >
-          <View style={styles.overlay}>
+          <View style={styles.overlay} testID="overlay">
             {renderContent()}
           </View>
         </ImageBackground>
-      </SafeAreaView>
+      </View>
     );
   }
   
+  // SafeAreaView 대신 View 사용
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
+      testID="auth-layout"
     >
       <StatusBar
         backgroundColor={theme.colors.background}
         barStyle={theme.dark ? 'light-content' : 'dark-content'}
+        testID="status-bar"
       />
       {renderContent()}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -122,7 +141,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    paddingTop: Platform.OS === 'android' ? 30 : 0,
   },
   keyboardView: {
     flex: 1,

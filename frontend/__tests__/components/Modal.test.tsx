@@ -1,11 +1,10 @@
-// __tests__/components/Modal.test.tsx
+// Modal.test.tsx - React 테스트용
 import React from 'react';
-import { Text, View } from 'react-native'; // React Native에서 직접 가져옴
-import { render, fireEvent } from '@testing-library/react-native';
+import { create, act } from 'react-test-renderer';
 import Modal from '../../src/components/Modal';
 
 // 테스트용 컴포넌트
-const TestContent = () => <View testID="modal-content"><Text>Test Content</Text></View>;
+const TestContent = () => <div>Test Content</div>;
 
 describe('Modal Component', () => {
   const mockOnClose = jest.fn();
@@ -15,81 +14,87 @@ describe('Modal Component', () => {
   });
   
   it('renders nothing when not visible', () => {
-    const { queryByText } = render(
+    const tree = create(
       <Modal isVisible={false} onClose={mockOnClose}>
         <TestContent />
       </Modal>
     );
     
-    // 모달이 렌더링되지 않았으므로 내용이 보이지 않아야 함
-    expect(queryByText('Test Content')).toBeNull();
+    expect(tree.toJSON()).toBeNull();
   });
-  
+
   it('renders content when visible', () => {
-    const { getByText } = render(
+    const tree = create(
       <Modal isVisible={true} onClose={mockOnClose}>
         <TestContent />
       </Modal>
     );
     
-    expect(getByText('Test Content')).toBeTruthy();
+    expect(tree.toJSON()).not.toBeNull();
+    expect(tree.root.findByType(TestContent)).toBeTruthy();
   });
-  
+
   it('displays title when provided', () => {
-    const { getByText } = render(
+    const tree = create(
       <Modal isVisible={true} onClose={mockOnClose} title="Test Modal">
         <TestContent />
       </Modal>
     );
     
-    expect(getByText('Test Modal')).toBeTruthy();
+    const titleElement = tree.root.findByProps({ 'data-testid': 'modal-header' });
+    expect(titleElement).toBeTruthy();
+    expect(titleElement.findByType('h3').props.children).toBe('Test Modal');
   });
   
   it('calls onClose when backdrop is pressed', () => {
-    const { getByTestId } = render(
+    const tree = create(
       <Modal isVisible={true} onClose={mockOnClose} closeOnBackdropPress={true}>
         <TestContent />
       </Modal>
     );
     
-    // Modal의 actual 구현에는 backdrop이 touchable opacity로 구현되어 있음
-    const backdrop = getByTestId('modal-backdrop');
-    fireEvent.press(backdrop);
+    const backdrop = tree.root.findByProps({ 'data-testid': 'modal-backdrop' });
+    act(() => {
+      backdrop.props.onClick();
+    });
     
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
   
   it('does not call onClose when backdrop is pressed and closeOnBackdropPress is false', () => {
-    const { getByTestId } = render(
+    const tree = create(
       <Modal isVisible={true} onClose={mockOnClose} closeOnBackdropPress={false}>
         <TestContent />
       </Modal>
     );
     
-    const backdrop = getByTestId('modal-backdrop');
-    fireEvent.press(backdrop);
+    const backdrop = tree.root.findByProps({ 'data-testid': 'modal-backdrop' });
+    act(() => {
+      backdrop.props.onClick();
+    });
     
     expect(mockOnClose).not.toHaveBeenCalled();
   });
   
   it('calls onClose when close button is pressed', () => {
-    const { getByText } = render(
+    const tree = create(
       <Modal isVisible={true} onClose={mockOnClose} title="Test Modal">
         <TestContent />
       </Modal>
     );
     
-    // 'title'이 제공되면 close 버튼('×')이 렌더링됨
-    const closeButton = getByText('×');
-    fireEvent.press(closeButton);
+    const closeButton = tree.root.findByProps({ 'data-testid': 'modal-close-button' });
+    act(() => {
+      closeButton.props.onClick();
+    });
     
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
   
   it('renders footer when provided', () => {
-    const Footer = () => <Text>Footer Content</Text>;
+    const Footer = () => <div>Footer Content</div>;
     
-    const { getByText } = render(
+    const tree = create(
       <Modal 
         isVisible={true} 
         onClose={mockOnClose}
@@ -99,6 +104,8 @@ describe('Modal Component', () => {
       </Modal>
     );
     
-    expect(getByText('Footer Content')).toBeTruthy();
+    const footerContainer = tree.root.findByProps({ 'data-testid': 'modal-footer' });
+    expect(footerContainer).toBeTruthy();
+    expect(footerContainer.findByType(Footer)).toBeTruthy();
   });
 });

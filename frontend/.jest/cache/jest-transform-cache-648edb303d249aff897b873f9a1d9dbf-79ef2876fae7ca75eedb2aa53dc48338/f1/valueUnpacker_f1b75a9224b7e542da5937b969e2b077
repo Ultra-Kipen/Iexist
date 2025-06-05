@@ -1,0 +1,76 @@
+65253b5568b5a0b5318e360ce0335c1a
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.getValueUnpackerCode = getValueUnpackerCode;
+var _commonTypes = require("../commonTypes.js");
+var _PlatformChecker = require("../PlatformChecker.js");
+function valueUnpacker(objectToUnpack, category, remoteFunctionName) {
+  'worklet';
+
+  var workletsCache = global.__workletsCache;
+  var handleCache = global.__handleCache;
+  if (workletsCache === undefined) {
+    workletsCache = global.__workletsCache = new Map();
+    handleCache = global.__handleCache = new WeakMap();
+  }
+  var workletHash = objectToUnpack.__workletHash;
+  if (workletHash !== undefined) {
+    var workletFun = workletsCache.get(workletHash);
+    if (workletFun === undefined) {
+      var initData = objectToUnpack.__initData;
+      if (global.evalWithSourceMap) {
+        workletFun = global.evalWithSourceMap('(' + initData.code + '\n)', initData.location, initData.sourceMap);
+      } else if (global.evalWithSourceUrl) {
+        workletFun = global.evalWithSourceUrl('(' + initData.code + '\n)', `worklet_${workletHash}`);
+      } else {
+        workletFun = eval('(' + initData.code + '\n)');
+      }
+      workletsCache.set(workletHash, workletFun);
+    }
+    var functionInstance = workletFun.bind(objectToUnpack);
+    objectToUnpack._recur = functionInstance;
+    return functionInstance;
+  } else if (objectToUnpack.__init !== undefined) {
+    var value = handleCache.get(objectToUnpack);
+    if (value === undefined) {
+      value = objectToUnpack.__init();
+      handleCache.set(objectToUnpack, value);
+    }
+    return value;
+  } else if (category === 'RemoteFunction') {
+    var fun = function fun() {
+      var label = remoteFunctionName ? `function \`${remoteFunctionName}\`` : 'anonymous function';
+      throw new Error(`[Reanimated] Tried to synchronously call a non-worklet ${label} on the UI thread.
+See https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#tried-to-synchronously-call-a-non-worklet-function-on-the-ui-thread for more details.`);
+    };
+    fun.__remoteFunction = objectToUnpack;
+    return fun;
+  } else {
+    throw new Error(`[Reanimated] Data type in category "${category}" not recognized by value unpacker: "${_toString(objectToUnpack)}".`);
+  }
+}
+if (true && !(0, _PlatformChecker.shouldBeUseWeb)()) {
+  var testWorklet = function testWorklet() {
+    'worklet';
+  };
+  if (!(0, _commonTypes.isWorkletFunction)(testWorklet)) {
+    throw new Error(`[Reanimated] Failed to create a worklet. See https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#failed-to-create-a-worklet for more details.`);
+  }
+  if (!(0, _commonTypes.isWorkletFunction)(valueUnpacker)) {
+    throw new Error('[Reanimated] `valueUnpacker` is not a worklet');
+  }
+  var closure = valueUnpacker.__closure;
+  if (closure === undefined) {
+    throw new Error('[Reanimated] `valueUnpacker` closure is undefined');
+  }
+  if (Object.keys(closure).length !== 0) {
+    throw new Error('[Reanimated] `valueUnpacker` must have empty closure');
+  }
+}
+function getValueUnpackerCode() {
+  return valueUnpacker.__initData.code;
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJPYmplY3QiLCJkZWZpbmVQcm9wZXJ0eSIsImV4cG9ydHMiLCJ2YWx1ZSIsImdldFZhbHVlVW5wYWNrZXJDb2RlIiwiX2NvbW1vblR5cGVzIiwicmVxdWlyZSIsIl9QbGF0Zm9ybUNoZWNrZXIiLCJ2YWx1ZVVucGFja2VyIiwib2JqZWN0VG9VbnBhY2siLCJjYXRlZ29yeSIsInJlbW90ZUZ1bmN0aW9uTmFtZSIsIndvcmtsZXRzQ2FjaGUiLCJnbG9iYWwiLCJfX3dvcmtsZXRzQ2FjaGUiLCJoYW5kbGVDYWNoZSIsIl9faGFuZGxlQ2FjaGUiLCJ1bmRlZmluZWQiLCJNYXAiLCJXZWFrTWFwIiwid29ya2xldEhhc2giLCJfX3dvcmtsZXRIYXNoIiwid29ya2xldEZ1biIsImdldCIsImluaXREYXRhIiwiX19pbml0RGF0YSIsImV2YWxXaXRoU291cmNlTWFwIiwiY29kZSIsImxvY2F0aW9uIiwic291cmNlTWFwIiwiZXZhbFdpdGhTb3VyY2VVcmwiLCJldmFsIiwic2V0IiwiZnVuY3Rpb25JbnN0YW5jZSIsImJpbmQiLCJfcmVjdXIiLCJfX2luaXQiLCJmdW4iLCJsYWJlbCIsIkVycm9yIiwiX19yZW1vdGVGdW5jdGlvbiIsIl90b1N0cmluZyIsInNob3VsZEJlVXNlV2ViIiwidGVzdFdvcmtsZXQiLCJpc1dvcmtsZXRGdW5jdGlvbiIsImNsb3N1cmUiLCJfX2Nsb3N1cmUiLCJrZXlzIiwibGVuZ3RoIl0sInNvdXJjZXMiOlsiLi4vLi4vLi4vc3JjL3dvcmtsZXRzL3ZhbHVlVW5wYWNrZXIudHMiXSwic291cmNlc0NvbnRlbnQiOltudWxsXSwibWFwcGluZ3MiOiJBQUNBLFlBQVk7O0FBQUFBLE1BQUEsQ0FBQUMsY0FBQSxDQUFBQyxPQUFBO0VBQUFDLEtBQUE7QUFBQTtBQUFBRCxPQUFBLENBQUFFLG9CQUFBLEdBQUFBLG9CQUFBO0FBRVosSUFBQUMsWUFBQSxHQUFBQyxPQUFBO0FBQ0EsSUFBQUMsZ0JBQUEsR0FBQUQsT0FBQTtBQUVBLFNBQVNFLGFBQWFBLENBQ3BCQyxjQUFtQixFQUNuQkMsUUFBaUIsRUFDakJDLGtCQUEyQixFQUN0QjtFQUNMLFNBQVM7O0VBQ1QsSUFBSUMsYUFBYSxHQUFHQyxNQUFNLENBQUNDLGVBQWU7RUFDMUMsSUFBSUMsV0FBVyxHQUFHRixNQUFNLENBQUNHLGFBQWE7RUFDdEMsSUFBSUosYUFBYSxLQUFLSyxTQUFTLEVBQUU7SUFFL0JMLGFBQWEsR0FBR0MsTUFBTSxDQUFDQyxlQUFlLEdBQUcsSUFBSUksR0FBRyxDQUFDLENBQUM7SUFDbERILFdBQVcsR0FBR0YsTUFBTSxDQUFDRyxhQUFhLEdBQUcsSUFBSUcsT0FBTyxDQUFDLENBQUM7RUFDcEQ7RUFDQSxJQUFNQyxXQUFXLEdBQUdYLGNBQWMsQ0FBQ1ksYUFBYTtFQUNoRCxJQUFJRCxXQUFXLEtBQUtILFNBQVMsRUFBRTtJQUM3QixJQUFJSyxVQUFVLEdBQUdWLGFBQWEsQ0FBQ1csR0FBRyxDQUFDSCxXQUFXLENBQUM7SUFDL0MsSUFBSUUsVUFBVSxLQUFLTCxTQUFTLEVBQUU7TUFDNUIsSUFBTU8sUUFBUSxHQUFHZixjQUFjLENBQUNnQixVQUFVO01BQzFDLElBQUlaLE1BQU0sQ0FBQ2EsaUJBQWlCLEVBQUU7UUFLNUJKLFVBQVUsR0FBR1QsTUFBTSxDQUFDYSxpQkFBaUIsQ0FDbkMsR0FBRyxHQUFHRixRQUFRLENBQUNHLElBQUksR0FBRyxLQUFLLEVBQzNCSCxRQUFRLENBQUNJLFFBQVEsRUFDakJKLFFBQVEsQ0FBQ0ssU0FDWCxDQUE0QjtNQUM5QixDQUFDLE1BQU0sSUFBSWhCLE1BQU0sQ0FBQ2lCLGlCQUFpQixFQUFFO1FBS25DUixVQUFVLEdBQUdULE1BQU0sQ0FBQ2lCLGlCQUFpQixDQUNuQyxHQUFHLEdBQUdOLFFBQVEsQ0FBQ0csSUFBSSxHQUFHLEtBQUssRUFDM0IsV0FBV1AsV0FBVyxFQUN4QixDQUE0QjtNQUM5QixDQUFDLE1BQU07UUFHTEUsVUFBVSxHQUFHUyxJQUFJLENBQUMsR0FBRyxHQUFHUCxRQUFRLENBQUNHLElBQUksR0FBRyxLQUFLLENBRXJDO01BQ1Y7TUFDQWYsYUFBYSxDQUFDb0IsR0FBRyxDQUFDWixXQUFXLEVBQUVFLFVBQVUsQ0FBQztJQUM1QztJQUNBLElBQU1XLGdCQUFnQixHQUFHWCxVQUFVLENBQUNZLElBQUksQ0FBQ3pCLGNBQWMsQ0FBQztJQUN4REEsY0FBYyxDQUFDMEIsTUFBTSxHQUFHRixnQkFBZ0I7SUFDeEMsT0FBT0EsZ0JBQWdCO0VBQ3pCLENBQUMsTUFBTSxJQUFJeEIsY0FBYyxDQUFDMkIsTUFBTSxLQUFLbkIsU0FBUyxFQUFFO0lBQzlDLElBQUlkLEtBQUssR0FBR1ksV0FBVyxDQUFDUSxHQUFHLENBQUNkLGNBQWMsQ0FBQztJQUMzQyxJQUFJTixLQUFLLEtBQUtjLFNBQVMsRUFBRTtNQUN2QmQsS0FBSyxHQUFHTSxjQUFjLENBQUMyQixNQUFNLENBQUMsQ0FBQztNQUMvQnJCLFdBQVcsQ0FBQ2lCLEdBQUcsQ0FBQ3ZCLGNBQWMsRUFBRU4sS0FBSyxDQUFDO0lBQ3hDO0lBQ0EsT0FBT0EsS0FBSztFQUNkLENBQUMsTUFBTSxJQUFJTyxRQUFRLEtBQUssZ0JBQWdCLEVBQUU7SUFDeEMsSUFBTTJCLEdBQUcsR0FBRyxTQUFOQSxHQUFHQSxDQUFBLEVBQVM7TUFDaEIsSUFBTUMsS0FBSyxHQUFHM0Isa0JBQWtCLEdBQzVCLGNBQWNBLGtCQUFrQixJQUFJLEdBQ3BDLG9CQUFvQjtNQUN4QixNQUFNLElBQUk0QixLQUFLLENBQUMsMERBQTBERCxLQUFLO0FBQ3JGLHlLQUF5SyxDQUFDO0lBQ3RLLENBQUM7SUFDREQsR0FBRyxDQUFDRyxnQkFBZ0IsR0FBRy9CLGNBQWM7SUFDckMsT0FBTzRCLEdBQUc7RUFDWixDQUFDLE1BQU07SUFDTCxNQUFNLElBQUlFLEtBQUssQ0FDYix1Q0FBdUM3QixRQUFRLHdDQUF3QytCLFNBQVMsQ0FDOUZoQyxjQUNGLENBQUMsSUFDSCxDQUFDO0VBQ0g7QUFDRjtBQU9BLElBQUksUUFBVyxDQUFDLElBQUFpQywrQkFBYyxFQUFDLENBQUMsRUFBRTtFQUNoQyxJQUFNQyxXQUFXLEdBQUksU0FBZkEsV0FBV0EsQ0FBQSxFQUFVO0lBQ3pCLFNBQVM7RUFDWCxDQUErQjtFQUMvQixJQUFJLENBQUMsSUFBQUMsOEJBQWlCLEVBQUNELFdBQVcsQ0FBQyxFQUFFO0lBQ25DLE1BQU0sSUFBSUosS0FBSyxDQUNiLDBLQUNGLENBQUM7RUFDSDtFQUNBLElBQUksQ0FBQyxJQUFBSyw4QkFBaUIsRUFBQ3BDLGFBQWEsQ0FBQyxFQUFFO0lBQ3JDLE1BQU0sSUFBSStCLEtBQUssQ0FBQywrQ0FBK0MsQ0FBQztFQUNsRTtFQUNBLElBQU1NLE9BQU8sR0FBSXJDLGFBQWEsQ0FBbUJzQyxTQUFTO0VBQzFELElBQUlELE9BQU8sS0FBSzVCLFNBQVMsRUFBRTtJQUN6QixNQUFNLElBQUlzQixLQUFLLENBQUMsbURBQW1ELENBQUM7RUFDdEU7RUFDQSxJQUFJdkMsTUFBTSxDQUFDK0MsSUFBSSxDQUFDRixPQUFPLENBQUMsQ0FBQ0csTUFBTSxLQUFLLENBQUMsRUFBRTtJQUNyQyxNQUFNLElBQUlULEtBQUssQ0FBQyxzREFBc0QsQ0FBQztFQUN6RTtBQUNGO0FBRU8sU0FBU25DLG9CQUFvQkEsQ0FBQSxFQUFHO0VBQ3JDLE9BQVFJLGFBQWEsQ0FBbUJpQixVQUFVLENBQUNFLElBQUk7QUFDekQiLCJpZ25vcmVMaXN0IjpbXX0=

@@ -34,6 +34,11 @@ const comfortWallService = {
   
   sendMessage: async (postId: number, data: ComfortMessageData) => {
     return await apiClient.post(`/comfort-wall/${postId}/message`, data);
+  },
+  
+  // 좋아요 기능 추가
+  likePost: async (postId: number) => {
+    return await apiClient.post(`/comfort-wall/${postId}/like`);
   }
 };
 

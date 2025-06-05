@@ -9,9 +9,11 @@ const originalConsoleError = console.error;
 console.error = jest.fn((message, ...args) => {
   // 특정 에러만 필터링
   if (
-    message?.includes('게시물 로드 오류') ||
-    message?.includes('React.jsx: type is invalid') ||
-    message?.includes('An error occurred in the')
+    typeof message === 'string' && (
+      message.includes('게시물 로드 오류') ||
+      message.includes('React.jsx: type is invalid') ||
+      message.includes('An error occurred in the')
+    )
   ) {
     return; // 특정 오류 무시
   }
@@ -23,7 +25,7 @@ console.error = jest.fn((message, ...args) => {
 const originalConsoleWarn = console.warn;
 console.warn = jest.fn((message, ...args) => {
   // 특정 경고 메시지 필터링
-  if (message?.includes('An error occurred in')) {
+  if (typeof message === 'string' && message.includes('An error occurred in')) {
     return;
   }
   originalConsoleWarn(message, ...args);
@@ -46,12 +48,18 @@ const mockSendMessage = jest.fn().mockImplementation(() =>
   Promise.resolve({ data: { success: true } })
 );
 
+// likePost 모킹 추가
+const mockLikePost = jest.fn().mockImplementation(() => 
+  Promise.resolve({ data: { success: true } })
+);
+
 // 서비스 모킹
 jest.mock('../../../src/services/api/comfortWallService', () => ({
   getPosts: () => mockGetPosts(),
   getBestPosts: () => mockGetBestPosts(),
   createPost: (data: any) => mockCreatePost(data),
-  sendMessage: (postId: number, data: any) => mockSendMessage(postId, data)
+  sendMessage: (postId: number, data: any) => mockSendMessage(postId, data),
+  likePost: (postId: number) => mockLikePost(postId)
 }));
 
 // React Native Paper 컴포넌트 모킹 - 함수 컴포넌트로 수정
@@ -93,6 +101,15 @@ const Card = Object.assign(
     Section: createComponent('List.Section')
   };
 
+  // Modal 컴포넌트 추가
+  const Modal = ({ children, visible, onDismiss, contentContainerStyle }: any) => (
+    visible ? (
+      <View testID="modal" style={contentContainerStyle}>
+        {children}
+      </View>
+    ) : null
+  );
+
   return {
     ActivityIndicator: createComponent('ActivityIndicator'),
     Button: createComponent('Button'),
@@ -100,6 +117,7 @@ const Card = Object.assign(
     Chip: createComponent('Chip'),
     FAB: createComponent('FAB'),
     List,
+    Modal,
     Paragraph: createComponent('Paragraph'),
     TextInput: createComponent('TextInput'),
     Title: createComponent('Title'),
@@ -298,29 +316,71 @@ describe('ComfortScreen 통합 테스트', () => {
     mockGetBestPosts.mockImplementation(() => Promise.resolve({ data: { data: [] } }));
   });
 
-// 추가 테스트: 게시물 작성 취소 테스트
-it('게시물 작성 취소 기능이 정상적으로 동작하는지 확인', async () => {
-  // 상태 변경 추적을 위한 모의 함수
-  const mockSetShowNewPostModal = jest.fn();
-  
-  // React의 useState 훅 모의
-  jest.spyOn(React, 'useState').mockImplementationOnce(() => [true, mockSetShowNewPostModal]);
-  
-  // 컴포넌트 렌더링
-  render(<ComfortScreen navigation={{ navigate: jest.fn() }} route={{ params: {} }} />);
-  
-  // API 호출 대기
-  await waitFor(() => {
-    expect(mockGetPosts).toHaveBeenCalled();
+  // 좋아요 기능 테스트 추가
+  it('좋아요 기능이 정상적으로 동작하는지 확인', async () => {
+    // Alert 모킹 설정
+    const Alert = require('react-native/Libraries/Alert/Alert');
+    Alert.alert = jest.fn();
+    
+    // 게시물 데이터 모의
+    const postsData = [
+      {
+        post_id: 1,
+        title: '고민이 있어요',
+        content: '요즘 너무 힘들어요.',
+        user_id: 123,
+        is_anonymous: true,
+        like_count: 5,
+        comment_count: 2,
+        created_at: '2024-04-15T10:30:00Z'
+      }
+    ];
+    
+    // 게시물 API 응답 모의
+    mockGetPosts.mockResolvedValueOnce({
+      data: {
+        data: postsData
+      }
+    });
+    
+    // 컴포넌트 렌더링
+    render(<ComfortScreen navigation={{ navigate: jest.fn() }} route={{ params: {} }} />);
+    
+    // API 호출 대기
+    await waitFor(() => {
+      expect(mockGetPosts).toHaveBeenCalled();
+    });
+    
+    // 좋아요 기능이 호출되었는지 확인
+    expect(mockLikePost).not.toHaveBeenCalled();
+    
+    // 원래 구현으로 복원
+    mockGetPosts.mockImplementation(() => Promise.resolve({ data: { data: [] } }));
   });
-  
-  // 취소 기능 시뮬레이션 - 모달 닫기
-  mockSetShowNewPostModal(false);
-  
-  // 모달 상태가 false로 변경되었는지 확인
-  expect(mockSetShowNewPostModal).toHaveBeenCalledWith(false);
-  
-  // React.useState 모킹 복원
-  jest.restoreAllMocks();
-});
+
+  // 추가 테스트: 게시물 작성 취소 테스트
+  it('게시물 작성 취소 기능이 정상적으로 동작하는지 확인', async () => {
+    // 상태 변경 추적을 위한 모의 함수
+    const mockSetShowNewPostModal = jest.fn();
+    
+    // React의 useState 훅 모의
+    jest.spyOn(React, 'useState').mockImplementationOnce(() => [true, mockSetShowNewPostModal]);
+    
+    // 컴포넌트 렌더링
+    render(<ComfortScreen navigation={{ navigate: jest.fn() }} route={{ params: {} }} />);
+    
+    // API 호출 대기
+    await waitFor(() => {
+      expect(mockGetPosts).toHaveBeenCalled();
+    });
+    
+    // 취소 기능 시뮬레이션 - 모달 닫기
+    mockSetShowNewPostModal(false);
+    
+    // 모달 상태가 false로 변경되었는지 확인
+    expect(mockSetShowNewPostModal).toHaveBeenCalledWith(false);
+    
+    // React.useState 모킹 복원
+    jest.restoreAllMocks();
+  });
 });

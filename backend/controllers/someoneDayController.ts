@@ -270,6 +270,23 @@ const someoneDayController: SomeoneDayControllerType = {
             });
         }
 
+        // 입력 데이터 검증
+        if (!title || title.trim().length < 5 || title.trim().length > 100) {
+            await transaction.rollback();
+            return res.status(400).json({
+                status: 'error',
+                message: '제목은 5자 이상 100자 이하여야 합니다.'
+            });
+        }
+
+        if (!content || content.trim().length < 20 || content.trim().length > 2000) {
+            await transaction.rollback();
+            return res.status(400).json({
+                status: 'error',
+                message: '게시물 내용은 20자 이상 2000자 이하여야 합니다.'
+            });
+        }
+
         const post = await db.SomeoneDayPost.create({
             user_id,
             title: title.trim(),
@@ -443,51 +460,72 @@ getPosts: async (req: AuthRequestGeneric<never, SomeoneDayQuery>, res: Response)
       const { tag, sort_by = 'latest', start_date, end_date } = req.query;
       const { limit, offset, page } = getPaginationOptions(req.query.page, req.query.limit);
  
+      // WHERE 절과 INCLUDE 절을 분리하여 처리
       const whereClause: any = {};
+      const includeClause: any[] = [
+        {
+          model: db.User,
+          as: 'user',
+          attributes: ['nickname', 'profile_image_url'],
+          required: false
+        }
+      ];
+
+      // 태그 필터링 처리 개선
       if (tag) {
-        whereClause['$tags.name$'] = tag;
+        // 태그 테이블을 포함하되, 특정 태그 이름으로 필터링
+        includeClause.push({
+          model: db.Tag,
+          as: 'tags',
+          through: { attributes: [] },
+          attributes: ['tag_id', 'name'],
+          where: {
+            name: {
+              [Op.like]: `%${tag}%`
+            }
+          },
+          required: true // INNER JOIN으로 변경하여 해당 태그가 있는 게시물만 조회
+        });
+      } else {
+        // 태그 필터링이 없는 경우 모든 태그 포함
+        includeClause.push({
+          model: db.Tag,
+          as: 'tags',
+          through: { attributes: [] },
+          attributes: ['tag_id', 'name'],
+          required: false
+        });
       }
-    // getPosts 메서드의 날짜 처리 부분 최적화
-if (start_date && end_date) {
-  whereClause.created_at = {
-    [Op.between]: [
-      normalizeDate(new Date(start_date)),
-      new Date(new Date(end_date).setHours(23, 59, 59, 999))
-    ]
-  };
-}
-const posts = await db.SomeoneDayPost.findAndCountAll({
-  where: whereClause,
-  include: [
-    {
-      model: db.User,
-      as: 'user',
-      attributes: ['nickname', 'profile_image_url'],
-      required: false
-    },
-    {
-      model: db.Tag,
-      as: 'tags',
-      through: { attributes: [] },
-      attributes: ['tag_id', 'name']
-    }
-  ],
-  order: getOrderClause(sort_by),
-  limit,
-  offset,
-  distinct: true,
-  attributes: [
-    'post_id',
-    'title',
-    'content',
-    'summary',
-    'image_url',
-    'is_anonymous',
-    'like_count',
-    'comment_count',
-    'created_at'
-  ]
-});
+
+      // 날짜 필터링 처리
+      if (start_date && end_date) {
+        whereClause.created_at = {
+          [Op.between]: [
+            normalizeDate(new Date(start_date)),
+            new Date(new Date(end_date).setHours(23, 59, 59, 999))
+          ]
+        };
+      }
+
+      const posts = await db.SomeoneDayPost.findAndCountAll({
+        where: whereClause,
+        include: includeClause,
+        order: getOrderClause(sort_by),
+        limit,
+        offset,
+        distinct: true,
+        attributes: [
+          'post_id',
+          'title',
+          'content',
+          'summary',
+          'image_url',
+          'is_anonymous',
+          'like_count',
+          'comment_count',
+          'created_at'
+        ]
+      });
  
       return res.json({
         status: 'success',

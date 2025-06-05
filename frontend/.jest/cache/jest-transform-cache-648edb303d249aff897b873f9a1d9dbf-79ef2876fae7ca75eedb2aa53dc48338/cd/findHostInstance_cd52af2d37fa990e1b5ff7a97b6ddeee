@@ -1,0 +1,49 @@
+c3d02d644333163fb9d90c15e9cda6f6
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.findHostInstance = findHostInstance;
+var _errors = require("../errors.js");
+var _PlatformChecker = require("../PlatformChecker.js");
+function findHostInstanceFastPath(maybeNativeRef) {
+  if (!maybeNativeRef) {
+    return undefined;
+  }
+  if (maybeNativeRef.__internalInstanceHandle && maybeNativeRef.__nativeTag && maybeNativeRef._viewConfig) {
+    return maybeNativeRef;
+  }
+  if (maybeNativeRef._nativeTag && maybeNativeRef.viewConfig) {
+    return maybeNativeRef;
+  }
+  return undefined;
+}
+function resolveFindHostInstance_DEPRECATED() {
+  if (findHostInstance_DEPRECATED !== undefined) {
+    return;
+  }
+  if ((0, _PlatformChecker.isFabric)()) {
+    try {
+      var _ReactFabric$default$, _ReactFabric$default;
+      var ReactFabric = require('react-native/Libraries/Renderer/shims/ReactFabric');
+      findHostInstance_DEPRECATED = (_ReactFabric$default$ = ReactFabric == null || (_ReactFabric$default = ReactFabric.default) == null ? void 0 : _ReactFabric$default.findHostInstance_DEPRECATED) != null ? _ReactFabric$default$ : ReactFabric == null ? void 0 : ReactFabric.findHostInstance_DEPRECATED;
+    } catch (e) {
+      throw new _errors.ReanimatedError('Failed to resolve findHostInstance_DEPRECATED');
+    }
+  } else {
+    var _ReactNative$default$, _ReactNative$default;
+    var ReactNative = require('react-native/Libraries/Renderer/shims/ReactNative');
+    findHostInstance_DEPRECATED = (_ReactNative$default$ = ReactNative == null || (_ReactNative$default = ReactNative.default) == null ? void 0 : _ReactNative$default.findHostInstance_DEPRECATED) != null ? _ReactNative$default$ : ReactNative == null ? void 0 : ReactNative.findHostInstance_DEPRECATED;
+  }
+}
+var findHostInstance_DEPRECATED;
+function findHostInstance(component) {
+  var hostInstance = findHostInstanceFastPath(component._componentRef);
+  if (hostInstance !== undefined) {
+    return hostInstance;
+  }
+  resolveFindHostInstance_DEPRECATED();
+  return findHostInstance_DEPRECATED(!(0, _PlatformChecker.isFabric)() || component._hasAnimatedRef ? component._componentRef : component);
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJPYmplY3QiLCJkZWZpbmVQcm9wZXJ0eSIsImV4cG9ydHMiLCJ2YWx1ZSIsImZpbmRIb3N0SW5zdGFuY2UiLCJfZXJyb3JzIiwicmVxdWlyZSIsIl9QbGF0Zm9ybUNoZWNrZXIiLCJmaW5kSG9zdEluc3RhbmNlRmFzdFBhdGgiLCJtYXliZU5hdGl2ZVJlZiIsInVuZGVmaW5lZCIsIl9faW50ZXJuYWxJbnN0YW5jZUhhbmRsZSIsIl9fbmF0aXZlVGFnIiwiX3ZpZXdDb25maWciLCJfbmF0aXZlVGFnIiwidmlld0NvbmZpZyIsInJlc29sdmVGaW5kSG9zdEluc3RhbmNlX0RFUFJFQ0FURUQiLCJmaW5kSG9zdEluc3RhbmNlX0RFUFJFQ0FURUQiLCJpc0ZhYnJpYyIsIl9SZWFjdEZhYnJpYyRkZWZhdWx0JCIsIl9SZWFjdEZhYnJpYyRkZWZhdWx0IiwiUmVhY3RGYWJyaWMiLCJkZWZhdWx0IiwiZSIsIlJlYW5pbWF0ZWRFcnJvciIsIl9SZWFjdE5hdGl2ZSRkZWZhdWx0JCIsIl9SZWFjdE5hdGl2ZSRkZWZhdWx0IiwiUmVhY3ROYXRpdmUiLCJjb21wb25lbnQiLCJob3N0SW5zdGFuY2UiLCJfY29tcG9uZW50UmVmIiwiX2hhc0FuaW1hdGVkUmVmIl0sInNvdXJjZXMiOlsiLi4vLi4vLi4vc3JjL3BsYXRmb3JtLXNwZWNpZmljL2ZpbmRIb3N0SW5zdGFuY2UudHMiXSwic291cmNlc0NvbnRlbnQiOltudWxsXSwibWFwcGluZ3MiOiJBQUNBLFlBQVk7O0FBQUFBLE1BQUEsQ0FBQUMsY0FBQSxDQUFBQyxPQUFBO0VBQUFDLEtBQUE7QUFBQTtBQUFBRCxPQUFBLENBQUFFLGdCQUFBLEdBQUFBLGdCQUFBO0FBR1osSUFBQUMsT0FBQSxHQUFBQyxPQUFBO0FBQ0EsSUFBQUMsZ0JBQUEsR0FBQUQsT0FBQTtBQWVBLFNBQVNFLHdCQUF3QkEsQ0FBQ0MsY0FBd0MsRUFBRTtFQUMxRSxJQUFJLENBQUNBLGNBQWMsRUFBRTtJQUNuQixPQUFPQyxTQUFTO0VBQ2xCO0VBQ0EsSUFDRUQsY0FBYyxDQUFDRSx3QkFBd0IsSUFDdkNGLGNBQWMsQ0FBQ0csV0FBVyxJQUMxQkgsY0FBYyxDQUFDSSxXQUFXLEVBQzFCO0lBRUEsT0FBT0osY0FBYztFQUN2QjtFQUNBLElBQUlBLGNBQWMsQ0FBQ0ssVUFBVSxJQUFJTCxjQUFjLENBQUNNLFVBQVUsRUFBRTtJQUUxRCxPQUFPTixjQUFjO0VBQ3ZCO0VBR0EsT0FBT0MsU0FBUztBQUNsQjtBQUVBLFNBQVNNLGtDQUFrQ0EsQ0FBQSxFQUFHO0VBQzVDLElBQUlDLDJCQUEyQixLQUFLUCxTQUFTLEVBQUU7SUFDN0M7RUFDRjtFQUNBLElBQUksSUFBQVEseUJBQVEsRUFBQyxDQUFDLEVBQUU7SUFDZCxJQUFJO01BQUEsSUFBQUMscUJBQUEsRUFBQUMsb0JBQUE7TUFDRixJQUFNQyxXQUFXLEdBQUdmLE9BQU8sQ0FBQyxtREFBbUQsQ0FBQztNQUdoRlcsMkJBQTJCLElBQUFFLHFCQUFBLEdBQ3pCRSxXQUFXLGFBQUFELG9CQUFBLEdBQVhDLFdBQVcsQ0FBRUMsT0FBTyxxQkFBcEJGLG9CQUFBLENBQXNCSCwyQkFBMkIsWUFBQUUscUJBQUEsR0FDakRFLFdBQVcsb0JBQVhBLFdBQVcsQ0FBRUosMkJBQTJCO0lBQzVDLENBQUMsQ0FBQyxPQUFPTSxDQUFDLEVBQUU7TUFDVixNQUFNLElBQUlDLHVCQUFlLENBQ3ZCLCtDQUNGLENBQUM7SUFDSDtFQUNGLENBQUMsTUFBTTtJQUFBLElBQUFDLHFCQUFBLEVBQUFDLG9CQUFBO0lBQ0wsSUFBTUMsV0FBVyxHQUFHckIsT0FBTyxDQUFDLG1EQUFtRCxDQUFDO0lBR2hGVywyQkFBMkIsSUFBQVEscUJBQUEsR0FDekJFLFdBQVcsYUFBQUQsb0JBQUEsR0FBWEMsV0FBVyxDQUFFTCxPQUFPLHFCQUFwQkksb0JBQUEsQ0FBc0JULDJCQUEyQixZQUFBUSxxQkFBQSxHQUNqREUsV0FBVyxvQkFBWEEsV0FBVyxDQUFFViwyQkFBMkI7RUFDNUM7QUFDRjtBQUVBLElBQUlBLDJCQUEyRDtBQUN4RCxTQUFTYixnQkFBZ0JBLENBQzlCd0IsU0FBdUQsRUFDekM7RUFFZCxJQUFNQyxZQUFZLEdBQUdyQix3QkFBd0IsQ0FDMUNvQixTQUFTLENBQWdDRSxhQUM1QyxDQUFDO0VBQ0QsSUFBSUQsWUFBWSxLQUFLbkIsU0FBUyxFQUFFO0lBQzlCLE9BQU9tQixZQUFZO0VBQ3JCO0VBRUFiLGtDQUFrQyxDQUFDLENBQUM7RUFPcEMsT0FBT0MsMkJBQTJCLENBQ2hDLENBQUMsSUFBQUMseUJBQVEsRUFBQyxDQUFDLElBQUtVLFNBQVMsQ0FBZ0NHLGVBQWUsR0FDbkVILFNBQVMsQ0FBZ0NFLGFBQWEsR0FDdkRGLFNBQ04sQ0FBQztBQUNIIiwiaWdub3JlTGlzdCI6W119

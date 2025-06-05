@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { Request, Response } from 'express';
+import { Request } from 'express';
+import type { Response } from 'express';  // type-only import로 변경
 import jwt from 'jsonwebtoken';
 import { Op, QueryTypes } from 'sequelize';
 import db from '../models';
@@ -19,9 +20,9 @@ interface IUserController {
   blockUser(req: AuthRequest, res: Response): Promise<Response>;
   unblockUser(req: AuthRequest, res: Response): Promise<Response>;
   requestPasswordReset(req: Request, res: Response): Promise<Response>;
-resetPassword(req: Request, res: Response): Promise<Response>;
-forgotPassword(req: Request, res: Response): Promise<Response>;
-
+  resetPassword(req: Request, res: Response): Promise<Response>;
+  forgotPassword(req: Request, res: Response): Promise<Response>;
+  getUserStats(req: AuthRequest, res: Response): Promise<Response>; // 인터페이스에 추가
 }
 // JWT_SECRET 설정
 const JWT_SECRET = process.env.JWT_SECRET || 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=';
@@ -977,7 +978,58 @@ async updateNotificationSettings(req: AuthRequest, res: Response) {
   });
   }
   }
+  // userController.ts에 getUserStats 메서드 추가
+// getUserStats 메서드 수정
+async getUserStats(req: AuthRequest, res: Response) {
+  try {
+    const user_id = req.user?.user_id;
+    if (!user_id) {
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
+
+    // 사용자 통계 조회
+    const userStats = await db.UserStats.findOne({
+      where: { user_id }
+    });
+
+    if (!userStats) {
+      return res.status(404).json({
+        status: 'error',
+        message: '사용자 통계를 찾을 수 없습니다.'
+      });
+    }
+
+    // 필요한 추가 통계 계산
+    const likeCount = await db.MyDayLike.count({
+      where: { user_id }
+    }) + await db.SomeoneDayLike.count({
+      where: { user_id }
+    });
+
+    return res.json({
+      status: 'success',
+      data: {
+        post_count: (userStats.get('my_day_post_count') as number) + (userStats.get('someone_day_post_count') as number),
+        my_day_post_count: userStats.get('my_day_post_count') as number,
+        someone_day_post_count: userStats.get('someone_day_post_count') as number,
+        comment_count: 0, // 추후 계산 필요
+        like_count: likeCount,
+        received_like_count: (userStats.get('my_day_like_received_count') as number) + (userStats.get('someone_day_like_received_count') as number)
+      }
+    });
+  } catch (error) {
+    console.error('사용자 통계 조회 오류:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: '사용자 통계 조회 중 오류가 발생했습니다.'
+    });
+  }
 }
+}
+
 
 
 // 인스턴스 생성 및 export
@@ -985,6 +1037,6 @@ export const userController = new UserController();
 // 클래스 export
 export { UserController };
 // 인터페이스 type export
-  export type { IUserController };
+export type { IUserController };
 // default export
 export default userController;

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useRef } from 'react';
 import notificationService from '../services/api/notificationService';
 
 interface Notification {
@@ -41,6 +41,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchNotifications = async () => {
     try {
@@ -50,7 +51,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       if (response && response.data) {
         // 명시적 타입 지정
         const notificationsData: Notification[] = Array.isArray(response.data) 
-        ? response.data.map(item => ({
+        ? response.data.map((item: { id: any; user_id: any; content: any; notification_type: any; related_id: any; is_read: any; created_at: any; }) => ({
             id: item.id,
             user_id: item.user_id,
             content: item.content,
@@ -119,14 +120,23 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   };
 
   useEffect(() => {
+    // 초기 fetch
     fetchNotifications();
     
     // 주기적으로 알림 업데이트 (예: 30초마다)
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 30000);
+    // 테스트 환경에서는 interval 생성 방지
+    if (process.env.NODE_ENV !== 'test') {
+      intervalRef.current = setInterval(() => {
+        fetchNotifications();
+      }, 30000);
+    }
     
-    return () => clearInterval(interval);
+    // 컴포넌트 언마운트 시 interval 정리
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, []);
 
   return (

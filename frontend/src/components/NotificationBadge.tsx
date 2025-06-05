@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useNotification } from '../contexts/NotificationContext';
 
 interface NotificationBadgeProps {
@@ -14,27 +14,6 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   maxCount = 99
 }) => {
   const { unreadCount } = useNotification();
-  const scaleAnim = React.useRef(new Animated.Value(0)).current;
-  
-  // 카운트가 변경될 때 애니메이션 효과
-  useEffect(() => {
-    if (unreadCount > 0 || showZero) {
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.2,
-          duration: 200,
-          useNativeDriver: true
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: true
-        })
-      ]).start();
-    } else {
-      scaleAnim.setValue(0);
-    }
-  }, [unreadCount, showZero, scaleAnim]);
   
   // 표시할 카운트 계산 (maxCount 초과 시 "+")
   const displayCount = unreadCount > maxCount ? `${maxCount}+` : unreadCount.toString();
@@ -45,17 +24,16 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   }
   
   return (
-    <Animated.View 
+    <View 
       style={[
         styles.badge,
         style,
-        { transform: [{ scale: scaleAnim }] },
         unreadCount > 9 && styles.wideBadge,
         unreadCount > 99 && styles.extraWideBadge
       ]}
     >
       <Text style={styles.count}>{displayCount}</Text>
-    </Animated.View>
+    </View>
   );
 };
 

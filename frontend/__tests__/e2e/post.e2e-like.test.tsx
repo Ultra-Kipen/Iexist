@@ -1,15 +1,135 @@
 // __tests__/e2e/post.e2e-like.test.tsx
+// React Native 컴포넌트 명시적 모킹 - 수정된 버전
+jest.mock('react-native', () => {
+  return {
+    View: 'View',
+    Text: 'Text',
+    Button: 'Button',
+    TextInput: 'TextInput',
+    TouchableOpacity: 'TouchableOpacity',
+    StyleSheet: {
+      create: jest.fn(styles => styles),
+      flatten: jest.fn(style => style), // flatten 함수 추가
+      absoluteFill: {},
+      hairlineWidth: 1,
+    },
+    Platform: { 
+      OS: 'android',
+      select: jest.fn(obj => obj.android || obj.default),
+    },
+    Dimensions: { 
+      get: jest.fn(() => ({ width: 375, height: 667 })),
+    },
+    NativeModules: {},
+    DevMenu: {
+      show: jest.fn(),
+    },
+    I18nManager: {
+      isRTL: false,
+      getConstants: () => ({ isRTL: false }),
+    },
+  };
+});
 
-import React from 'react';
+// React Navigation 모킹도 명시적으로 설정
+jest.mock('@react-navigation/native', () => {
+  return {
+    NavigationContainer: ({ children }) => children,
+    useNavigation: () => ({
+      navigate: jest.fn(),
+      goBack: jest.fn(),
+    }),
+  };
+});
+
+// React Native Paper 모킹
+jest.mock('react-native-paper', () => {
+  return {
+    Provider: ({ children }) => children,
+  };
+});
+
+import React, { useEffect } from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { View, Text, Button, TextInput } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import postService from '../../src/services/api/postService';
 
-// StatisticsScreen 및 다른 실제 화면 컴포넌트 import 제거
-// MockScreens만 사용하는 것으로 변경
-import { MockPostScreen, MockMyPostsScreen, MockStatisticsScreen } from '../mocks/MockScreens';
+// 외부 import 제거하고 직접 Mock 컴포넌트 정의
+// Mock PostScreen 컴포넌트
+const MockPostScreen = ({ route, navigation }: any) => {
+  const { postId } = route?.params || { postId: 1 };
+  
+  useEffect(() => {
+    // 게시물 상세 정보 로드 (getPostById 메서드 사용)
+    postService.getPostById(postId);
+    // 댓글 로드
+    postService.getComments(postId);
+  }, [postId]);
+
+  const handleAddComment = () => {
+    postService.addComment(postId, { content: '테스트 댓글입니다.', is_anonymous: false });
+  };
+
+  return (
+    <View>
+      <Text>게시물 상세 화면</Text>
+      <Text>게시물 ID: {postId}</Text>
+      <Text>테스트 게시물</Text>
+      
+      <TextInput 
+        placeholder="댓글을 입력하세요..." 
+        testID="comment-input"
+      />
+      
+      <Button 
+        title="게시" 
+        onPress={handleAddComment}
+        testID="submit-comment"
+      />
+    </View>
+  );
+};
+
+// Mock MyPostsScreen 컴포넌트
+const MockMyPostsScreen = ({ navigation }: any) => {
+  useEffect(() => {
+    // 내 게시물 로드
+    postService.getMyPosts();
+  }, []);
+
+  const handleDeletePost = (postId: number) => {
+    postService.deletePost(postId);
+  };
+
+  return (
+    <View>
+      <Text>내 게시물 화면</Text>
+      <View testID="post-item">
+        <Text>게시물 1</Text>
+        <Button 
+          title="삭제" 
+          onPress={() => handleDeletePost(1)}
+          testID="delete-button"
+        />
+      </View>
+    </View>
+  );
+};
+
+// Mock StatisticsScreen 컴포넌트
+const MockStatisticsScreen = ({ navigation }: any) => {
+  return (
+    <View>
+      <Text>감정 통계</Text>
+      <View testID="emotion-chart">
+        <Text>그래프 영역</Text>
+      </View>
+    </View>
+  );
+};
 
 // 컴포넌트와 서비스의 통합을 테스트하기 위한 모킹
 jest.mock('../../src/services/api/postService', () => ({

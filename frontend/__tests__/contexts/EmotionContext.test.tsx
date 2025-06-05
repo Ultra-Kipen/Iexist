@@ -1,7 +1,6 @@
 // __tests__/contexts/EmotionContext.test.tsx
 import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react-native';
-import { Text, View, Button } from 'react-native';
 import { EmotionProvider, useEmotion } from '../../src/contexts/EmotionContext';
 
 // API 서비스 모킹
@@ -34,6 +33,8 @@ const TestConsumer = () => {
     selectEmotion,
     clearSelectedEmotions
   } = useEmotion();
+
+  const { Text, View, Button } = require('react-native');
 
   return (
     <View>

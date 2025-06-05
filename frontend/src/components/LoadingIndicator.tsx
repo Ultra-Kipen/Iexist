@@ -6,15 +6,20 @@ interface LoadingIndicatorProps {
   size?: 'small' | 'large';
   color?: string;
   text?: string;
+  testID?: string;
 }
 
 const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
   size = 'large',
   color = '#4A90E2',
-  text = '로딩 중...'
+  text = '로딩 중...',
+  testID = 'loading-indicator' // 명시적 testID 추가
 }) => {
   return (
-    <View style={styles.container}>
+    <View 
+      style={styles.container}
+      testID={testID} // testID 적용
+    >
       <ActivityIndicator size={size} color={color} />
       {text && <Text style={styles.text}>{text}</Text>}
     </View>

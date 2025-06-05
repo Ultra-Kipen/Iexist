@@ -176,6 +176,7 @@ CREATE TABLE challenge_emotions (
   log_date date NOT NULL,
   note varchar(200) DEFAULT NULL,
   created_at datetime NOT NULL,
+  updated_at datetime NOT NULL,
   PRIMARY KEY (challenge_emotion_id),
   KEY challenge_id (challenge_id),
   KEY user_id (user_id),
@@ -466,8 +467,6 @@ async function recreateDatabase() {
  }
 }
 
-// setup.ts 수정
-// 이 부분은 테이블 생성을 보장하기 위한 코드입니다
 export async function setupDatabase() {
   try {
     console.log('데이터베이스 초기화 시작...');
@@ -503,65 +502,6 @@ export async function setupDatabase() {
       }
     } catch (error) {
       console.error('테이블 생성 중 오류:', error);
-    }
-    
-    // SomeoneDayTag 테이블이 존재하는지 확인하고 없으면 생성
-    try {
-      await db.sequelize.query(`
-        CREATE TABLE IF NOT EXISTS someone_day_tags (
-          created_at datetime NOT NULL,
-          updated_at datetime NOT NULL,
-          post_id int(11) NOT NULL,
-          tag_id int(11) NOT NULL,
-          PRIMARY KEY (post_id,tag_id),
-          KEY tag_id (tag_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-      `);
-    } catch (error) {
-      console.warn('SomeoneDayTag 테이블 생성 오류 (이미 존재할 수 있음):', error);
-    }
-    
-    // Tag 테이블이 존재하는지 확인하고 없으면 생성
-    try {
-      await db.sequelize.query(`
-        CREATE TABLE IF NOT EXISTS tags (
-          tag_id int(11) NOT NULL AUTO_INCREMENT,
-          name varchar(50) NOT NULL,
-          created_at datetime NOT NULL,
-          updated_at datetime NOT NULL,
-          PRIMARY KEY (tag_id),
-          UNIQUE KEY name (name),
-          UNIQUE KEY tags_name (name)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-      `);
-    } catch (error) {
-      console.warn('Tag 테이블 생성 오류 (이미 존재할 수 있음):', error);
-    }
-    
-    // SomeoneDayPost 테이블이 존재하는지 확인하고 없으면 생성
-    try {
-      await db.sequelize.query(`
-        CREATE TABLE IF NOT EXISTS someone_day_posts (
-          post_id int(11) NOT NULL AUTO_INCREMENT,
-          user_id int(11) NOT NULL,
-          title varchar(100) NOT NULL,
-          content text NOT NULL,
-          summary varchar(200) DEFAULT NULL,
-          image_url varchar(255) DEFAULT NULL,
-          is_anonymous tinyint(1) NOT NULL DEFAULT 0,
-          character_count int(11) DEFAULT NULL,
-          like_count int(11) NOT NULL DEFAULT 0,
-          comment_count int(11) NOT NULL DEFAULT 0,
-          created_at datetime NOT NULL,
-          updated_at datetime NOT NULL,
-          PRIMARY KEY (post_id),
-          KEY someone_day_posts_user_id (user_id),
-          KEY someone_day_posts_created_at (created_at),
-          KEY someone_day_posts_like_count (like_count)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-      `);
-    } catch (error) {
-      console.warn('SomeoneDayPost 테이블 생성 오류 (이미 존재할 수 있음):', error);
     }
     
     // 외래 키 제약 다시 활성화
@@ -633,319 +573,317 @@ async function initializeEmotions() {
           where: { emotion_id: emotion.emotion_id },
           defaults: emotion
         });
-}
-console.log('감정 데이터 개별 초기화 완료');
-} catch (secondaryError) {
-console.error('감정 데이터 개별 초기화 실패:', secondaryError);
-}
-}
+      }
+      console.log('감정 데이터 개별 초기화 완료');
+    } catch (secondaryError) {
+      console.error('감정 데이터 개별 초기화 실패:', secondaryError);
+    }
+  }
 }
 
 async function createTestEmotionLogs(userId: number) {
-try {
-console.log('테스트 감정 로그 생성 시도');
-
-// 감정 ID가 있는지 확인
-const emotions = await db.Emotion.findAll();
-if (emotions.length === 0) {
-await initializeEmotions();
-}
-
-// 현재 날짜
-const today = new Date();
-
-// 감정 로그 생성
-const logs = [
-{
-  user_id: userId,
-  emotion_id: 1, // 행복
-  note: '오늘은 정말 좋은 하루였어요',
-  log_date: today,
-  created_at: today,
-  updated_at: today
-},
-{
-  user_id: userId,
-  emotion_id: 5, // 슬픔
-  note: '지난주에는 슬픈 일이 있었어요',
-  log_date: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000),
-  created_at: today,
-  updated_at: today
-}
-];
-
-try {
-await db.EmotionLog.bulkCreate(logs);
-console.log('테스트 감정 로그 생성 성공');
-return true;
-} catch (createError) {
-console.warn('bulkCreate 실패, 개별 생성 시도:', createError);
-
-// 개별적으로 생성 시도
-for (const log of logs) {
   try {
-    await db.EmotionLog.create(log);
-  } catch (individualError) {
-    console.warn('개별 감정 로그 생성 실패:', individualError);
-  }
-}
+    console.log('테스트 감정 로그 생성 시도');
 
-return true;
-}
-} catch (error) {
-console.error('테스트 감정 로그 생성 실패:', error);
-// 실패해도 테스트는 계속 진행
-return false;
-}
+    // 감정 ID가 있는지 확인
+    const emotions = await db.Emotion.findAll();
+    if (emotions.length === 0) {
+      await initializeEmotions();
+    }
+
+    // 현재 날짜
+    const today = new Date();
+
+    // 감정 로그 생성
+    const logs = [
+      {
+        user_id: userId,
+        emotion_id: 1, // 행복
+        note: '오늘은 정말 좋은 하루였어요',
+        log_date: today,
+        created_at: today,
+        updated_at: today
+      },
+      {
+        user_id: userId,
+        emotion_id: 5, // 슬픔
+        note: '지난주에는 슬픈 일이 있었어요',
+        log_date: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000),
+        created_at: today,
+        updated_at: today
+      }
+    ];
+
+    try {
+      await db.EmotionLog.bulkCreate(logs);
+      console.log('테스트 감정 로그 생성 성공');
+      return true;
+    } catch (createError) {
+      console.warn('bulkCreate 실패, 개별 생성 시도:', createError);
+
+      // 개별적으로 생성 시도
+      for (const log of logs) {
+        try {
+          await db.EmotionLog.create(log);
+        } catch (individualError) {
+          console.warn('개별 감정 로그 생성 실패:', individualError);
+        }
+      }
+
+      return true;
+    }
+  } catch (error) {
+    console.error('테스트 감정 로그 생성 실패:', error);
+    // 실패해도 테스트는 계속 진행
+    return false;
+  }
 }
 
 async function createTestChallenge(user_id: number) {
-try {
-const startDate = new Date();
-const endDate = new Date();
-endDate.setDate(endDate.getDate() + 7);
-
-const challenge = await db.Challenge.create({
-creator_id: user_id,
-title: `테스트 챌린지 ${Date.now()}`,
-description: '테스트 챌린지 설명입니다.',
-start_date: startDate,
-end_date: endDate,
-is_public: true,
-participant_count: 1,
-created_at: new Date(),
-updated_at: new Date()
-});
-
-try {
-  await db.ChallengeParticipant.create({
-    challenge_id: challenge.get('challenge_id'),
-    user_id,
-    created_at: new Date()
-    // updated_at 속성 제거
-  });
-} catch (participantError) {
-console.warn('챌린지 참가자 생성 실패:', participantError);
-}
-
-return challenge.get('challenge_id');
-} catch (error) {
-console.error('테스트 챌린지 생성 실패:', error);
-return null;
-}
-}
-
-async function createTestPost(user_id: number) {
-try {
-const post = await db.MyDayPost.create({
-user_id,
-content: `테스트 게시물 내용 ${Date.now()}. 이 게시물은 테스트를 위해 자동으로 생성되었습니다. 충분한 길이의 내용입니다.`,
-is_anonymous: false,
-character_count: 100,
-like_count: 0,
-comment_count: 0,
-created_at: new Date(),
-updated_at: new Date()
-});
-
-try {
-// 감정 추가
-const emotionId = 1; // 행복
-await db.MyDayEmotion.create({
-  post_id: post.get('post_id'),
-  emotion_id: emotionId
-  // created_at 및 updated_at 속성 제거
-});
-} catch (emotionError) {
-console.warn('게시물 감정 연결 실패:', emotionError);
-}
-
-return post.get('post_id');
-} catch (error) {
-console.error('테스트 게시물 생성 실패:', error);
-return null;
-}
-}
-
-const createTestUser = async () => {
-try {
-// 이미 생성된 테스트 사용자가 있는지 확인
-const existingUser = testDataCache.get('testUser');
-if (existingUser) {
-console.log('기존 테스트 사용자 재사용:', existingUser.userId);
-return existingUser;
-}
-
-console.log('새 테스트 사용자 생성 시작');
-
-// 외래 키 제약 일시 해제
-await db.sequelize.query('SET FOREIGN_KEY_CHECKS=0;');
-
-try {
-// timestamp로 고유한 값 생성
-const timestamp = Date.now();
-
-// 사용자 생성
-const user = await db.User.create({
-  username: `testuser${timestamp}`,
-  email: `test${timestamp}@example.com`,
-  password_hash: await bcrypt.hash('password123', 10),
-  nickname: `TestUser${timestamp}`,
-  theme_preference: 'system',
-  is_active: true,
-  created_at: new Date(),
-  updated_at: new Date(),
-  notification_settings: {
-    like_notifications: true,
-    comment_notifications: true, 
-    challenge_notifications: true,
-    encouragement_notifications: true
-  },
-  privacy_settings: JSON.parse('{}')
-});
-
-const userId = user.get('user_id');
-console.log(`생성된 테스트 사용자 ID: ${userId}`);
-
-// UserStats 생성
-try {
-  await db.UserStats.create({
-    user_id: userId,
-    my_day_post_count: 0,
-    someone_day_post_count: 0,
-    my_day_like_received_count: 0,
-    someone_day_like_received_count: 0,
-    my_day_comment_received_count: 0,
-    someone_day_comment_received_count: 0,
-    challenge_count: 0,
-    last_updated: new Date()
-  });
-} catch (statsError) {
-  console.warn('UserStats 생성 중 오류:', statsError);
-  
-  // 대체 방법: 직접 쿼리 실행
   try {
-    await db.sequelize.query(`
-      INSERT INTO user_stats (
-        user_id, 
-        my_day_post_count, 
-        someone_day_post_count, 
-        my_day_like_received_count,
-        someone_day_like_received_count,
-        my_day_comment_received_count,
-        someone_day_comment_received_count,
-        challenge_count,
-        last_updated
-      ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, ?)
-    `, {
-      replacements: [userId, new Date()],
-      type: QueryTypes.INSERT
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 7);
+
+    const challenge = await db.Challenge.create({
+      creator_id: user_id,
+      title: `테스트 챌린지 ${Date.now()}`,
+      description: '테스트 챌린지 설명입니다.',
+      start_date: startDate,
+      end_date: endDate,
+      is_public: true,
+      participant_count: 1,
+      created_at: new Date(),
+      updated_at: new Date()
     });
-  } catch (queryError) {
-    console.warn('직접 쿼리를 통한 UserStats 생성 실패:', queryError);
+
+    try {
+      // ChallengeParticipant 생성 시 created_at, updated_at 제거 (Sequelize가 자동 관리)
+      await db.ChallengeParticipant.create({
+        challenge_id: challenge.get('challenge_id'),
+        user_id
+      });
+    } catch (participantError) {
+      console.warn('챌린지 참가자 생성 실패:', participantError);
+    }
+
+    return challenge.get('challenge_id');
+  } catch (error) {
+    console.error('테스트 챌린지 생성 실패:', error);
+    return null;
   }
 }
 
-// JWT 토큰 생성
-console.log(`JWT 토큰 생성을 위한 사용자 ID: ${userId}`);
-const token = jwt.sign(
-  { user_id: userId },
-  process.env.JWT_SECRET || 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=',
-  { expiresIn: '1h' }
-);
+async function createTestPost(user_id: number) {
+  try {
+    const post = await db.MyDayPost.create({
+      user_id,
+      content: `테스트 게시물 내용 ${Date.now()}. 이 게시물은 테스트를 위해 자동으로 생성되었습니다. 충분한 길이의 내용입니다.`,
+      is_anonymous: false,
+      character_count: 100,
+      like_count: 0,
+      comment_count: 0,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
 
-// 외래 키 제약 다시 활성화
-await db.sequelize.query('SET FOREIGN_KEY_CHECKS=1;');
+    try {
+      // MyDayEmotion 생성 시 created_at, updated_at 제거 (Sequelize가 자동 관리)
+      const emotionId = 1; // 행복
+      await db.MyDayEmotion.create({
+        post_id: post.get('post_id'),
+        emotion_id: emotionId
+      });
+    } catch (emotionError) {
+      console.warn('게시물 감정 연결 실패:', emotionError);
+    }
 
-// 게시물 미리 생성
-const postId = await createTestPost(userId);
-
-// 챌린지 미리 생성
-const challengeId = await createTestChallenge(userId);
-
-const userData = { 
-  user, 
-  token, 
-  userId,
-  postId,
-  challengeId
-};
-
-// 캐시에 테스트 데이터 저장
-testDataCache.set('testUser', userData);
-
-return userData;
-} catch (error) {
-// 외래 키 제약 다시 활성화
-await db.sequelize.query('SET FOREIGN_KEY_CHECKS=1;');
-console.error('테스트 사용자 생성 실패:', error);
-throw error;
+    return post.get('post_id');
+  } catch (error) {
+    console.error('테스트 게시물 생성 실패:', error);
+    return null;
+  }
 }
-} catch (error) {
-console.error('테스트 사용자 생성 실패:', error);
-throw error;
-}
+
+const createTestUser = async () => {
+  try {
+    // 이미 생성된 테스트 사용자가 있는지 확인
+    const existingUser = testDataCache.get('testUser');
+    if (existingUser) {
+      console.log('기존 테스트 사용자 재사용:', existingUser.userId);
+      return existingUser;
+    }
+
+    console.log('새 테스트 사용자 생성 시작');
+
+    // 외래 키 제약 일시 해제
+    await db.sequelize.query('SET FOREIGN_KEY_CHECKS=0;');
+
+    try {
+      // timestamp로 고유한 값 생성
+      const timestamp = Date.now();
+
+      // 사용자 생성
+      const user = await db.User.create({
+        username: `testuser${timestamp}`,
+        email: `test${timestamp}@example.com`,
+        password_hash: await bcrypt.hash('password123', 10),
+        nickname: `TestUser${timestamp}`,
+        theme_preference: 'system',
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+        notification_settings: {
+          like_notifications: true,
+          comment_notifications: true, 
+          challenge_notifications: true,
+          encouragement_notifications: true
+        },
+        privacy_settings: JSON.parse('{}')
+      });
+
+      const userId = user.get('user_id');
+      console.log(`생성된 테스트 사용자 ID: ${userId}`);
+
+      // UserStats 생성
+      try {
+        await db.UserStats.create({
+          user_id: userId,
+          my_day_post_count: 0,
+          someone_day_post_count: 0,
+          my_day_like_received_count: 0,
+          someone_day_like_received_count: 0,
+          my_day_comment_received_count: 0,
+          someone_day_comment_received_count: 0,
+          challenge_count: 0,
+          last_updated: new Date()
+        });
+      } catch (statsError) {
+        console.warn('UserStats 생성 중 오류:', statsError);
+        
+        // 대체 방법: 직접 쿼리 실행
+        try {
+          await db.sequelize.query(`
+            INSERT INTO user_stats (
+              user_id, 
+              my_day_post_count, 
+              someone_day_post_count, 
+              my_day_like_received_count,
+              someone_day_like_received_count,
+              my_day_comment_received_count,
+              someone_day_comment_received_count,
+              challenge_count,
+              last_updated
+            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, ?)
+          `, {
+            replacements: [userId, new Date()],
+            type: QueryTypes.INSERT
+          });
+        } catch (queryError) {
+          console.warn('직접 쿼리를 통한 UserStats 생성 실패:', queryError);
+        }
+      }
+
+      // JWT 토큰 생성
+      console.log(`JWT 토큰 생성을 위한 사용자 ID: ${userId}`);
+      const token = jwt.sign(
+        { user_id: userId },
+        process.env.JWT_SECRET || 'UiztNewcec/1sEvgkVnLuDjP6VVd8GpEORFOZnnkBwA=',
+        { expiresIn: '1h' }
+      );
+
+      // 외래 키 제약 다시 활성화
+      await db.sequelize.query('SET FOREIGN_KEY_CHECKS=1;');
+
+      // 게시물 미리 생성
+      const postId = await createTestPost(userId);
+
+      // 챌린지 미리 생성
+      const challengeId = await createTestChallenge(userId);
+
+      const userData = { 
+        user, 
+        token, 
+        userId,
+        postId,
+        challengeId
+      };
+
+      // 캐시에 테스트 데이터 저장
+      testDataCache.set('testUser', userData);
+
+      return userData;
+    } catch (error) {
+      // 외래 키 제약 다시 활성화
+      await db.sequelize.query('SET FOREIGN_KEY_CHECKS=1;');
+      console.error('테스트 사용자 생성 실패:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('테스트 사용자 생성 실패:', error);
+    throw error;
+  }
 };
 
 let serverInstances: any[] = [];
 
 // 서버 시작 함수: 포트 충돌 해결
 export const getUniquePort = () => {
-// 기본 포트에서 테스트별 오프셋 추가
-const basePort = 5017;
-const offset = Math.floor(Math.random() * 1000);
-return basePort + offset;
+  // 기본 포트에서 테스트별 오프셋 추가
+  const basePort = 5017;
+  const offset = Math.floor(Math.random() * 1000);
+  return basePort + offset;
 };
 
 beforeAll(async () => {
   try {
-  console.time('데이터베이스 초기화');
-  
-  // 타임아웃 방지를 위한 빠른 초기화 로직
-  if (process.env.FAST_INIT === 'true' || process.env.NODE_ENV === 'test') {
-    console.log('빠른 초기화 모드 - 데이터베이스 초기화 과정 생략');
-    isDbInitialized = true;
-    return;
-  }
-  
-  // 이미 실행 중인 서버 인스턴스가 있으면 종료
-  if (serverInstances.length > 0) {
-    for (const server of serverInstances) {
-      if (server && typeof server.close === 'function') {
-        await new Promise<void>((resolve) => {
-          server.close(() => {
-            console.log('기존 서버 인스턴스 종료됨');
-            resolve();
+    console.time('데이터베이스 초기화');
+    
+    // 타임아웃 방지를 위한 빠른 초기화 로직
+    if (process.env.FAST_INIT === 'true' || process.env.NODE_ENV === 'test') {
+      console.log('빠른 초기화 모드 - 데이터베이스 초기화 과정 생략');
+      isDbInitialized = true;
+      return;
+    }
+    
+    // 이미 실행 중인 서버 인스턴스가 있으면 종료
+    if (serverInstances.length > 0) {
+      for (const server of serverInstances) {
+        if (server && typeof server.close === 'function') {
+          await new Promise<void>((resolve) => {
+            server.close(() => {
+              console.log('기존 서버 인스턴스 종료됨');
+              resolve();
+            });
           });
-        });
+        }
+      }
+      serverInstances = [];
+    }
+    
+    if (!isDbInitialized) {
+      // 데이터베이스 설정
+      await setupDatabase();
+    
+      // 외래 키 무결성 검사 및 복구
+      await validateAndRepairForeignKeys();
+    
+      isDbInitialized = true;
+    
+      // 통합 테스트를 위한 테스트 사용자 미리 생성
+      try {
+        await createTestUser();
+      } catch (userError) {
+        console.warn('테스트 사용자 생성 실패, 테스트는 계속 진행합니다:', userError);
       }
     }
-    serverInstances = [];
-  }
-  
-  if (!isDbInitialized) {
-    // 데이터베이스 설정
-    await setupDatabase();
-  
-    // 외래 키 무결성 검사 및 복구
-    await validateAndRepairForeignKeys();
-  
-    isDbInitialized = true;
-  
-    // 통합 테스트를 위한 테스트 사용자 미리 생성
-    try {
-      await createTestUser();
-    } catch (userError) {
-      console.warn('테스트 사용자 생성 실패, 테스트는 계속 진행합니다:', userError);
-    }
-  }
-  console.timeEnd('데이터베이스 초기화');
+    console.timeEnd('데이터베이스 초기화');
   } catch (error) {
-  console.error('데이터베이스 초기화 실패:', error);
-  // 오류가 발생해도 테스트가 계속 진행되도록 변경
-  console.warn('오류가 발생했지만 테스트는 계속 진행합니다.');
+    console.error('데이터베이스 초기화 실패:', error);
+    // 오류가 발생해도 테스트가 계속 진행되도록 변경
+    console.warn('오류가 발생했지만 테스트는 계속 진행합니다.');
   }
-  }, 600000); // 10분으로 타임아웃 증가
+}, 600000); // 10분으로 타임아웃 증가
 
 const cleanupDatabase = async () => {
   try {
@@ -976,17 +914,56 @@ const cleanupDatabase = async () => {
   }
 };
 
+// 안전한 타임아웃 관리 클래스
+class TimeoutManager {
+  private timeouts: Set<NodeJS.Timeout> = new Set();
+
+  createTimeout(callback: () => void, delay: number): NodeJS.Timeout {
+    const timeoutId = setTimeout(() => {
+      this.timeouts.delete(timeoutId);
+      callback();
+    }, delay);
+    this.timeouts.add(timeoutId);
+    return timeoutId;
+  }
+
+  clearTimeout(timeoutId: NodeJS.Timeout): void {
+    if (this.timeouts.has(timeoutId)) {
+      clearTimeout(timeoutId);
+      this.timeouts.delete(timeoutId);
+    }
+  }
+
+  clearAll(): void {
+    this.timeouts.forEach(timeoutId => {
+      clearTimeout(timeoutId);
+    });
+    this.timeouts.clear();
+  }
+}
+
+const timeoutManager = new TimeoutManager();
+
 // setup.ts의 afterAll 함수 수정
 afterAll(async () => {
   try {
     console.log('DB 연결 종료 및 서버 인스턴스 정리 시작...');
+
+    // 모든 타임아웃 정리
+    timeoutManager.clearAll();
 
     // 열려있는 모든 서버 인스턴스 종료
     for (const server of serverInstances) {
       if (server && typeof server.close === 'function') {
         try {
           await new Promise<void>((resolve) => {
+            const timeoutId = timeoutManager.createTimeout(() => {
+              console.log('서버 종료 타임아웃');
+              resolve();
+            }, 5000);
+
             server.close(() => {
+              timeoutManager.clearTimeout(timeoutId);
               console.log('서버 인스턴스 종료됨');
               resolve();
             });
@@ -997,59 +974,59 @@ afterAll(async () => {
       }
     }
     serverInstances = [];
-// 공통 타임아웃 함수 정의
-const createTimeoutPromise = (message: string, timeout: number = 5000) => {
-  let timeoutId: NodeJS.Timeout;
-  const promise = new Promise<void>((resolve) => {
-    timeoutId = setTimeout(() => {
-      console.log(message);
-      resolve();
-    }, timeout);
-  });
-  
-  return {
-    promise,
-    cancel: () => {
-      if (timeoutId) clearTimeout(timeoutId);
+
+    // sequelize 연결 종료 - 안전한 타임아웃 관리
+    if (db.sequelize) {
+      try {
+        await new Promise<void>((resolve) => {
+          const timeoutId = timeoutManager.createTimeout(() => {
+            console.log('sequelize 연결 종료 타임아웃');
+            resolve();
+          }, 5000);
+
+          db.sequelize.close().then(() => {
+            timeoutManager.clearTimeout(timeoutId);
+            console.log('sequelize 연결 종료됨');
+            resolve();
+          }).catch((error) => {
+            timeoutManager.clearTimeout(timeoutId);
+            console.log('sequelize 연결 종료 중 오류 발생:', error);
+            resolve();
+          });
+        });
+      } catch (error) {
+        console.log('sequelize 연결 종료 중 예외 발생:', error);
+      }
     }
-  };
-};
 
-// sequelize 연결 종료 - 타임아웃 정리 보장
-if (db.sequelize) {
-  try {
-    const { promise: timeoutPromise, cancel: cancelTimeout } = 
-      createTimeoutPromise('sequelize 연결 종료 타임아웃');
+    // 실제 DB 연결 종료 - 안전한 타임아웃 관리
+    if (dbConnection) {
+      try {
+        await new Promise<void>((resolve) => {
+          const timeoutId = timeoutManager.createTimeout(() => {
+            console.log('dbConnection 연결 종료 타임아웃');
+            resolve();
+          }, 5000);
 
-    await Promise.race([
-      db.sequelize.close().then(() => cancelTimeout()),
-      timeoutPromise
-    ]);
-    cancelTimeout(); // 성공적으로 종료된 경우에도 타임아웃 취소
-    console.log('sequelize 연결 종료됨');
-  } catch (error) {
-    console.log('sequelize 연결 종료 중 오류 발생:', error);
-  }
-}
+          dbConnection!.close().then(() => {
+            timeoutManager.clearTimeout(timeoutId);
+            console.log('dbConnection 연결 종료됨');
+            resolve();
+          }).catch((error) => {
+            timeoutManager.clearTimeout(timeoutId);
+            console.log('dbConnection 연결 종료 중 오류 발생:', error);
+            resolve();
+          });
+        });
+      } catch (error) {
+        console.log('dbConnection 연결 종료 중 예외 발생:', error);
+      } finally {
+        dbConnection = null;
+      }
+    }
 
-// 실제 DB 연결 종료 - 타임아웃 정리 보장
-if (dbConnection) {
-  try {
-    const { promise: timeoutPromise, cancel: cancelTimeout } = 
-      createTimeoutPromise('dbConnection 연결 종료 타임아웃');
-
-    await Promise.race([
-      dbConnection.close().then(() => cancelTimeout()),
-      timeoutPromise
-    ]);
-    cancelTimeout(); // 성공적으로 종료된 경우에도 타임아웃 취소
-    console.log('dbConnection 연결 종료됨');
-  } catch (error) {
-    console.log('dbConnection 연결 종료 중 오류 발생:', error);
-  } finally {
-    dbConnection = null;
-  }
-}
+    // 모든 남은 타임아웃 정리
+    timeoutManager.clearAll();
 
     console.log('DB 연결 종료 및 서버 인스턴스 정리 완료');
   } catch (error) {
@@ -1068,4 +1045,3 @@ export const registerServerInstance = (server: any) => {
 export { db };
 export const testRequest = request(app);
 export { createTestUser };
-

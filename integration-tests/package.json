@@ -1,0 +1,41 @@
+{
+  "scripts": {
+    "test:e2e:ios": "detox test -c ios.sim.debug",
+    "test:e2e:android": "detox test -c android.emu.debug",
+    "build:ios": "detox build -c ios.sim.debug",
+    "build:android": "detox build -c android.emu.debug",
+    "start:backend": "cd ../backend && npm run dev",
+    "start:frontend": "cd ../frontend && npm start",
+    "setup:db": "cd ../backend && npm run db:setup",
+    "test:full": "npm run setup:db && npm run start:backend & npm run start:frontend & npm run test:api",
+    "build": "tsc",
+    "tsc:check": "tsc --noEmit",
+    "create:test-user": "cd ../backend && ts-node scripts/create-test-user.ts",
+    "test:api:with-user": "npm run create:test-user && npm run test:api",
+    "test:api": "jest api-tests/ --forceExit",
+    "test:api:verbose": "jest api-tests/ --verbose --forceExit",
+    "test:api:coverage": "jest api-tests/ --coverage --forceExit",
+    "test:api:watch": "jest api-tests/ --watchAll --forceExit",
+    "test:api:debug": "node --inspect-brk ./node_modules/.bin/jest api-tests/ --runInBand",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "test:e2e": "cypress run",
+    "test:e2e:ui": "cypress open"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.0.0",
+    "@types/socket.io-client": "^3.0.0",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "cypress": "^13.17.0",
+    "http-status-codes": "^2.3.0",
+    "jest": "^29.5.0",
+    "jest-html-reporter": "^4.1.0",
+    "jest-junit": "^16.0.0",
+    "socket.io-client": "^4.8.1",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0",
+    "wait-on": "^8.0.3"
+  }
+}

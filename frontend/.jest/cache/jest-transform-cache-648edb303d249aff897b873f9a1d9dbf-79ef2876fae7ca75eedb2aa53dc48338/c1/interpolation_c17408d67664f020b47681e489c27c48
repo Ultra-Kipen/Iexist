@@ -1,0 +1,125 @@
+695c9ab10f946bc183a701dc28b2fd61
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Extrapolation = void 0;
+exports.clamp = clamp;
+exports.interpolate = interpolate;
+var _errors = require("./errors.js");
+var Extrapolation = exports.Extrapolation = function (Extrapolation) {
+  Extrapolation["IDENTITY"] = "identity";
+  Extrapolation["CLAMP"] = "clamp";
+  Extrapolation["EXTEND"] = "extend";
+  return Extrapolation;
+}({});
+function getVal(type, coef, val, leftEdgeOutput, rightEdgeOutput, x) {
+  'worklet';
+
+  switch (type) {
+    case Extrapolation.IDENTITY:
+      return x;
+    case Extrapolation.CLAMP:
+      if (coef * val < coef * leftEdgeOutput) {
+        return leftEdgeOutput;
+      }
+      return rightEdgeOutput;
+    case Extrapolation.EXTEND:
+    default:
+      return val;
+  }
+}
+function isExtrapolate(value) {
+  'worklet';
+
+  return value === Extrapolation.EXTEND || value === Extrapolation.CLAMP || value === Extrapolation.IDENTITY;
+}
+function validateType(type) {
+  'worklet';
+  var extrapolationConfig = {
+    extrapolateLeft: Extrapolation.EXTEND,
+    extrapolateRight: Extrapolation.EXTEND
+  };
+  if (!type) {
+    return extrapolationConfig;
+  }
+  if (typeof type === 'string') {
+    if (!isExtrapolate(type)) {
+      throw new _errors.ReanimatedError(`Unsupported value for "interpolate" \nSupported values: ["extend", "clamp", "identity", Extrapolatation.CLAMP, Extrapolatation.EXTEND, Extrapolatation.IDENTITY]\n Valid example:
+        interpolate(value, [inputRange], [outputRange], "clamp")`);
+    }
+    extrapolationConfig.extrapolateLeft = type;
+    extrapolationConfig.extrapolateRight = type;
+    return extrapolationConfig;
+  }
+  if (type.extrapolateLeft && !isExtrapolate(type.extrapolateLeft) || type.extrapolateRight && !isExtrapolate(type.extrapolateRight)) {
+    throw new _errors.ReanimatedError(`Unsupported value for "interpolate" \nSupported values: ["extend", "clamp", "identity", Extrapolatation.CLAMP, Extrapolatation.EXTEND, Extrapolatation.IDENTITY]\n Valid example:
+      interpolate(value, [inputRange], [outputRange], {
+        extrapolateLeft: Extrapolation.CLAMP,
+        extrapolateRight: Extrapolation.IDENTITY
+      }})`);
+  }
+  Object.assign(extrapolationConfig, type);
+  return extrapolationConfig;
+}
+function internalInterpolate(x, narrowedInput, extrapolationConfig) {
+  'worklet';
+
+  var leftEdgeInput = narrowedInput.leftEdgeInput,
+    rightEdgeInput = narrowedInput.rightEdgeInput,
+    leftEdgeOutput = narrowedInput.leftEdgeOutput,
+    rightEdgeOutput = narrowedInput.rightEdgeOutput;
+  if (rightEdgeInput - leftEdgeInput === 0) {
+    return leftEdgeOutput;
+  }
+  var progress = (x - leftEdgeInput) / (rightEdgeInput - leftEdgeInput);
+  var val = leftEdgeOutput + progress * (rightEdgeOutput - leftEdgeOutput);
+  var coef = rightEdgeOutput >= leftEdgeOutput ? 1 : -1;
+  if (coef * val < coef * leftEdgeOutput) {
+    return getVal(extrapolationConfig.extrapolateLeft, coef, val, leftEdgeOutput, rightEdgeOutput, x);
+  } else if (coef * val > coef * rightEdgeOutput) {
+    return getVal(extrapolationConfig.extrapolateRight, coef, val, leftEdgeOutput, rightEdgeOutput, x);
+  }
+  return val;
+}
+function interpolate(x, inputRange, outputRange, type) {
+  'worklet';
+
+  if (inputRange.length < 2 || outputRange.length < 2) {
+    throw new _errors.ReanimatedError('Interpolation input and output ranges should contain at least two values.');
+  }
+  var extrapolationConfig = validateType(type);
+  var length = inputRange.length;
+  var narrowedInput = {
+    leftEdgeInput: inputRange[0],
+    rightEdgeInput: inputRange[1],
+    leftEdgeOutput: outputRange[0],
+    rightEdgeOutput: outputRange[1]
+  };
+  if (length > 2) {
+    if (x > inputRange[length - 1]) {
+      narrowedInput.leftEdgeInput = inputRange[length - 2];
+      narrowedInput.rightEdgeInput = inputRange[length - 1];
+      narrowedInput.leftEdgeOutput = outputRange[length - 2];
+      narrowedInput.rightEdgeOutput = outputRange[length - 1];
+    } else {
+      for (var i = 1; i < length; ++i) {
+        if (x <= inputRange[i]) {
+          narrowedInput.leftEdgeInput = inputRange[i - 1];
+          narrowedInput.rightEdgeInput = inputRange[i];
+          narrowedInput.leftEdgeOutput = outputRange[i - 1];
+          narrowedInput.rightEdgeOutput = outputRange[i];
+          break;
+        }
+      }
+    }
+  }
+  return internalInterpolate(x, narrowedInput, extrapolationConfig);
+}
+function clamp(value, min, max) {
+  'worklet';
+
+  return Math.min(Math.max(value, min), max);
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJPYmplY3QiLCJkZWZpbmVQcm9wZXJ0eSIsImV4cG9ydHMiLCJ2YWx1ZSIsIkV4dHJhcG9sYXRpb24iLCJjbGFtcCIsImludGVycG9sYXRlIiwiX2Vycm9ycyIsInJlcXVpcmUiLCJnZXRWYWwiLCJ0eXBlIiwiY29lZiIsInZhbCIsImxlZnRFZGdlT3V0cHV0IiwicmlnaHRFZGdlT3V0cHV0IiwieCIsIklERU5USVRZIiwiQ0xBTVAiLCJFWFRFTkQiLCJpc0V4dHJhcG9sYXRlIiwidmFsaWRhdGVUeXBlIiwiZXh0cmFwb2xhdGlvbkNvbmZpZyIsImV4dHJhcG9sYXRlTGVmdCIsImV4dHJhcG9sYXRlUmlnaHQiLCJSZWFuaW1hdGVkRXJyb3IiLCJhc3NpZ24iLCJpbnRlcm5hbEludGVycG9sYXRlIiwibmFycm93ZWRJbnB1dCIsImxlZnRFZGdlSW5wdXQiLCJyaWdodEVkZ2VJbnB1dCIsInByb2dyZXNzIiwiaW5wdXRSYW5nZSIsIm91dHB1dFJhbmdlIiwibGVuZ3RoIiwiaSIsIm1pbiIsIm1heCIsIk1hdGgiXSwic291cmNlcyI6WyIuLi8uLi9zcmMvaW50ZXJwb2xhdGlvbi50cyJdLCJzb3VyY2VzQ29udGVudCI6W251bGxdLCJtYXBwaW5ncyI6IkFBQUEsWUFBWTs7QUFBQUEsTUFBQSxDQUFBQyxjQUFBLENBQUFDLE9BQUE7RUFBQUMsS0FBQTtBQUFBO0FBQUFELE9BQUEsQ0FBQUUsYUFBQTtBQUFBRixPQUFBLENBQUFHLEtBQUEsR0FBQUEsS0FBQTtBQUFBSCxPQUFBLENBQUFJLFdBQUEsR0FBQUEsV0FBQTtBQUVaLElBQUFDLE9BQUEsR0FBQUMsT0FBQTtBQVNBLElBQVlKLGFBQWEsR0FBQUYsT0FBQSxDQUFBRSxhQUFBLGFBQWJBLGFBQWE7RUFBYkEsYUFBYTtFQUFiQSxhQUFhO0VBQWJBLGFBQWE7RUFBQSxPQUFiQSxhQUFhO0FBQUE7QUFrQ3pCLFNBQVNLLE1BQU1BLENBQ2JDLElBQW1CLEVBQ25CQyxJQUFZLEVBQ1pDLEdBQVcsRUFDWEMsY0FBc0Is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

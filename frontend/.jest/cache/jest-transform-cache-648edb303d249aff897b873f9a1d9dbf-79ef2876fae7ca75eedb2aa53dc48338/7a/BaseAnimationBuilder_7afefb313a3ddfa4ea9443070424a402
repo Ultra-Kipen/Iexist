@@ -1,0 +1,130 @@
+697d1eb0d60c46211a37c4e41a621ed3
+'use strict';
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.BaseAnimationBuilder = void 0;
+var _classCallCheck2 = _interopRequireDefault(require("@babel/runtime/helpers/classCallCheck"));
+var _createClass2 = _interopRequireDefault(require("@babel/runtime/helpers/createClass"));
+var _index = require("../../animation/index.js");
+var _util = require("../../animation/util.js");
+var _commonTypes = require("../../commonTypes.js");
+var _errors = require("../../errors.js");
+var BaseAnimationBuilder = exports.BaseAnimationBuilder = function () {
+  function BaseAnimationBuilder() {
+    (0, _classCallCheck2.default)(this, BaseAnimationBuilder);
+    this.reduceMotionV = _commonTypes.ReduceMotion.System;
+    this.randomizeDelay = false;
+    this.build = function () {
+      throw new _errors.ReanimatedError('Unimplemented method in child class.');
+    };
+  }
+  return (0, _createClass2.default)(BaseAnimationBuilder, [{
+    key: "duration",
+    value: function duration(durationMs) {
+      this.durationV = durationMs;
+      return this;
+    }
+  }, {
+    key: "delay",
+    value: function delay(delayMs) {
+      this.delayV = delayMs;
+      return this;
+    }
+  }, {
+    key: "withCallback",
+    value: function withCallback(callback) {
+      this.callbackV = callback;
+      return this;
+    }
+  }, {
+    key: "reduceMotion",
+    value: function reduceMotion(reduceMotionV) {
+      this.reduceMotionV = reduceMotionV;
+      return this;
+    }
+  }, {
+    key: "getDuration",
+    value: function getDuration() {
+      var _this$durationV;
+      return (_this$durationV = this.durationV) != null ? _this$durationV : 300;
+    }
+  }, {
+    key: "randomDelay",
+    value: function randomDelay() {
+      this.randomizeDelay = true;
+      return this;
+    }
+  }, {
+    key: "getDelay",
+    value: function getDelay() {
+      var _this$delayV, _this$delayV2;
+      return this.randomizeDelay ? Math.random() * ((_this$delayV = this.delayV) != null ? _this$delayV : 1000) : (_this$delayV2 = this.delayV) != null ? _this$delayV2 : 0;
+    }
+  }, {
+    key: "getReduceMotion",
+    value: function getReduceMotion() {
+      return this.reduceMotionV;
+    }
+  }, {
+    key: "getDelayFunction",
+    value: function getDelayFunction() {
+      var isDelayProvided = this.randomizeDelay || this.delayV;
+      var reduceMotion = this.getReduceMotion();
+      return isDelayProvided ? function (delay, animation) {
+        'worklet';
+
+        return (0, _index.withDelay)(delay, animation, reduceMotion);
+      } : function (_, animation) {
+        'worklet';
+
+        animation.reduceMotion = (0, _util.getReduceMotionFromConfig)(reduceMotion);
+        return animation;
+      };
+    }
+  }], [{
+    key: "duration",
+    value: function duration(durationMs) {
+      var instance = this.createInstance();
+      return instance.duration(durationMs);
+    }
+  }, {
+    key: "delay",
+    value: function delay(delayMs) {
+      var instance = this.createInstance();
+      return instance.delay(delayMs);
+    }
+  }, {
+    key: "withCallback",
+    value: function withCallback(callback) {
+      var instance = this.createInstance();
+      return instance.withCallback(callback);
+    }
+  }, {
+    key: "reduceMotion",
+    value: function reduceMotion(_reduceMotion) {
+      var instance = this.createInstance();
+      return instance.reduceMotion(_reduceMotion);
+    }
+  }, {
+    key: "getDuration",
+    value: function getDuration() {
+      return 300;
+    }
+  }, {
+    key: "randomDelay",
+    value: function randomDelay() {
+      var instance = this.createInstance();
+      return instance.randomDelay();
+    }
+  }, {
+    key: "build",
+    value: function build() {
+      var instance = this.createInstance();
+      return instance.build();
+    }
+  }]);
+}();
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJfaW50ZXJvcFJlcXVpcmVEZWZhdWx0IiwicmVxdWlyZSIsIk9iamVjdCIsImRlZmluZVByb3BlcnR5IiwiZXhwb3J0cyIsInZhbHVlIiwiQmFzZUFuaW1hdGlvbkJ1aWxkZXIiLCJfY2xhc3NDYWxsQ2hlY2syIiwiX2NyZWF0ZUNsYXNzMiIsIl9pbmRleCIsIl91dGlsIiwiX2NvbW1vblR5cGVzIiwiX2Vycm9ycyIsImRlZmF1bHQiLCJyZWR1Y2VNb3Rpb25WIiwiUmVkdWNlTW90aW9uIiwiU3lzdGVtIiwicmFuZG9taXplRGVsYXkiLCJidWlsZCIsIlJlYW5pbWF0ZWRFcnJvciIsImtleSIsImR1cmF0aW9uIiwiZHVyYXRpb25NcyIsImR1cmF0aW9uViIsImRlbGF5IiwiZGVsYXlNcyIsImRlbGF5ViIsIndpdGhDYWxsYmFjayIsImNhbGxiYWNrIiwiY2FsbGJhY2tWIiwicmVkdWNlTW90aW9uIiwiZ2V0RHVyYXRpb24iLCJfdGhpcyRkdXJhdGlvblYiLCJyYW5kb21EZWxheSIsImdldERlbGF5IiwiX3RoaXMkZGVsYXlWIiwiX3RoaXMkZGVsYXlWMiIsIk1hdGgiLCJyYW5kb20iLCJnZXRSZWR1Y2VNb3Rpb24iLCJnZXREZWxheUZ1bmN0aW9uIiwiaXNEZWxheVByb3ZpZGVkIiwiYW5pbWF0aW9uIiwid2l0aERlbGF5IiwiXyIsImdldFJlZHVjZU1vdGlvbkZyb21Db25maWciLCJpbnN0YW5jZSIsImNyZWF0ZUluc3RhbmNlIl0sInNvdXJjZXMiOlsiLi4vLi4vLi4vLi4vc3JjL2xheW91dFJlYW5pbWF0aW9uL2FuaW1hdGlvbkJ1aWxkZXIvQmFzZUFuaW1hdGlvbkJ1aWxkZXIudHMiXSwic291cmNlc0NvbnRlbnQiOltudWxsXSwibWFwcGluZ3MiOiJBQUFBLFlBQVk7O0FBQUEsSUFBQUEsc0JBQUEsR0FBQUMsT0FBQTtBQUFBQyxNQUFBLENBQUFDLGNBQUEsQ0FBQUMsT0FBQTtFQUFBQyxLQUFBO0FBQUE7QUFBQUQsT0FBQSxDQUFBRSxvQkFBQTtBQUFB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

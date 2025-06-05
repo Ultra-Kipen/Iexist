@@ -1,0 +1,121 @@
+9de14550283d1c9615fd09cc2d646570
+'use strict';
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.processTransformOrigin = processTransformOrigin;
+var _slicedToArray2 = _interopRequireDefault(require("@babel/runtime/helpers/slicedToArray"));
+var _errors = require("../errors.js");
+var INDEX_X = 0;
+var INDEX_Y = 1;
+var INDEX_Z = 2;
+function validateTransformOrigin(transformOrigin) {
+  'worklet';
+
+  if (transformOrigin.length !== 3) {
+    throw new _errors.ReanimatedError('Transform origin must have exactly 3 values.');
+  }
+  var _transformOrigin = (0, _slicedToArray2.default)(transformOrigin, 3),
+    x = _transformOrigin[0],
+    y = _transformOrigin[1],
+    z = _transformOrigin[2];
+  if (!(typeof x === 'number' || typeof x === 'string' && x.endsWith('%'))) {
+    throw new _errors.ReanimatedError(`Transform origin x-position must be a number or a percentage string. Passed value: ${x}.`);
+  }
+  if (!(typeof y === 'number' || typeof y === 'string' && y.endsWith('%'))) {
+    throw new _errors.ReanimatedError(`Transform origin y-position must be a number or a percentage string. Passed value: ${y}.`);
+  }
+  if (typeof z !== 'number') {
+    throw new _errors.ReanimatedError(`Transform origin z-position must be a number. Passed value: ${z}.`);
+  }
+}
+function processTransformOrigin(transformOriginIn) {
+  'worklet';
+
+  var transformOrigin = Array.isArray(transformOriginIn) ? transformOriginIn : ['50%', '50%', 0];
+  if (typeof transformOriginIn === 'string') {
+    var transformOriginString = transformOriginIn;
+    var regex = /(top|bottom|left|right|center|\d+(?:%|px)|0)/gi;
+    var transformOriginArray = ['50%', '50%', 0];
+    var index = INDEX_X;
+    var matches;
+    while (matches = regex.exec(transformOriginString)) {
+      var nextIndex = index + 1;
+      var value = matches[0];
+      var valueLower = value.toLowerCase();
+      switch (valueLower) {
+        case 'left':
+        case 'right':
+          {
+            if (index !== INDEX_X) {
+              throw new _errors.ReanimatedError(`Transform-origin ${value} can only be used for x-position`);
+            }
+            transformOriginArray[INDEX_X] = valueLower === 'left' ? 0 : '100%';
+            break;
+          }
+        case 'top':
+        case 'bottom':
+          {
+            if (index === INDEX_Z) {
+              throw new _errors.ReanimatedError(`Transform-origin ${value} can only be used for y-position`);
+            }
+            transformOriginArray[INDEX_Y] = valueLower === 'top' ? 0 : '100%';
+            if (index === INDEX_X) {
+              var horizontal = regex.exec(transformOriginString);
+              if (horizontal == null) {
+                break;
+              }
+              switch (horizontal == null ? void 0 : horizontal[0].toLowerCase()) {
+                case 'left':
+                  transformOriginArray[INDEX_X] = 0;
+                  break;
+                case 'right':
+                  transformOriginArray[INDEX_X] = '100%';
+                  break;
+                case 'center':
+                  transformOriginArray[INDEX_X] = '50%';
+                  break;
+                default:
+                  throw new _errors.ReanimatedError(`Could not parse transform-origin: ${transformOriginString}`);
+              }
+              nextIndex = INDEX_Z;
+            }
+            break;
+          }
+        case 'center':
+          {
+            if (index === INDEX_Z) {
+              throw new _errors.ReanimatedError(`Transform-origin value ${value} cannot be used for z-position`);
+            }
+            transformOriginArray[index] = '50%';
+            break;
+          }
+        default:
+          {
+            if (value.endsWith('%')) {
+              transformOriginArray[index] = value;
+            } else {
+              var numericValue = parseFloat(value);
+              if (isNaN(numericValue)) {
+                throw new _errors.ReanimatedError(`Invalid numeric value in transform-origin: ${value}`);
+              }
+              transformOriginArray[index] = numericValue;
+            }
+            break;
+          }
+      }
+      index = nextIndex;
+    }
+    transformOrigin = transformOriginArray;
+  }
+  if (typeof transformOriginIn !== 'string' && !Array.isArray(transformOriginIn)) {
+    throw new _errors.ReanimatedError(`Invalid transformOrigin type: ${typeof transformOriginIn}`);
+  }
+  if (true) {
+    validateTransformOrigin(transformOrigin);
+  }
+  return transformOrigin;
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJfaW50ZXJvcFJlcXVpcmVEZWZhdWx0IiwicmVxdWlyZSIsIk9iamVjdCIsImRlZmluZVByb3BlcnR5IiwiZXhwb3J0cyIsInZhbHVlIiwicHJvY2Vzc1RyYW5zZm9ybU9yaWdpbiIsIl9zbGljZWRUb0FycmF5MiIsIl9lcnJvcnMiLCJJTkRFWF9YIiwiSU5ERVhfWSIsIklOREVYX1oiLCJ2YWxpZGF0ZVRyYW5zZm9ybU9yaWdpbiIsInRyYW5zZm9ybU9yaWdpbiIsImxlbmd0aCIsIlJlYW5pbWF0ZWRFcnJvciIsIl90cmFuc2Zvcm1PcmlnaW4iLCJkZWZhdWx0IiwieCIsInkiLCJ6IiwiZW5kc1dpdGgiLCJ0cmFuc2Zvcm1PcmlnaW5JbiIsIkFycmF5IiwiaXNBcnJheSIsInRyYW5zZm9ybU9yaWdpblN0cmluZyIsInJlZ2V4IiwidHJhbnNmb3JtT3JpZ2luQXJyYXkiLCJpbmRleCIsIm1hdGNoZXMiLCJleGVjIiwibmV4dEluZGV4IiwidmFsdWVMb3dlciIsInRvTG93ZXJDYXNlIiwiaG9yaXpvbnRhbCIsIm51bWVyaWNWYWx1ZSIsInBhcnNlRmxvYXQiLCJpc05hTiJdLCJzb3VyY2VzIjpbIi4uLy4uLy4uL3NyYy91cGRhdGVQcm9wcy9wcm9jZXNzVHJhbnNmb3JtT3JpZ2luLnRzIl0sInNvdXJjZXNDb250ZW50IjpbbnVsbF0sIm1hcHBpbmdzIjoiQUFBQSxZQUFZOztBQUFBLElBQUFBLHNCQUFBLEdBQUFDLE9BQUE7QUFBQUMsTUFBQSxDQUFBQyxjQUFBLENBQUFDLE9BQUE7RUFBQUMsS0FBQTtBQUFBO0FBQUFELE9BQUEsQ0FBQUUsc0JBQUEsR0FBQUEsc0JBQUE7QUFBQSxJQUFBQyxlQUFBLEdBQUFQLHNCQUFBLENBQUFDLE9BQUE7QUFDWixJQUFBTyxPQUFBLEdBQUFQLE9BQUE7QUFFQSxJQUFNUSxPQUFPLEdBQUcsQ0FBQztBQUNqQixJQUFNQyxPQUFPLEdBQUcsQ0FBQztBQUNqQixJQUFNQyxPQUFPLEdBQUcsQ0FBQztBQUdqQixTQUFTQyx1QkFB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

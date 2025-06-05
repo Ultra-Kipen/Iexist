@@ -1,12 +1,9 @@
-// __tests__/integration/postService.integration.test.tsx
-
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import postService from '../../src/services/api/postService';
 import { MockPostScreen } from '../mocks/MockScreens';
-
 // App 컴포넌트 직접 import 제거
 
 // 컴포넌트와 서비스의 통합을 테스트하기 위한 모킹
@@ -37,6 +34,7 @@ const mockNavigation = {
   goBack: jest.fn()
 };
 
+// 테스트 컴포넌트 래퍼
 // 테스트 컴포넌트 래퍼
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <NavigationContainer>
@@ -96,34 +94,37 @@ describe('게시물 기능 통합 테스트', () => {
       });
 
       // Mock 게시물 상세 컴포넌트 렌더링
-      const { getByTestId, getByText } = render(
-        <TestWrapper>
-          <MockPostScreen
-            route={{ params: { postId: 1 } }}
-            navigation={mockNavigation}
-          />
-        </TestWrapper>
-      );
+   // Mock 게시물 상세 컴포넌트 렌더링
+// Mock 게시물 상세 컴포넌트 렌더링
+const { getByTestId, getByText } = render(
+  <TestWrapper>
+    <MockPostScreen
+      route={{ params: { postId: 1 } }}
+      navigation={mockNavigation}
+    />
+  </TestWrapper>
+);
 
-      // 게시물 ID가 표시되는지 확인
-      expect(getByText('게시물 ID: 1')).toBeTruthy();
+// 게시물 ID가 표시되는지 확인
+expect(getByText('게시물 ID: 1')).toBeTruthy();
 
-      // 댓글 입력 필드 확인
-      const commentInput = getByTestId('comment-input');
-      fireEvent.changeText(commentInput, '테스트 댓글입니다.');
+// 댓글 입력 필드 확인
+const commentInput = getByTestId('comment-input');
+fireEvent.changeText(commentInput, '테스트 댓글입니다.');
 
-      // 댓글 제출 버튼 클릭
-      const submitButton = getByTestId('submit-comment');
-      fireEvent.press(submitButton);
+// 댓글 제출 버튼 클릭
+const submitButton = getByTestId('submit-comment');
+fireEvent.press(submitButton);
 
-      // addComment 서비스가 호출되었는지 확인
-      await waitFor(() => {
-        expect(mockAddComment).toHaveBeenCalledWith(1, {
-          content: '테스트 댓글입니다.',
-          is_anonymous: false
-        });
-      });
-
+// addComment 서비스가 호출되었는지 확인
+await waitFor(() => {
+  expect(postService.addComment).toHaveBeenCalled();
+  // 모의 함수에 전달된 인수 확인 (테스트 댓글이 아닌 고정된 문자열을 사용하므로 수정)
+  expect(postService.addComment).toHaveBeenCalledWith(1, {
+    content: '테스트 댓글입니다.',
+    is_anonymous: false
+  });
+});
       // getPostById와 getComments가 호출되었는지 확인
       expect(mockGetPostById).toHaveBeenCalledWith(1);
       expect(mockGetComments).toHaveBeenCalledWith(1);

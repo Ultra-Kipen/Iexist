@@ -1,7 +1,9 @@
-// src/components/EmotionChart.tsx
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { LineChart, PieChart } from 'react-native-chart-kit';
+
+// require로 Dimensions 가져오기
+const Dimensions = require('react-native').Dimensions;
 
 interface EmotionData {
   count: number;
@@ -24,6 +26,9 @@ const EmotionChart: React.FC<EmotionChartProps> = ({
   type = 'line',
   height = 220,
 }) => {
+  // Dimensions API 사용 (as 키워드로 이름 변경)
+  const screenWidth = Dimensions.get('window').width - 32;
+  
   if (!data || data.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -31,8 +36,6 @@ const EmotionChart: React.FC<EmotionChartProps> = ({
       </View>
     );
   }
-
-  const screenWidth = Dimensions.get('window').width - 32;
 
   if (type === 'pie') {
     // 감정별 분포를 위한 파이 차트 데이터 가공

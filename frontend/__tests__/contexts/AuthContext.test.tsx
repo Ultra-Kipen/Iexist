@@ -4,7 +4,6 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '../../src/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import authService from '../../src/services/api/authService';
-import { View, Text, TouchableOpacity } from 'react-native';
 
 // Mock the authService
 jest.mock('../../src/services/api/authService', () => ({
@@ -16,6 +15,7 @@ jest.mock('../../src/services/api/authService', () => ({
 // Create a test component that uses the AuthContext
 const TestComponent = () => {
   const { user, isAuthenticated, login, logout, register } = useAuth();
+  const { View, Text, TouchableOpacity } = require('react-native');
   
   return (
     <View>

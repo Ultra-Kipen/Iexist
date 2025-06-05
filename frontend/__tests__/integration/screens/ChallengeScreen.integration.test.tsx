@@ -1,225 +1,291 @@
+// __TESTS__/screens/MyPostsScreen.test.tsx
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { ScrollView, View } from 'react-native';
-import {
-  Card,
-  Title,
-  Paragraph,
-  Button,
-  ProgressBar,
-  List
-} from 'react-native-paper';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react-native';
+import MyPostsScreen from '../../../src/screens/MyPostsScreen';
+import postService from '../../../src/services/api/postService';
+import { Alert } from 'react-native';
+import { AxiosResponse } from 'axios';
 
-// React Native Paper의 useTheme 모킹
+// 타입 정의
+type MockFn<T extends (...args: any[]) => any> = jest.Mock<ReturnType<T>, Parameters<T>>;
+
+// 모킹
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({
+    navigate: jest.fn(),
+    goBack: jest.fn(),
+    addListener: jest.fn().mockReturnValue(jest.fn()),
+  }),
+}));
+
+jest.mock('../../../src/services/api/postService', () => ({
+  getMyPosts: jest.fn(),
+  deletePost: jest.fn(),
+}));
+
+// Paper 모킹 개선 - 인라인 타입 주석 사용
 jest.mock('react-native-paper', () => {
-  const originalModule = jest.requireActual('react-native-paper');
-  return {
-    ...originalModule,
-    useTheme: () => ({
-      colors: {
-        primary: '#6200ee',
-      },
-    }),
-  };
-});
-
-// ChallengeScreen 모듈을 모킹
-interface Challenge {
-  id: number;
-  title: string;
-  description: string;
-  participants: number;
-  duration: number;
-  progress: number;
-}
-
-jest.mock('../../../src/screens/ChallengeScreen', () => {
-  // 실제 컴포넌트를 원래 파일에서 가져오는 대신, 테스트를 위한 간단한 버전을 제공합니다
   const React = require('react');
-  const { View, Text } = require('react-native');
-  const { Button } = require('react-native-paper');
+  const { View, Text, TouchableOpacity } = require('react-native');
   
-  // 챌린지 데이터
-  const challenges = [
-    {
-      id: 1,
-      title: '7일간의 감사 일기',
-      description: '매일 감사한 일 3가지를 기록해보세요.',
-      participants: 128,
-      duration: 7,
-      progress: 0.4,
-    },
-    {
-      id: 2,
-      title: '30일 긍정 에너지 나누기',
-      description: '하루에 한 번 주변 사람에게 긍정적인 말을 해보세요.',
-      participants: 56,
-      duration: 30,
-      progress: 0.2,
-    },
-    {
-      id: 3,
-      title: '21일 명상 습관 만들기',
-      description: '매일 10분씩 명상을 하고 느낀 점을 공유해보세요.',
-      participants: 89,
-      duration: 21,
-      progress: 0.6,
-    },
-  ];
+
+  // 간단한 버튼 컴포넌트
+  const Button = (props: { onPress?: any; mode?: string; style?: any; testID?: any; textColor?: any; children?: any; }) => (
+    <TouchableOpacity 
+      onPress={props.onPress} 
+      style={{ 
+        backgroundColor: props.mode === 'contained' ? '#2196F3' : 'transparent',
+        borderWidth: props.mode === 'outlined' ? 1 : 0,
+        padding: 8,
+        borderRadius: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...(props.style || {})
+      }}
+      testID={props.testID}
+    >
+      <Text style={{ color: props.textColor || (props.mode === 'contained' ? 'white' : '#2196F3') }}>
+        {props.children}
+      </Text>
+    </TouchableOpacity>
+  );
   
-  // 간단한 Mock 컴포넌트 생성
-  const MockChallengeScreen = () => {
-    const handleJoinChallenge = (challengeId: number) => {
-      console.log('Joining challenge:', challengeId);
-    };
-    
-    return React.createElement(View, null, 
-      React.createElement(Text, null, '현재 진행 중인 챌린지'),
-      ...challenges.map(challenge => 
-        React.createElement(View, { key: challenge.id }, 
-          React.createElement(Text, null, challenge.title),
-          React.createElement(Text, null, challenge.description),
-          React.createElement(Text, null, `${Math.round(challenge.progress * 100)}% 완료`),
-          React.createElement(Text, null, `참여자: ${challenge.participants}명`),
-          React.createElement(Text, null, `기간: ${challenge.duration}일`),
-          React.createElement(Button, {
-            onPress: () => handleJoinChallenge(challenge.id)
-          }, '참여하기')
-        )
-      )
+  // 간단한 카드 컴포넌트
+  const Card = (props: { style?: any; testID?: any; children?: any; }) => (
+    <View style={[{ margin: 8, padding: 8, backgroundColor: 'white' }, props.style]} testID={props.testID}>
+      {props.children}
+    </View>
+  );
+  
+  Card.Content = (props: { children?: any; }) => <View style={{ padding: 8 }}>{props.children}</View>;
+  Card.Actions = (props: { children?: any; }) => <View style={{ flexDirection: 'row', justifyContent: 'flex-end', padding: 8 }}>{props.children}</View>;
+  
+  // Dialog 관련 컴포넌트
+  const Dialog = (props: { visible?: any; children?: any; onDismiss?: any; }) => {
+    if (!props.visible) return null;
+    return (
+      <View 
+        style={{ 
+          position: 'absolute', 
+          top: 0, left: 0, right: 0, bottom: 0,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: 'rgba(0,0,0,0.5)'
+        }}
+      >
+        <View style={{ backgroundColor: 'white', padding: 16, width: '80%', borderRadius: 8 }}>
+          {props.children}
+        </View>
+      </View>
     );
   };
   
-  return MockChallengeScreen;
+  Dialog.Title = (props: { children?: any; }) => <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>{props.children}</Text>;
+  Dialog.Content = (props: { children?: any; }) => <View style={{ marginVertical: 8 }}>{props.children}</View>;
+  Dialog.Actions = (props: { children?: any; }) => <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>{props.children}</View>;
+  
+  // Chip 컴포넌트
+  const Chip = (props: { style?: any; icon?: () => any; children?: any; }) => (
+    <View style={[{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#e0e0e0', borderRadius: 16, padding: 4 }, props.style]}>
+      {props.icon && props.icon()}
+      <Text style={{ marginLeft: 4 }}>{props.children}</Text>
+    </View>
+  );
+  
+  // Portal 컴포넌트
+  const Portal = (props: { children?: any; }) => props.children;
+
+  return {
+    Button,
+    Card,
+    Chip,
+    Dialog,
+    Portal,
+  };
 });
-// 모의된 ChallengeScreen 임포트
-const ChallengeScreen = require('../../../src/screens/ChallengeScreen');
 
-// Mock console.log
-const mockConsoleLog = jest.fn();
-const originalConsoleLog = console.log;
-console.log = mockConsoleLog;
+jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  
+  return function MockIcon(props: { name?: any; size?: any; color?: any; }) {
+    return <Text>{props.name}</Text>;
+  };
+});
 
-describe('ChallengeScreen 통합 테스트', () => {
+jest.mock('react-native/Libraries/Alert/Alert', () => ({
+  alert: jest.fn(),
+}));
+
+// 테스트 데이터
+const mockPosts = [
+  {
+    post_id: 1,
+    content: '첫 번째 테스트 게시물입니다.',
+    emotion_summary: '행복',
+    like_count: 5,
+    comment_count: 2,
+    created_at: '2025-03-01T12:00:00Z',
+  },
+  {
+    post_id: 2,
+    content: '두 번째 테스트 게시물입니다.',
+    emotion_summary: '슬픔',
+    like_count: 2,
+    comment_count: 1,
+    created_at: '2025-03-02T12:00:00Z',
+  },
+];
+
+// Axios 응답 모킹 헬퍼 함수
+function createMockResponse<T>(data: T): AxiosResponse<T> {
+  return {
+    data,
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config: {} as any,
+  };
+}
+
+describe('MyPostsScreen', () => {
   beforeEach(() => {
-    mockConsoleLog.mockClear();
+    jest.clearAllMocks();
+    
+    // 타입 어설션 추가
+    (postService.getMyPosts as MockFn<typeof postService.getMyPosts>).mockResolvedValue(
+      createMockResponse({ posts: mockPosts })
+    );
   });
 
-  afterAll(() => {
-    console.log = originalConsoleLog;
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
   });
 
-  it('컴포넌트가 올바르게 렌더링되고 모든 챌린지가 표시되어야 함', async () => {
-    const { getByText, getAllByText } = render(<ChallengeScreen />);
-
-    // 헤더 타이틀 확인
-    expect(getByText('현재 진행 중인 챌린지')).toBeTruthy();
+  it('renders post list correctly', async () => {
+    const mockAddListener = jest.fn().mockReturnValue(jest.fn());
     
-    // 모든 챌린지 카드가 표시되는지 확인
-    expect(getByText('7일간의 감사 일기')).toBeTruthy();
-    expect(getByText('30일 긍정 에너지 나누기')).toBeTruthy();
-    expect(getByText('21일 명상 습관 만들기')).toBeTruthy();
+    render(<MyPostsScreen navigation={{ navigate: jest.fn(), addListener: mockAddListener }} route={{}} />);
     
-    // 모든 챌린지에 참여하기 버튼이 있는지 확인
-    const joinButtons = getAllByText('참여하기');
-    expect(joinButtons.length).toBe(3);
-  });
-
-  it('참여하기 버튼 클릭 시 올바른 ID로 핸들러가 호출되어야 함', async () => {
-    const { getAllByText } = render(<ChallengeScreen />);
-
-    const joinButtons = getAllByText('참여하기');
-    
-    // 첫 번째 챌린지 참여 테스트
-    fireEvent.press(joinButtons[0]);
     await waitFor(() => {
-      expect(mockConsoleLog).toHaveBeenCalledWith('Joining challenge:', 1);
+      expect(screen.getByText('내 게시물')).toBeTruthy();
+      expect(screen.getByText('첫 번째 테스트 게시물입니다.')).toBeTruthy();
+      expect(screen.getByText('두 번째 테스트 게시물입니다.')).toBeTruthy();
+    });
+  });
+
+  it('navigates to create post screen', async () => {
+    const navigate = jest.fn();
+    
+    render(<MyPostsScreen navigation={{ navigate, addListener: jest.fn().mockReturnValue(jest.fn()) }} route={{}} />);
+    
+    await waitFor(() => {
+      const newPostButton = screen.getByText('새 게시물');
+      fireEvent.press(newPostButton);
     });
     
-    // 두 번째 챌린지 참여 테스트
-    fireEvent.press(joinButtons[1]);
+    expect(navigate).toHaveBeenCalledWith('CreatePost');
+  });
+
+  it('shows empty state when no posts', async () => {
+    (postService.getMyPosts as MockFn<typeof postService.getMyPosts>).mockResolvedValue(
+      createMockResponse({ posts: [] })
+    );
+    
+    render(<MyPostsScreen navigation={{ navigate: jest.fn(), addListener: jest.fn().mockReturnValue(jest.fn()) }} route={{}} />);
+    
     await waitFor(() => {
-      expect(mockConsoleLog).toHaveBeenCalledWith('Joining challenge:', 2);
+      expect(screen.getByText('게시물이 없습니다')).toBeTruthy();
+      expect(screen.getByText('첫 게시물 작성하기')).toBeTruthy();
+    });
+  });
+
+  it('handles post deletion', async () => {
+    (postService.deletePost as MockFn<typeof postService.deletePost>).mockResolvedValue(
+      createMockResponse({ success: true })
+    );
+    
+    render(<MyPostsScreen navigation={{ navigate: jest.fn(), addListener: jest.fn().mockReturnValue(jest.fn()) }} route={{}} />);
+    
+    await waitFor(() => {
+      const deleteButtons = screen.getAllByText('삭제');
+      fireEvent.press(deleteButtons[0]);
     });
     
-    // 세 번째 챌린지 참여 테스트
-    fireEvent.press(joinButtons[2]);
+    expect(screen.getByText('게시물 삭제')).toBeTruthy();
+    expect(screen.getByText('정말로 이 게시물을 삭제하시겠습니까?')).toBeTruthy();
+    
+    const confirmDeleteButton = screen.getAllByText('삭제')[screen.getAllByText('삭제').length - 1];
+    fireEvent.press(confirmDeleteButton);
+    
     await waitFor(() => {
-      expect(mockConsoleLog).toHaveBeenCalledWith('Joining challenge:', 3);
+      expect(postService.deletePost).toHaveBeenCalledWith(1);
+      expect(Alert.alert).toHaveBeenCalledWith('성공', '게시물이 성공적으로 삭제되었습니다');
+    });
+  });
+
+  it('handles deletion cancellation', async () => {
+    render(<MyPostsScreen navigation={{ navigate: jest.fn(), addListener: jest.fn().mockReturnValue(jest.fn()) }} route={{}} />);
+    
+    await waitFor(() => {
+      const deleteButtons = screen.getAllByText('삭제');
+      fireEvent.press(deleteButtons[0]);
     });
     
-    // 총 호출 횟수 확인
-    expect(mockConsoleLog).toHaveBeenCalledTimes(3);
+    const cancelButton = screen.getByText('취소');
+    fireEvent.press(cancelButton);
+    
+    expect(postService.deletePost).not.toHaveBeenCalled();
   });
 
-  it('챌린지 세부 정보가 정확하게 표시되어야 함', () => {
-    const { getAllByText } = render(<ChallengeScreen />);
+  it('handles error during deletion', async () => {
+    (postService.deletePost as MockFn<typeof postService.deletePost>).mockRejectedValue({
+      response: {
+        status: 500,
+        data: { message: '네트워크 오류' }
+      }
+    });
     
-    // 참여자 정보 확인
-    const participantTexts = getAllByText(/참여자: \d+명/);
-    expect(participantTexts[0].props.children).toBe('참여자: 128명');
-    expect(participantTexts[1].props.children).toBe('참여자: 56명');
-    expect(participantTexts[2].props.children).toBe('참여자: 89명');
+    render(<MyPostsScreen navigation={{ navigate: jest.fn(), addListener: jest.fn().mockReturnValue(jest.fn()) }} route={{}} />);
     
-    // 기간 정보 확인
-    const durationTexts = getAllByText(/기간: \d+일/);
-    expect(durationTexts[0].props.children).toBe('기간: 7일');
-    expect(durationTexts[1].props.children).toBe('기간: 30일');
-    expect(durationTexts[2].props.children).toBe('기간: 21일');
+    await waitFor(() => {
+      const deleteButtons = screen.getAllByText('삭제');
+      fireEvent.press(deleteButtons[0]);
+    });
+    
+    const confirmDeleteButton = screen.getAllByText('삭제')[screen.getAllByText('삭제').length - 1];
+    fireEvent.press(confirmDeleteButton);
+    
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith('오류', '게시물을 삭제하는 중 오류가 발생했습니다');
+    });
   });
 
-  it('진행률 표시가 올바르게 계산되어 표시되어야 함', () => {
-    const { getAllByText } = render(<ChallengeScreen />);
+  it('handles error during data loading', async () => {
+    (postService.getMyPosts as MockFn<typeof postService.getMyPosts>).mockRejectedValue({
+      response: {
+        status: 500,
+        data: { message: '네트워크 오류' }
+      }
+    });
     
-    const progressTexts = [
-      getAllByText('40% 완료')[0],
-      getAllByText('20% 완료')[0],
-      getAllByText('60% 완료')[0]
-    ];
+    render(<MyPostsScreen navigation={{ navigate: jest.fn(), addListener: jest.fn().mockReturnValue(jest.fn()) }} route={{}} />);
     
-    expect(progressTexts[0]).toBeTruthy();
-    expect(progressTexts[1]).toBeTruthy();
-    expect(progressTexts[2]).toBeTruthy();
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith('오류', '게시물을 불러오는 중 오류가 발생했습니다');
+    });
   });
 
-  it('ProgressBar 컴포넌트가 올바르게 표시되어야 함', () => {
-    const { getByText } = render(<ChallengeScreen />);
+  it('navigates to post detail screen', async () => {
+    const navigate = jest.fn();
+    render(<MyPostsScreen navigation={{ navigate, addListener: jest.fn().mockReturnValue(jest.fn()) }} route={{}} />);
     
-    // ProgressBar 자체를 찾을 수 없으므로 진행률 텍스트로 검증
-    expect(getByText('40% 완료')).toBeTruthy();
-    expect(getByText('20% 완료')).toBeTruthy();
-    expect(getByText('60% 완료')).toBeTruthy();
-  });
-  
-  it('챌린지 목록이 스크롤 가능한 컨테이너에 렌더링되어야 함', () => {
-    const { getByText } = render(<ChallengeScreen />);
+    await waitFor(() => {
+      const detailButtons = screen.getAllByText('자세히');
+      fireEvent.press(detailButtons[0]);
+    });
     
-    // 컴포넌트가 정상적으로 렌더링되었는지 타이틀로 확인
-    expect(getByText('현재 진행 중인 챌린지')).toBeTruthy();
-  });
-  
-  it('모든 필수 정보가 표시되는지 확인', () => {
-    const { getByText } = render(<ChallengeScreen />);
-    
-    // 첫 번째 챌린지의 모든 정보 확인
-    expect(getByText('7일간의 감사 일기')).toBeTruthy();
-    expect(getByText('매일 감사한 일 3가지를 기록해보세요.')).toBeTruthy();
-    expect(getByText('40% 완료')).toBeTruthy();
-    expect(getByText('참여자: 128명')).toBeTruthy();
-    expect(getByText('기간: 7일')).toBeTruthy();
-    
-    // 두 번째 챌린지의 모든 정보 확인
-    expect(getByText('30일 긍정 에너지 나누기')).toBeTruthy();
-    expect(getByText('하루에 한 번 주변 사람에게 긍정적인 말을 해보세요.')).toBeTruthy();
-    expect(getByText('20% 완료')).toBeTruthy();
-    expect(getByText('참여자: 56명')).toBeTruthy();
-    expect(getByText('기간: 30일')).toBeTruthy();
-    
-    // 세 번째 챌린지의 모든 정보 확인
-    expect(getByText('21일 명상 습관 만들기')).toBeTruthy();
-    expect(getByText('매일 10분씩 명상을 하고 느낀 점을 공유해보세요.')).toBeTruthy();
-    expect(getByText('60% 완료')).toBeTruthy();
-    expect(getByText('참여자: 89명')).toBeTruthy();
-    expect(getByText('기간: 21일')).toBeTruthy();
+    expect(navigate).toHaveBeenCalledWith('Post', { postId: 1 });
   });
 });

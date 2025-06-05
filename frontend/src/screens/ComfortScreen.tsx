@@ -1,6 +1,14 @@
 // src/screens/ComfortScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, Alert, Modal, TouchableOpacity } from 'react-native';
+import { 
+  View, 
+  ScrollView, 
+  StyleSheet, 
+  Alert, 
+  TouchableOpacity, 
+  Text as RNText 
+} from 'react-native';
+import { Modal } from 'react-native-paper'; // Import Modal from react-native-paper instead
 import {
   Card,
   TextInput,
@@ -11,11 +19,9 @@ import {
   useTheme,
   FAB,
   ActivityIndicator,
-  Chip,
-  Text
+  Chip
 } from 'react-native-paper';
 import comfortWallService from '../services/api/comfortWallService';
-import postService from '../services/api/postService'; // 새로 추가
 
 interface ComfortPost {
   post_id: number;
@@ -38,6 +44,13 @@ interface BestPost {
   comment_count: number;
 }
 
+// Define ListIconProps type to fix implicit any
+interface ListIconProps {
+  color: string;
+  style?: object;
+  [key: string]: any;
+}
+
 const ComfortScreen = ({ navigation }: any) => {
   const [posts, setPosts] = useState<ComfortPost[]>([]);
   const [bestPosts, setBestPosts] = useState<BestPost[]>([]);
@@ -50,7 +63,7 @@ const ComfortScreen = ({ navigation }: any) => {
   const [message, setMessage] = useState('');
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [likedPosts, setLikedPosts] = useState<number[]>([]); // 좋아요 상태 추가
+  const [likedPosts, setLikedPosts] = useState<number[]>([]);
   const theme = useTheme();
 
   useEffect(() => {
@@ -60,11 +73,9 @@ const ComfortScreen = ({ navigation }: any) => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // 게시물 불러오기
       const response = await comfortWallService.getPosts();
       setPosts(response.data.data || []);
       
-      // 베스트 게시물 불러오기
       const bestResponse = await comfortWallService.getBestPosts();
       setBestPosts(bestResponse.data.data || []);
     } catch (error) {
@@ -96,7 +107,7 @@ const ComfortScreen = ({ navigation }: any) => {
           setShowNewPostModal(false);
           setNewPostTitle('');
           setNewPostContent('');
-          loadData(); // 게시물 목록 새로고침
+          loadData();
         }}]
       );
     } catch (error: any) {
@@ -109,20 +120,17 @@ const ComfortScreen = ({ navigation }: any) => {
     }
   };
 
-  // 좋아요 처리 함수 추가
   const handleLike = async (postId: number) => {
     setIsSubmitting(true);
     try {
-      await postService.likePost(postId);
+      await comfortWallService.likePost(postId);
       
-      // 좋아요 상태 토글
       if (likedPosts.includes(postId)) {
         setLikedPosts(likedPosts.filter(id => id !== postId));
       } else {
         setLikedPosts([...likedPosts, postId]);
       }
       
-      // 게시물 목록 새로고침
       loadData();
     } catch (error: any) {
       Alert.alert(
@@ -158,7 +166,7 @@ const ComfortScreen = ({ navigation }: any) => {
         [{ text: '확인', onPress: () => {
           setShowMessageModal(false);
           setMessage('');
-          loadData(); // 게시물 목록 새로고침
+          loadData();
         }}]
       );
     } catch (error: any) {
@@ -175,7 +183,7 @@ const ComfortScreen = ({ navigation }: any) => {
     return (
       <View style={styles.loadingContainer} testID="loading-indicator">
         <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>게시물을 불러오는 중...</Text>
+        <RNText style={styles.loadingText}>게시물을 불러오는 중...</RNText>
       </View>
     );
   }
@@ -191,8 +199,8 @@ const ComfortScreen = ({ navigation }: any) => {
               {bestPosts.map(post => (
                 <Card key={post.post_id} style={styles.bestPostCard}>
                   <Card.Content>
-                    <Title numberOfLines={1}>{post.title}</Title>
-                    <Paragraph numberOfLines={2}>{post.content}</Paragraph>
+                    <Title>{post.title}</Title>
+                    <Paragraph>{post.content.substring(0, 100)}{post.content.length > 100 ? '...' : ''}</Paragraph>
                     <View style={styles.postStats}>
                       <Chip 
                         icon={likedPosts.includes(post.post_id) ? "thumb-up" : "thumb-up-outline"} 
@@ -219,8 +227,8 @@ const ComfortScreen = ({ navigation }: any) => {
                 key={post.post_id}
                 title={post.title}
                 description={`${post.content.substring(0, 50)}${post.content.length > 50 ? '...' : ''}`}
-                left={props => <List.Icon {...props} icon="comment-outline" />}
-                right={props => (
+                left={(props: ListIconProps) => <List.Icon {...props} icon="comment-outline" />}
+                right={() => (
                   <View style={{ flexDirection: 'row' }}>
                     <Button 
                       mode="text" 
@@ -244,7 +252,7 @@ const ComfortScreen = ({ navigation }: any) => {
               />
             ))
           ) : (
-            <Paragraph style={styles.emptyText}>고민 게시물이 없습니다. 새로운 고민을 공유해보세요!</Paragraph>
+            <RNText style={styles.emptyText}>고민 게시물이 없습니다. 새로운 고민을 공유해보세요!</RNText>
           )}
         </List.Section>
       </ScrollView>
@@ -259,131 +267,121 @@ const ComfortScreen = ({ navigation }: any) => {
 
       {/* 새 게시물 모달 */}
       <Modal
-        animationType="slide"
-        transparent={true}
         visible={showNewPostModal}
-        onRequestClose={() => setShowNewPostModal(false)}
+        onDismiss={() => setShowNewPostModal(false)}
+        contentContainerStyle={styles.modalContent}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Title style={styles.modalTitle}>고민 나누기</Title>
-            
-            <TextInput
-              mode="outlined"
-              label="제목"
-              value={newPostTitle}
-              onChangeText={setNewPostTitle}
-              style={styles.input}
-              testID="post-title-input"
-            />
-            
-            <TextInput
-              mode="outlined"
-              label="고민 내용"
-              value={newPostContent}
-              onChangeText={setNewPostContent}
-              multiline
-              numberOfLines={4}
-              style={styles.input}
-              testID="post-content-input"
-            />
-            
-            <View style={styles.anonymousOption}>
-              <Paragraph>익명으로 게시하기</Paragraph>
-              <TouchableOpacity 
-                onPress={() => setIsAnonymous(!isAnonymous)}
-                style={styles.checkbox}
-                testID="anonymous-checkbox"
-              >
-                {isAnonymous && <View style={styles.checkboxInner} />}
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.modalButtons}>
-              <Button 
-                mode="outlined" 
-                onPress={() => setShowNewPostModal(false)}
-                style={styles.modalButton}
-                testID="cancel-post-button"
-              >
-                취소
-              </Button>
-              <Button 
-                mode="contained" 
-                onPress={handlePost}
-                style={styles.modalButton}
-                loading={isSubmitting}
-                disabled={isSubmitting}
-                testID="submit-post-button"
-              >
-                게시하기
-              </Button>
-            </View>
-          </View>
+        <Title style={styles.modalTitle}>고민 나누기</Title>
+        
+        <TextInput
+          mode="outlined"
+          label="제목"
+          value={newPostTitle}
+          onChangeText={setNewPostTitle}
+          style={styles.input}
+          testID="post-title-input"
+        />
+        
+        <TextInput
+          mode="outlined"
+          label="고민 내용"
+          value={newPostContent}
+          onChangeText={setNewPostContent}
+          multiline
+          numberOfLines={4}
+          style={styles.input}
+          testID="post-content-input"
+        />
+        
+        <View style={styles.anonymousOption}>
+          <Paragraph>익명으로 게시하기</Paragraph>
+          <TouchableOpacity 
+            onPress={() => setIsAnonymous(!isAnonymous)}
+            style={styles.checkbox}
+            testID="anonymous-checkbox"
+          >
+            {isAnonymous && <View style={styles.checkboxInner} />}
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.modalButtons}>
+          <Button 
+            mode="outlined" 
+            onPress={() => setShowNewPostModal(false)}
+            style={styles.modalButton}
+            testID="cancel-post-button"
+          >
+            취소
+          </Button>
+          <Button 
+            mode="contained" 
+            onPress={handlePost}
+            style={styles.modalButton}
+            loading={isSubmitting}
+            disabled={isSubmitting}
+            testID="submit-post-button"
+          >
+            게시하기
+          </Button>
         </View>
       </Modal>
 
       {/* 메시지 전송 모달 */}
       <Modal
-        animationType="slide"
-        transparent={true}
         visible={showMessageModal}
-        onRequestClose={() => setShowMessageModal(false)}
+        onDismiss={() => setShowMessageModal(false)}
+        contentContainerStyle={styles.modalContent}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Title style={styles.modalTitle}>응원 메시지 보내기</Title>
-            
-            {selectedPost && (
-              <View style={styles.selectedPostInfo}>
-                <Title numberOfLines={1}>{selectedPost.title}</Title>
-                <Paragraph numberOfLines={3}>{selectedPost.content}</Paragraph>
-              </View>
-            )}
-            
-            <TextInput
-              mode="outlined"
-              label="응원 메시지"
-              value={message}
-              onChangeText={setMessage}
-              multiline
-              numberOfLines={4}
-              style={styles.input}
-              testID="comment-input"
-            />
-            
-            <View style={styles.anonymousOption}>
-              <Paragraph>익명으로 전송하기</Paragraph>
-              <TouchableOpacity 
-                onPress={() => setIsAnonymous(!isAnonymous)}
-                style={styles.checkbox}
-                testID="anonymous-checkbox"
-              >
-                {isAnonymous && <View style={styles.checkboxInner} />}
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.modalButtons}>
-              <Button 
-                mode="outlined" 
-                onPress={() => setShowMessageModal(false)}
-                style={styles.modalButton}
-                testID="cancel-message-button"
-              >
-                취소
-              </Button>
-              <Button 
-                mode="contained" 
-                onPress={sendMessage}
-                style={styles.modalButton}
-                loading={isSubmitting}
-                disabled={isSubmitting}
-                testID="submit-comment-button"
-              >
-                전송하기
-              </Button>
-            </View>
+        <Title style={styles.modalTitle}>응원 메시지 보내기</Title>
+        
+        {selectedPost && (
+          <View style={styles.selectedPostInfo}>
+            <Title>{selectedPost.title}</Title>
+            <Paragraph>{selectedPost.content.substring(0, 150)}{selectedPost.content.length > 150 ? '...' : ''}</Paragraph>
           </View>
+        )}
+        
+        <TextInput
+          mode="outlined"
+          label="응원 메시지"
+          value={message}
+          onChangeText={setMessage}
+          multiline
+          numberOfLines={4}
+          style={styles.input}
+          testID="comment-input"
+        />
+        
+        <View style={styles.anonymousOption}>
+          <Paragraph>익명으로 전송하기</Paragraph>
+          <TouchableOpacity 
+            onPress={() => setIsAnonymous(!isAnonymous)}
+            style={styles.checkbox}
+            testID="anonymous-checkbox"
+          >
+            {isAnonymous && <View style={styles.checkboxInner} />}
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.modalButtons}>
+          <Button 
+            mode="outlined" 
+            onPress={() => setShowMessageModal(false)}
+            style={styles.modalButton}
+            testID="cancel-message-button"
+          >
+            취소
+          </Button>
+          <Button 
+            mode="contained" 
+            onPress={sendMessage}
+            style={styles.modalButton}
+            loading={isSubmitting}
+            disabled={isSubmitting}
+            testID="submit-comment-button"
+          >
+            전송하기
+          </Button>
         </View>
       </Modal>
     </View>
@@ -391,7 +389,6 @@ const ComfortScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  // 기존 스타일 유지...
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -462,6 +459,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 8,
     padding: 20,
+    margin: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

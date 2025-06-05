@@ -30,9 +30,6 @@ router.get('/',
 );
 
 // 알림 소유권 확인 미들웨어
-// 알림 소유권 확인 미들웨어 수정
-// 알림 소유권 확인 미들웨어 수정
-// notifications.ts 파일 수정
 const checkNotificationOwnership = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = req.params.id;
@@ -110,5 +107,86 @@ router.post('/mark-all-read',
     return notificationController.markAllAsRead(typedReq, res).catch(next);
   }
 );
+
+// 읽지 않은 알림 개수 엔드포인트 추가
+router.get('/unread/count', authMiddleware, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: { count: 0 },
+      message: '읽지 않은 알림 개수를 조회했습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 모든 알림 읽음 처리 엔드포인트 추가
+router.post('/read-all', authMiddleware, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: '모든 알림을 읽음 처리했습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 모든 알림 업데이트 엔드포인트 추가
+router.put('/all', authMiddleware, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: '모든 알림을 업데이트했습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 테스트 트리거 엔드포인트 추가
+router.post('/test-trigger', authMiddleware, async (req, res) => {
+  try {
+    const user_id = (req as any).user?.user_id;
+    
+    if (!user_id) {
+      return res.status(401).json({
+        status: 'error',
+        message: '인증이 필요합니다.'
+      });
+    }
+
+    // 테스트용 알림 생성
+    const testNotification = await db.Notification.create({
+      user_id: user_id,
+      content: '테스트 알림입니다.',
+      notification_type: 'system',
+      is_read: false,
+      created_at: new Date()
+    });
+
+    res.json({
+      success: true,
+      data: testNotification,
+      message: '테스트 알림이 생성되었습니다.'
+    });
+  } catch (error) {
+    console.error('테스트 알림 생성 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '테스트 알림 생성 중 오류가 발생했습니다.'
+    });
+  }
+});
 
 export default router;

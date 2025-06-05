@@ -4,11 +4,11 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, Platform, A
 import EmotionSelector from './EmotionSelector';
 import LoadingIndicator from './LoadingIndicator';
 import uploadService from '../services/api/uploadService';
-// 이미지 선택 함수
+
+// 이미지 선택 함수 - 실제 앱에서는 image-picker 라이브러리를 사용할 것
 const selectImage = async (): Promise<{uri: string; name?: string; type?: string} | null> => {
   return new Promise((resolve) => {
-    // 여기서는 간단한 모의 함수로 대체
-    // 실제 구현에서는 react-native-image-picker 또는 expo-image-picker 등을 사용
+    // 모의 함수로 대체
     setTimeout(() => {
       // 성공 시 이미지 정보 반환
       resolve({
@@ -38,8 +38,9 @@ interface MyDayPostFormProps {
   maxContentLength?: number;
 }
 
-interface Emotion {
-  emotion_id: number;
+// EmotionSelector에서 사용하는 Emotion 인터페이스와 호환되는 타입 정의
+interface EmotionData {
+  id: number;  // EmotionSelector에서 사용하는 필드명
   name: string;
   icon: string;
   color: string;
@@ -63,27 +64,79 @@ const MyDayPostForm: React.FC<MyDayPostFormProps> = ({
     name?: string;
     type?: string;
   } | null>(null);
+  const [emotions, setEmotions] = useState<EmotionData[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // 감정 목록 가져오기
+  useEffect(() => {
+    const fetchEmotions = async () => {
+      try {
+        // 임시 감정 데이터
+        const mockEmotions: EmotionData[] = [
+          { id: 1, name: '행복', icon: 'emoticon-happy-outline', color: '#FFD700' },
+          { id: 2, name: '감사', icon: 'hand-heart', color: '#FF69B4' },
+          { id: 3, name: '위로', icon: 'hand-peace', color: '#87CEEB' },
+          { id: 4, name: '감동', icon: 'heart-outline', color: '#FF6347' },
+          { id: 5, name: '슬픔', icon: 'emoticon-sad-outline', color: '#4682B4' },
+          { id: 6, name: '불안', icon: 'alert-outline', color: '#DDA0DD' },
+          { id: 7, name: '화남', icon: 'emoticon-angry-outline', color: '#FF4500' },
+          { id: 8, name: '지침', icon: 'emoticon-neutral-outline', color: '#A9A9A9' },
+          { id: 9, name: '우울', icon: 'weather-cloudy', color: '#708090' },
+          { id: 10, name: '고독', icon: 'account-outline', color: '#8B4513' },
+          { id: 11, name: '충격', icon: 'lightning-bolt', color: '#9932CC' },
+          { id: 12, name: '편함', icon: 'sofa-outline', color: '#32CD32' }
+        ];
+        setEmotions(mockEmotions);
+      } catch (error) {
+        console.error('감정 목록 가져오기 오류:', error);
+        setError('감정 목록을 불러오는데 실패했습니다.');
+      }
+    };
+    
+    fetchEmotions();
+  }, []);
 
   // 감정 선택 처리
-  const handleEmotionSelect = (emotionId: number, isSelected: boolean) => {
-    if (isSelected) {
-      // 감정 추가
-      setEmotionIds(prev => [...prev, emotionId]);
-    } else {
-      // 감정 제거
+  const handleEmotionSelect = (emotionId: number) => {
+    if (emotionIds.includes(emotionId)) {
+      // 이미 선택된 감정이면 선택 해제
       setEmotionIds(prev => prev.filter(id => id !== emotionId));
+    } else {
+      // 새 감정 선택
+      setEmotionIds(prev => [...prev, emotionId]);
     }
     
-    // 감정 요약 생성은 별도 함수로 처리 필요
-    updateEmotionSummary();
+    // 감정 요약 업데이트 (다음 렌더링 주기에 갱신됨)
+    setTimeout(() => updateEmotionSummary(), 0);
   };
   
   // 감정 요약 업데이트 함수
   const updateEmotionSummary = () => {
-    // 여기서는 간단하게 처리하지만, 실제로는 감정 ID를 이름으로 변환하는 로직이 필요
-    const summary = emotionIds.length > 0 ? `선택된 감정: ${emotionIds.length}개` : '';
+    if (emotionIds.length === 0) {
+      setEmotionSummary('');
+      return;
+    }
+    
+    // 감정 ID를 이름으로 변환
+    const selectedEmotions = emotions.filter(emotion => emotionIds.includes(emotion.id));
+    const emotionNames = selectedEmotions.map(emotion => emotion.name);
+    
+    let summary = '';
+    if (emotionNames.length <= 2) {
+      summary = emotionNames.join(', ');
+    } else {
+      summary = `${emotionNames[0]}, ${emotionNames[1]} 외 ${emotionNames.length - 2}개`;
+    }
+    
     setEmotionSummary(summary);
   };
+
+  // 감정 데이터 업데이트 시 요약 업데이트
+  useEffect(() => {
+    if (emotions.length > 0 && emotionIds.length > 0) {
+      updateEmotionSummary();
+    }
+  }, [emotions, emotionIds]);
 
   // 이미지 업로드 처리
   const handleImageSelect = async () => {
@@ -120,26 +173,17 @@ const MyDayPostForm: React.FC<MyDayPostFormProps> = ({
     try {
       setImageUploadLoading(true);
       
-      // 이미지 업로드 (uploadService 사용)
-      // 실제 구현에서는 API 호출을 사용합니다
-      // 모의 응답으로 대체합니다
-      // const response = await uploadService.uploadImage(imageUri);
+      // 이미지 업로드
+      // FormData 대신 직접 파일 URI를 전달
+      const response = await uploadService.uploadImage(imageUri);
       
-      // 3초 지연을 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // 모의 응답 생성
-      const mockResponse = {
-        data: {
-          image_url: `https://example.com/uploads/${Date.now()}.jpg`,
-          original_name: 'image.jpg',
-          file_size: 12345
-        }
-      };
+      if (!response || !response.data || !response.data.image_url) {
+        throw new Error('이미지 업로드 응답이 유효하지 않습니다.');
+      }
       
       setImageUploadLoading(false);
       
-      return mockResponse.data.image_url;
+      return response.data.image_url;
     } catch (error) {
       setImageUploadLoading(false);
       console.error('이미지 업로드 오류:', error);
@@ -150,22 +194,52 @@ const MyDayPostForm: React.FC<MyDayPostFormProps> = ({
 
   // 게시물 제출 처리
   const handleSubmit = async () => {
-    if (content.trim().length < 10) {
-      Alert.alert('오류', '내용은 최소 10자 이상이어야 합니다.');
-      return;
-    }
-    
-    if (emotionIds.length === 0) {
-      Alert.alert('오류', '적어도 하나 이상의 감정을 선택해주세요.');
-      return;
-    }
-    
     try {
+      // 유효성 검사
+      if (content.trim().length < 10) {
+        Alert.alert('오류', '내용은 최소 10자 이상이어야 합니다.');
+        return;
+      }
+      
+      if (emotionIds.length === 0) {
+        Alert.alert('오류', '적어도 하나 이상의 감정을 선택해주세요.');
+        return;
+      }
+      
       let finalImageUrl = imageUrl;
       
       // 선택된 이미지가 있고 로컬 이미지인 경우 업로드
       if (selectedImage && selectedImage.uri && selectedImage.uri.startsWith('file://')) {
         finalImageUrl = await uploadImage();
+        if (!finalImageUrl && selectedImage) {
+          // 업로드 실패 시 사용자에게 알림
+          Alert.alert(
+            '업로드 경고',
+            '이미지 업로드에 실패했습니다. 이미지 없이 게시물을 등록하시겠습니까?',
+            [
+              { text: '취소', style: 'cancel' },
+              { 
+                text: '이미지 없이 등록', 
+                onPress: async () => {
+                  try {
+                    await onSubmit({
+                      content,
+                      emotion_ids: emotionIds,
+                      emotion_summary: emotionSummary,
+                      is_anonymous: isAnonymous
+                    });
+                    
+                    // 성공 후 폼 초기화
+                    resetForm();
+                  } catch (submitError) {
+                    handleSubmitError(submitError);
+                  }
+                }
+              }
+            ]
+          );
+          return;
+        }
       }
       
       await onSubmit({
@@ -177,16 +251,33 @@ const MyDayPostForm: React.FC<MyDayPostFormProps> = ({
       });
       
       // 성공 후 폼 초기화
-      setContent('');
-      setEmotionIds([]);
-      setEmotionSummary('');
-      setImageUrl(undefined);
-      setSelectedImage(null);
-      setIsAnonymous(false);
+      resetForm();
     } catch (error) {
-      console.error('게시물 제출 오류:', error);
-      Alert.alert('제출 실패', '게시물을 제출하는 중 오류가 발생했습니다. 다시 시도해 주세요.');
+      handleSubmitError(error);
     }
+  };
+
+  // 폼 초기화 함수
+  const resetForm = () => {
+    setContent('');
+    setEmotionIds([]);
+    setEmotionSummary('');
+    setImageUrl(undefined);
+    setSelectedImage(null);
+    setIsAnonymous(false);
+  };
+
+  // 제출 오류 처리 함수
+  const handleSubmitError = (error: any) => {
+    console.error('게시물 제출 오류:', error);
+    
+    // API 응답에서 오류 메시지 추출 시도
+    let errorMessage = '게시물을 제출하는 중 오류가 발생했습니다. 다시 시도해 주세요.';
+    if (error.response && error.response.data && error.response.data.message) {
+      errorMessage = error.response.data.message;
+    }
+    
+    Alert.alert('제출 실패', errorMessage);
   };
 
   // 이미지 제거
@@ -199,23 +290,40 @@ const MyDayPostForm: React.FC<MyDayPostFormProps> = ({
     <View style={styles.container}>
       <Text style={styles.title}>오늘 하루는 어땠나요?</Text>
       
+      {/* 오류 메시지 */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+      
       {/* 감정 선택기 */}
       <View style={styles.emotionSelectorContainer}>
-        <Text style={styles.sectionTitle}>오늘의 감정</Text>
-        <View>
-          {/* 실제 프로젝트에서는 EmotionSelector 컴포넌트를 사용합니다 */}
-          {/* 여기서는 placeholder로 대체합니다 */}
-          <TouchableOpacity 
-            style={styles.selectorPlaceholder}
-            onPress={() => Alert.alert('감정 선택', '감정을 선택해주세요.')}
-          >
-            <Text style={styles.selectorPlaceholderText}>
-              {emotionIds.length > 0 
-                ? `${emotionIds.length}개의 감정이 선택됨` 
-                : '감정을 선택해주세요'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {emotions.length > 0 ? (
+          <EmotionSelector
+            emotions={emotions}
+            selectedEmotions={emotionIds}
+            onSelect={handleEmotionSelect}
+            multiple={true}
+          />
+        ) : (
+          <View>
+            <Text style={styles.sectionTitle}>오늘의 감정</Text>
+            <TouchableOpacity 
+              style={styles.selectorPlaceholder}
+              onPress={() => Alert.alert('감정 선택', '감정을 선택해주세요.')}
+            >
+              <Text style={styles.selectorPlaceholderText}>
+                {emotionIds.length > 0 
+                  ? `${emotionIds.length}개의 감정이 선택됨` 
+                  : '감정을 선택해주세요'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {emotionSummary ? (
+          <Text style={styles.emotionSummary}>{emotionSummary}</Text>
+        ) : null}
       </View>
       
       {/* 내용 입력 */}
@@ -230,7 +338,10 @@ const MyDayPostForm: React.FC<MyDayPostFormProps> = ({
           maxLength={maxContentLength}
           textAlignVertical="top"
         />
-        <Text style={styles.charCount}>
+        <Text style={[
+          styles.charCount,
+          content.length >= maxContentLength * 0.9 && styles.charCountWarning
+        ]}>
           {content.length}/{maxContentLength}
         </Text>
       </View>
@@ -310,6 +421,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
+  errorContainer: {
+    backgroundColor: '#FFE5E5',
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#D32F2F',
+    textAlign: 'center',
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -317,6 +438,12 @@ const styles = StyleSheet.create({
   },
   emotionSelectorContainer: {
     marginBottom: 16,
+  },
+  emotionSummary: {
+    fontSize: 14,
+    color: '#657786',
+    marginTop: 8,
+    marginLeft: 16,
   },
   contentContainer: {
     marginBottom: 16,
@@ -335,6 +462,9 @@ const styles = StyleSheet.create({
     color: '#657786',
     textAlign: 'right',
     marginTop: 4,
+  },
+  charCountWarning: {
+    color: '#E0245E',
   },
   selectorPlaceholder: {
     height: 48,

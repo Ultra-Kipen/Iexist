@@ -37,7 +37,7 @@ export function useCachedApiQuery<T = any, P = Record<string, any>>(
       throw new Error(`API 요청 오류: ${response.status}`);
     }
     
-    const result: ApiResponse<T> = await response.json();
+    const result = await response.json() as ApiResponse<T>;
     
     if (!result.success) {
       throw new Error(result.error || '알 수 없는 오류가 발생했습니다.');

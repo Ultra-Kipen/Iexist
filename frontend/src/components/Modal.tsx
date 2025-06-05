@@ -1,5 +1,5 @@
-import React, { useState, useEffect, ReactNode } from 'react';
-import { View, Text, TouchableOpacity, Modal as RNModal, StyleSheet, Dimensions } from 'react-native';
+// Modal.tsx - 웹 환경용 수정 버전
+import React, { ReactNode, CSSProperties } from 'react';
 
 interface ModalProps {
   isVisible: boolean;
@@ -20,11 +20,7 @@ const Modal: React.FC<ModalProps> = ({
   animationType = 'fade',
   closeOnBackdropPress = true,
 }) => {
-  const [visible, setVisible] = useState(isVisible);
-
-  useEffect(() => {
-    setVisible(isVisible);
-  }, [isVisible]);
+  if (!isVisible) return null;
 
   const handleBackdropPress = () => {
     if (closeOnBackdropPress) {
@@ -32,91 +28,95 @@ const Modal: React.FC<ModalProps> = ({
     }
   };
 
+  // 인라인 스타일 정의
+  const styles = {
+    backdrop: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+    } as CSSProperties,
+    modalContainer: {
+      width: '85%',
+      maxWidth: '500px',
+      backgroundColor: 'white',
+      borderRadius: '10px',
+      overflow: 'hidden',
+      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.25)',
+    } as CSSProperties,
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '15px',
+      borderBottom: '1px solid #f0f0f0',
+    } as CSSProperties,
+    headerText: {
+      margin: 0,
+      fontSize: '18px',
+      fontWeight: 'bold',
+      color: '#333',
+    } as CSSProperties,
+    closeButton: {
+      background: 'none',
+      border: 'none',
+      fontSize: '24px',
+      color: '#999',
+      cursor: 'pointer',
+      padding: '5px',
+      lineHeight: 1,
+    } as CSSProperties,
+    content: {
+      padding: '15px',
+    } as CSSProperties,
+    footer: {
+      padding: '15px',
+      borderTop: '1px solid #f0f0f0',
+      display: 'flex',
+      justifyContent: 'flex-end',
+    } as CSSProperties,
+  };
+
   return (
-    <RNModal
-      transparent
-      visible={visible}
-      animationType={animationType}
-      onRequestClose={onClose}
+    <div 
+      style={styles.backdrop} 
+      onClick={handleBackdropPress}
+      data-testid="modal-backdrop"
     >
-      <TouchableOpacity
-        style={styles.backdrop}
-        activeOpacity={1}
-        onPress={handleBackdropPress}
+      <div 
+        style={styles.modalContainer} 
+        onClick={(e: React.MouseEvent) => e.stopPropagation()} 
+        data-testid="modal-container"
       >
-        <View style={styles.modalContainer} onStartShouldSetResponder={() => true}>
-          {title && (
-            <View style={styles.header}>
-              <Text style={styles.headerText}>{title}</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>×</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          <View style={styles.content}>
-            {children}
-          </View>
-          {footer && (
-            <View style={styles.footer}>
-              {footer}
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    </RNModal>
+        {title && (
+          <div style={styles.header} data-testid="modal-header">
+            <h3 style={styles.headerText}>{title}</h3>
+            <button 
+              style={styles.closeButton} 
+              onClick={onClose}
+              data-testid="modal-close-button"
+            >
+              &times;
+            </button>
+          </div>
+        )}
+        <div style={styles.content} data-testid="modal-content-container">
+          {children}
+        </div>
+        {footer && (
+          <div style={styles.footer} data-testid="modal-footer">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
-
-const { width } = Dimensions.get('window');
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    width: width * 0.85,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    overflow: 'hidden',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  headerText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  closeButton: {
-    padding: 5,
-  },
-  closeButtonText: {
-    fontSize: 24,
-    color: '#999',
-    lineHeight: 24,
-  },
-  content: {
-    padding: 15,
-  },
-  footer: {
-    padding: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-});
 
 export default Modal;

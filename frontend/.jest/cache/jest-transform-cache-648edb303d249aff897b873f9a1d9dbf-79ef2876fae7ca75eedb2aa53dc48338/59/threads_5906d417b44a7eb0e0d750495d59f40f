@@ -1,0 +1,169 @@
+242abc5b30b79194e3b48de20085eae7
+'use strict';
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.callMicrotasks = void 0;
+exports.executeOnUIRuntimeSync = executeOnUIRuntimeSync;
+exports.runOnJS = runOnJS;
+exports.runOnUI = runOnUI;
+exports.runOnUIImmediately = runOnUIImmediately;
+exports.setupMicrotasks = setupMicrotasks;
+var _toConsumableArray2 = _interopRequireDefault(require("@babel/runtime/helpers/toConsumableArray"));
+var _slicedToArray2 = _interopRequireDefault(require("@babel/runtime/helpers/slicedToArray"));
+var _commonTypes = require("./commonTypes.js");
+var _errors = require("./errors.js");
+var _PlatformChecker = require("./PlatformChecker.js");
+var _ReanimatedModule = require("./ReanimatedModule");
+var _shareables = require("./shareables.js");
+var IS_JEST = (0, _PlatformChecker.isJest)();
+var SHOULD_BE_USE_WEB = (0, _PlatformChecker.shouldBeUseWeb)();
+var _runOnUIQueue = [];
+function setupMicrotasks() {
+  'worklet';
+
+  var microtasksQueue = [];
+  var isExecutingMicrotasksQueue = false;
+  global.queueMicrotask = function (callback) {
+    microtasksQueue.push(callback);
+  };
+  global.__callMicrotasks = function () {
+    if (isExecutingMicrotasksQueue) {
+      return;
+    }
+    try {
+      isExecutingMicrotasksQueue = true;
+      for (var index = 0; index < microtasksQueue.length; index += 1) {
+        microtasksQueue[index]();
+      }
+      microtasksQueue = [];
+      global._maybeFlushUIUpdatesQueue();
+    } finally {
+      isExecutingMicrotasksQueue = false;
+    }
+  };
+}
+function callMicrotasksOnUIThread() {
+  'worklet';
+
+  global.__callMicrotasks();
+}
+var callMicrotasks = exports.callMicrotasks = SHOULD_BE_USE_WEB ? function () {} : callMicrotasksOnUIThread;
+function runOnUI(worklet) {
+  'worklet';
+
+  if (true && !SHOULD_BE_USE_WEB && _WORKLET) {
+    throw new _errors.ReanimatedError('`runOnUI` cannot be called on the UI runtime. Please call the function synchronously or use `queueMicrotask` or `requestAnimationFrame` instead.');
+  }
+  if (true && !SHOULD_BE_USE_WEB && !(0, _commonTypes.isWorkletFunction)(worklet)) {
+    throw new _errors.ReanimatedError('`runOnUI` can only be used with worklets.');
+  }
+  return function () {
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+    if (IS_JEST) {
+      _ReanimatedModule.ReanimatedModule.scheduleOnUI((0, _shareables.makeShareableCloneRecursive)(function () {
+        'worklet';
+
+        worklet.apply(void 0, args);
+      }));
+      return;
+    }
+    if (true) {
+      (0, _shareables.makeShareableCloneRecursive)(worklet);
+      (0, _shareables.makeShareableCloneRecursive)(args);
+    }
+    _runOnUIQueue.push([worklet, args]);
+    if (_runOnUIQueue.length === 1) {
+      queueMicrotask(function () {
+        var queue = _runOnUIQueue;
+        _runOnUIQueue = [];
+        _ReanimatedModule.ReanimatedModule.scheduleOnUI((0, _shareables.makeShareableCloneRecursive)(function () {
+          'worklet';
+          queue.forEach(function (_ref) {
+            var _ref2 = (0, _slicedToArray2.default)(_ref, 2),
+              worklet = _ref2[0],
+              args = _ref2[1];
+            worklet.apply(void 0, (0, _toConsumableArray2.default)(args));
+          });
+          callMicrotasks();
+        }));
+      });
+    }
+  };
+}
+function executeOnUIRuntimeSync(worklet) {
+  return function () {
+    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      args[_key2] = arguments[_key2];
+    }
+    return _ReanimatedModule.ReanimatedModule.executeOnUIRuntimeSync((0, _shareables.makeShareableCloneRecursive)(function () {
+      'worklet';
+
+      var result = worklet.apply(void 0, args);
+      return (0, _shareables.makeShareableCloneOnUIRecursive)(result);
+    }));
+  };
+}
+function runOnUIImmediately(worklet) {
+  'worklet';
+
+  if (true && !SHOULD_BE_USE_WEB && _WORKLET) {
+    throw new _errors.ReanimatedError('`runOnUIImmediately` cannot be called on the UI runtime. Please call the function synchronously or use `queueMicrotask` or `requestAnimationFrame` instead.');
+  }
+  if (true && !SHOULD_BE_USE_WEB && !(0, _commonTypes.isWorkletFunction)(worklet)) {
+    throw new _errors.ReanimatedError('`runOnUIImmediately` can only be used with worklets.');
+  }
+  return function () {
+    for (var _len3 = arguments.length, args = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+      args[_key3] = arguments[_key3];
+    }
+    _ReanimatedModule.ReanimatedModule.scheduleOnUI((0, _shareables.makeShareableCloneRecursive)(function () {
+      'worklet';
+
+      worklet.apply(void 0, args);
+    }));
+  };
+}
+function runWorkletOnJS(worklet) {
+  for (var _len4 = arguments.length, args = new Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
+    args[_key4 - 1] = arguments[_key4];
+  }
+  worklet.apply(void 0, args);
+}
+function runOnJS(fun) {
+  'worklet';
+
+  if (SHOULD_BE_USE_WEB || !_WORKLET) {
+    return function () {
+      for (var _len5 = arguments.length, args = new Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+        args[_key5] = arguments[_key5];
+      }
+      return queueMicrotask(args.length ? function () {
+        return fun.apply(void 0, args);
+      } : fun);
+    };
+  }
+  if ((0, _commonTypes.isWorkletFunction)(fun)) {
+    return function () {
+      for (var _len6 = arguments.length, args = new Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
+        args[_key6] = arguments[_key6];
+      }
+      return runOnJS(runWorkletOnJS).apply(void 0, [fun].concat(args));
+    };
+  }
+  if (fun.__remoteFunction) {
+    fun = fun.__remoteFunction;
+  }
+  var scheduleOnJS = typeof fun === 'function' ? global._scheduleHostFunctionOnJS : global._scheduleRemoteFunctionOnJS;
+  return function () {
+    for (var _len7 = arguments.length, args = new Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
+      args[_key7] = arguments[_key7];
+    }
+    scheduleOnJS(fun, args.length > 0 ? (0, _shareables.makeShareableCloneOnUIRecursive)(args) : undefined);
+  };
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJfaW50ZXJvcFJlcXVpcmVEZWZhdWx0IiwicmVxdWlyZSIsIk9iamVjdCIsImRlZmluZVByb3BlcnR5IiwiZXhwb3J0cyIsInZhbHVlIiwiY2FsbE1pY3JvdGFza3MiLCJleGVjdXRlT25VSVJ1bnRpbWVTeW5jIiwicnVuT25KUyIsInJ1bk9uVUkiLCJydW5PblVJSW1tZWRpYXRlbHkiLCJzZXR1cE1pY3JvdGFza3MiLCJfdG9Db25zdW1hYmxlQXJyYXkyIiwiX3NsaWNlZFRvQXJyYXkyIiwiX2NvbW1vblR5cGVzIiwiX2Vycm9ycyIsIl9QbGF0Zm9ybUNoZWNrZXIiLCJfUmVhbmltYXRlZE1vZHVsZSIsIl9zaGFyZWFibGVzIiwiSVNfSkVTVCIsImlzSmVzdCIsIlNIT1VMRF9CRV9VU0VfV0VCIiwic2hvdWxkQmVVc2VXZWIiLCJfcnVuT25VSVF1ZXVlIiwibWljcm90YXNrc1F1ZXVlIiwiaXNFeGVjdXRpbmdNaWNyb3Rhc2tzUXVldWUiLCJnbG9iYWwiLCJxdWV1ZU1pY3JvdGFzayIsImNhbGxiYWNrIiwicHVzaCIsIl9fY2FsbE1pY3JvdGFza3MiLCJpbmRleCIsImxlbmd0aCIsIl9tYXliZUZsdXNoVUlVcGRhdGVzUXVldWUiLCJjYWxsTWljcm90YXNrc09uVUlUaHJlYWQiLCJ3b3JrbGV0IiwiX1dPUktMRVQiLCJSZWFuaW1hdGVkRXJyb3IiLCJpc1dvcmtsZXRGdW5jdGlvbiIsIl9sZW4iLCJhcmd1bWVudHMiLCJhcmdzIiwiQXJyYXkiLCJfa2V5IiwiUmVhbmltYXRlZE1vZHVsZSIsInNjaGVkdWxlT25VSSIsIm1ha2VTaGFyZWFibGVDbG9uZVJlY3Vyc2l2ZSIsImFwcGx5IiwicXVldWUiLCJmb3JFYWNoIiwiX3JlZiIsIl9yZWYyIiwiZGVmYXVsdCIsIl9sZW4yIiwiX2tleTIiLCJyZXN1bHQiLCJtYWtlU2hhcmVhYmxlQ2xvbmVPblVJUmVjdXJzaXZlIiwiX2xlbjMiLCJfa2V5MyIsInJ1bldvcmtsZXRPbkpTIiwiX2xlbjQiLCJfa2V5NCIsImZ1biIsIl9sZW41IiwiX2tleTUiLCJfbGVuNiIsIl9rZXk2IiwiY29uY2F0IiwiX19yZW1vdGVGdW5jdGlvbiIsInNjaGVkdWxlT25KUyIsIl9zY2hlZHVsZUhvc3RGdW5jdGlvbk9uSlMiLCJfc2NoZWR1bGVSZW1vdGVGdW5jdGlvbk9uSlMiLCJfbGVuNyIsIl9rZXk3IiwidW5kZWZpbmVkIl0sInNvdXJjZXMiOlsiLi4vLi4vc3JjL3RocmVhZHMudHMiXSwic291cmNlc0NvbnRlbnQiOltudWxsXSwibWFwcGluZ3MiOiJBQUFBLFlBQVk7O0FBQUEsSUFBQUEsc0JBQUEsR0FBQUMsT0FBQTtBQUFBQyxNQUFBLENBQUFDLGNBQUEsQ0FBQUMsT0FBQTtFQUFBQyxLQUFBO0FBQUE7QUFBQUQsT0FBQSxDQUFBRSxjQUFBO0FBQUFGLE9BQUEsQ0FBQUcsc0JBQUEsR0FBQUEsc0JBQUE7QUFBQUgsT0FBQSxDQUFBSSxPQUFBLEdBQUFBLE9BQUE7QUFBQUosT0FBQSxDQUFBSyxPQUFBLEdBQUFBLE9BQUE7QUFBQUwsT0FBQSxDQUFBTSxrQkFBQSxHQUFBQSxrQkFBQTtBQUFBTixPQUFBLENBQUFPLGVBQUEsR0FBQUEsZUFBQTtBQUFBLElBQUFDLG1CQUFBLEdBQUFaLHNCQUFBLENBQUFDLE9BQUE7QUFBQSxJQUFBWSxlQUFBLEdBQUFiLHNCQUFBLENBQUFDLE9BQUE7QUFFWixJQUFBYSxZQUFBLEdBQUFiLE9BQUE7QUFDQSxJQUFBYyxPQUFBLEdBQUFkLE9BQUE7QUFDQSxJQUFBZSxnQkFBQSxHQUFBZixPQUFBO0FBQ0EsSUFBQWdCLGlCQUFBLEdBQUFoQixPQUFBO0FBQ0EsSUFBQWlCLFdBQUEsR0FBQWpCLE9BQUE7QUFLQSxJQUFNa0IsT0FBTyxHQUFHLElBQUFDLHVCQUFNLEVBQUMsQ0FBQztBQUN4QixJQUFNQyxpQkFBaUIsR0FBRyxJQUFBQywrQkFBYyxFQUFDLENBQUM7QUFHMUMsSUFBSUMsYUFBc0UsR0FBRyxFQUFFO0FBRXhFLFNBQVNaLGVBQWVBLENBQUEsRUFBRztFQUNoQyxTQUFTOztFQUVULElB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

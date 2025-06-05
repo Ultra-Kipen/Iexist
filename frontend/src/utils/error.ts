@@ -1,106 +1,109 @@
 import { AxiosError } from 'axios';
 
-export enum ErrorType {
-  NETWORK = 'NETWORK',
-  AUTHENTICATION = 'AUTHENTICATION',
-  AUTHORIZATION = 'AUTHORIZATION',
-  VALIDATION = 'VALIDATION',
-  SERVER = 'SERVER',
-  UNKNOWN = 'UNKNOWN',
-}
-
-export interface AppError {
-  type: ErrorType;
-  message: string;
-  code?: string;
-  details?: any;
-  originalError?: Error;
-}
-
 /**
- * API 오류를 앱 오류로 변환합니다.
- * @param error API 오류
- * @returns 앱 오류 객체
+ * API 에러를 처리하고 사용자에게 표시할 메시지를 반환합니다.
+ * @param error API 에러 객체
+ * @returns 적절한 오류 메시지
  */
-export const handleApiError = (error: any): AppError => {
+export const handleApiError = (error: any): string => {
+  // API 응답에서 메시지 추출
   if (error.response) {
-    // 서버가 응답을 보낸 경우
-    const status = error.response.status;
-    
-    if (status === 401) {
-      return {
-        type: ErrorType.AUTHENTICATION,
-        message: '인증 정보가 만료되었거나 유효하지 않습니다. 다시 로그인해주세요.',
-        code: 'AUTH_FAILED',
-        details: error.response.data,
-        originalError: error,
-      };
-    } else if (status === 403) {
-      return {
-        type: ErrorType.AUTHORIZATION,
-        message: '해당 기능에 접근할 권한이 없습니다.',
-        code: 'PERMISSION_DENIED',
-        details: error.response.data,
-        originalError: error,
-      };
-    } else if (status === 400 || status === 422) {
-      return {
-        type: ErrorType.VALIDATION,
-        message: '입력하신 정보가 유효하지 않습니다. 다시 확인해주세요.',
-        code: 'VALIDATION_ERROR',
-        details: error.response.data,
-        originalError: error,
-      };
-    } else if (status >= 500) {
-      return {
-        type: ErrorType.SERVER,
-        message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-        code: 'SERVER_ERROR',
-        details: error.response.data,
-        originalError: error,
-      };
+    if (error.response.data && error.response.data.message) {
+      return error.response.data.message;
     }
-  } else if (error.request) {
-    // 네트워크 오류
-    return {
-      type: ErrorType.NETWORK,
-      message: '네트워크 연결에 문제가 있습니다. 연결 상태를 확인해주세요.',
-      code: 'NETWORK_ERROR',
-      originalError: error,
-    };
+    
+    if (error.response.data && error.response.data.error && error.response.data.error.message) {
+      return error.response.data.error.message;
+    }
   }
   
-  // 기타 오류
-  return {
-    type: ErrorType.UNKNOWN,
-    message: error.message || '알 수 없는 오류가 발생했습니다.',
-    code: 'UNKNOWN_ERROR',
-    originalError: error,
+  // 네트워크 오류 확인
+  if (isNetworkError(error)) {
+    return '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인해주세요.';
+  }
+  
+  // 기본 오류 메시지
+  return '오류가 발생했습니다. 다시 시도해주세요.';
+};
+
+/**
+ * 네트워크 관련 오류인지 확인합니다.
+ * @param error 오류 객체
+ * @returns 네트워크 오류 여부
+ */
+export const isNetworkError = (error: any): boolean => {
+  if (!error || !error.message) {
+    return false;
+  }
+  
+  const networkErrorMessages = [
+    'Network Error',
+    'Failed to fetch',
+    'ECONNREFUSED',
+    'Connection refused',
+    'timeout'
+  ];
+  
+  return networkErrorMessages.some(msg => 
+    error.message.toLowerCase().includes(msg.toLowerCase())
+  );
+};
+
+/**
+ * 오류 메시지를 포맷팅합니다.
+ * @param message 오류 메시지 또는 코드
+ * @param customRules 커스텀 포맷팅 규칙
+ * @returns 포맷팅된 오류 메시지
+ */
+export const formatErrorMessage = (message: string, customRules: Record<string, string> = {}): string => {
+  // 커스텀 규칙이 있다면 적용
+  if (message in customRules) {
+    return customRules[message];
+  }
+  
+  // 오류 코드 형식인지 확인 (ERR_로 시작하는 경우)
+  if (/^ERR_[A-Z0-9_]+$/.test(message)) {
+    if (message === 'ERR_AUTH_001') {
+      return '인증 오류가 발생했습니다. (ERR_AUTH_001)';
+    }
+    return `오류가 발생했습니다. (${message})`;
+  }
+  
+  return message;
+};
+
+/**
+ * API 오류 클래스
+ */
+export class ApiError extends Error {
+  statusCode: number;
+  data?: any;
+  
+  constructor(message: string, statusCode: number, data?: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.statusCode = statusCode;
+    this.data = data;
+    
+    // Error 객체 프로토타입 체인 유지를 위한 설정
+    Object.setPrototypeOf(this, ApiError.prototype);
+  }
+}
+
+/**
+ * 오류 처리 함수를 생성합니다.
+ * @param onError 오류 처리 콜백 함수
+ * @param defaultMessage 기본 오류 메시지
+ * @returns 오류 처리 함수
+ */
+export const createErrorHandler = (onError: (message: string) => void, defaultMessage: string) => {
+  return (error: any) => {
+    if (error instanceof Error) {
+      onError(error.message);
+    } else if (error.response && error.response.data && error.response.data.message) {
+      onError(error.response.data.message);
+    } else {
+      onError(defaultMessage);
+    }
   };
-};
-
-/**
- * 오류를 로깅합니다.
- * @param error 오류 객체
- * @param context 추가 컨텍스트 정보
- */
-export const logError = (error: Error | AppError, context?: any): void => {
-  // 개발 환경에서 콘솔에 오류 로깅
-  if (process.env.NODE_ENV === 'development') {
-    console.error('오류 발생:', error, '컨텍스트:', context);
-  }
-};
-
-/**
- * 사용자에게 표시할 친숙한 오류 메시지를 반환합니다.
- * @param error 오류 객체
- * @returns 사용자 친화적 오류 메시지
- */
-export const getUserFriendlyMessage = (error: Error | AppError): string => {
-  if ('type' in error) {
-    return error.message;
-  }
-  
-  // 일반 Error 객체인 경우 기본 메시지 반환
-  return '앱에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
 };
